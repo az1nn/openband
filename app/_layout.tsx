@@ -7,7 +7,8 @@ import { useEffect } from "react";
 import { AuthProvider, useAuth } from "../src/context/AuthContext";
 import { ThemeProvider } from "../src/context/ThemeContext";
 import { View, Platform } from "react-native";
-import { Loading, ToastProvider } from "../src/components";
+import { Loading } from "../src/components/Loading";
+import { ToastProvider } from "../src/components/Toast";
 import { AudioEngineProvider } from "../src/context/AudioEngine";
 import { audioSystem, disposeAllAudio } from "../src/lib/universalAudio";
 
@@ -50,6 +51,7 @@ function RootLayoutProtected() {
       <Stack.Screen name="extractor" options={{ headerShown: false }} />
       <Stack.Screen name="studio/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="mastering" options={{ headerShown: false }} />
+      <Stack.Screen name="settings-ai" options={{ title: "IA & Chaves", presentation: "modal" }} />
     </Stack>
   );
 }

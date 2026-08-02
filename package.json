@@ -36,7 +36,8 @@
     "react-native-web": "~0.21.0",
     "soundfont-player": "^0.12.0",
     "tailwindcss": "^3.4.17",
-    "three": "^0.160.0"
+    "three": "^0.160.0",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
@@ -75,6 +76,9 @@
     "web": "expo start --web",
     "desktop": "npm run build && cd electron && npm start",
     "desktop:dev": "concurrently \"expo start --web\" \"sleep 5 && cd electron && npm start\""
+  },
+  "engines": {
+    "node": ">=22"
   },
   "private": true
 }

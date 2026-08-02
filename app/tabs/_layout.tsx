@@ -4,7 +4,9 @@ import { Text, View, Pressable, ScrollView, Animated } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useResponsive } from "../../src/lib/responsive";
 import { useAuth } from "../../src/context/AuthContext";
-import { MiniPlayer, Sidebar, ErrorBoundary } from "../../src/components";
+import { MiniPlayer } from "../../src/components/MiniPlayer";
+import { Sidebar } from "../../src/components/Sidebar";
+import { ErrorBoundary } from "../../src/components/ErrorBoundary";
 
 const TIER_LABELS: Record<string, string> = {
   free: "Gratuito",
