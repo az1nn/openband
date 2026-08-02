@@ -1,0 +1,41 @@
+# Tasks — CI Workflow Fix (vitest stability + backend lockfile cache)
+
+> The vitest exit-1 failure was observed in CI but did NOT reproduce on the current tree (Node 22.23.x / vitest 4.1.10 → exit 0). Execute §1 (gate) first; the rest is defensive hardening + the verified backend-lockfile fix.
+
+## 0. Baseline + reproduction gate
+- [ ] `node --version`; `npx vitest run; echo "EXIT=$?"` → record the exit code on the CI Node line. Current baseline expectation: `# tests 1421 | 1421 passed`, exit 0.
+- [ ] If exit ≠ 0, capture stderr after the summary and confirm it is `Unhandled Rejection: ReferenceError: AudioContext is not defined` before proceeding.
+
+## 1. Root-cause fix: Web Audio guard
+- [ ] `src/lib/universalAudio.ts`: add `typeof AudioContext !== "undefined"` to the Web-Audio availability check used by `initialize()` (line ~127); `new AudioContext()` is only constructed when the API exists.
+- [ ] `src/lib/universalAudio.ts`: `ensureContext()` (line ~278) returns early (no throw) when Web Audio is unavailable; no repeated exceptions.
+- [ ] Verify no behavior change on real web/desktop: `Platform.OS === "web" && typeof window !== "undefined" && typeof AudioContext !== "undefined"` is still true in browsers.
+
+## 2. Defense-in-depth: MasteringSuite
+- [ ] `src/components/MasteringSuite.tsx` (line ~133): wrap `audioSystem.ensureContext()` in `try/catch`; on error, fall back to a safe state and never reject the effect unhandled.
+
+## 3. Reporter diagnostics
+- [ ] `tests/ok-reporter.ts`: add `onUnhandledError(err)` and `onUnhandledRejection(err)` hooks that `console.error` message + stack.
+- [ ] Confirm the reporter still prints the existing `# tests … | … passed` summary format unchanged.
+
+## 4. Backend lockfile / cache
+- [ ] Remove `backend/package-lock.json` from `.gitignore` (line 11).
+- [ ] `git add backend/package-lock.json` and include it in the implementation commit (now a tracked file).
+- [ ] `.github/workflows/ci.yml`: confirm `cache-dependency-path: backend/package-lock.json` resolves after the file is committed (no workflow change expected).
+
+## 5. Version alignment (documentation only)
+- [ ] Add `"engines": { "node": ">=22" }` to root `package.json`.
+- [ ] Add root `.nvmrc` with `22`.
+- [ ] Keep both CI jobs on `node-version: 22`; no workflow logic for the informational Node-20 deprecation notice.
+
+## 6. Verification
+- [ ] `npx vitest run; echo "EXIT=$?"` exits **0** on Node 22; output contains no "Unhandled Rejection" lines; baseline from §0 recorded in the PR description.
+- [ ] Manual negative check (revert after): injecting a stray rejection in one test prints the error via the new reporter hooks, proving future failures are visible.
+- [ ] `npx tsc --noEmit` clean.
+- [ ] `cd backend && npx tsc --noEmit` clean (lockfile commit only — no backend source change).
+- [ ] CI green: push to a PR branch; confirm (a) vitest step exit 0, (b) backend `setup-node` cache step has no "Some specified paths were not resolved" warning, (c) `npm ci` succeeds in `backend/`.
+
+## 7. Commits
+- [ ] **Commit (spec only):** `openspec/changes/ci-workflow-fix/*`. Message: `docs: spec CI workflow fix (vitest stability + backend lockfile)`.
+- [ ] **Commit (implementation):** all source + config + reporter updates. Message: `fix: CI green — guard AudioContext for jsdom, report unhandled rejections, commit backend lockfile`.
+- [ ] Push to `master`; confirm both jobs pass.
