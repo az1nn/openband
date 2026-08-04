@@ -46,5 +46,8 @@ export default function okReporter(): any {
       if (skip > 0) parts.push(`${skip} skipped`);
       console.log(`\n# ${parts.join(" | ")}`);
     },
+    onUnhandledError(err: any) {
+      console.error("\nUnhandled Error:", err?.message || err);
+    },
   };
 }

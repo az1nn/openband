@@ -130,7 +130,12 @@ export function MasteringSuite({ onBack, testID }: MasteringSuiteProps) {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
     let cancelled = false;
     (async () => {
-      const ctx = await audioSystem.ensureContext();
+      let ctx: AudioContext | null = null;
+      try {
+        ctx = await audioSystem.ensureContext();
+      } catch {
+        ctx = null;
+      }
       if (!ctx || cancelled) return;
       const el = document.createElement("audio");
       el.src = audioSource;

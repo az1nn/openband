@@ -100,6 +100,7 @@ export function disposeAllAudio(): void {
 class UniversalAudioSystem {
   private static instance: UniversalAudioSystem;
   private isInitialized = false;
+  private webAudioUnavailable = false;
   private _audioCtx: AudioContext | null = null;
   private recordingStream: MediaStream | null = null;
   private recordingWorkletNode: AudioWorkletNode | null = null;
@@ -120,14 +121,24 @@ class UniversalAudioSystem {
     return this._audioCtx;
   }
 
+  private webAudioAvailable(): boolean {
+    return (
+      Platform.OS === "web" &&
+      typeof window !== "undefined" &&
+      typeof AudioContext !== "undefined"
+    );
+  }
+
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
-    if (Platform.OS === "web" && typeof window !== "undefined") {
+    if (this.webAudioAvailable()) {
       this._audioCtx = new AudioContext();
       if (this._audioCtx.state === "suspended") {
         await this._audioCtx.resume();
       }
+    } else if (Platform.OS === "web" && typeof window !== "undefined") {
+      this.webAudioUnavailable = true;
     }
 
     this.isInitialized = true;
@@ -276,6 +287,7 @@ class UniversalAudioSystem {
   async ensureContext(): Promise<AudioContext | null> {
     if (Platform.OS !== "web" || typeof window === "undefined") return null;
     if (!this._audioCtx) await this.initialize();
+    if (this.webAudioUnavailable) return null;
     if (this._audioCtx?.state === "suspended") {
       await this._audioCtx.resume();
     }
