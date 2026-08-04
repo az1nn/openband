@@ -22,6 +22,7 @@ import presenceRoutes from "./routes/presence";
 import collabRoutes from "./routes/collab";
 import telemetryRoutes from "./routes/telemetry";
 import storageRoutes from "./routes/storage";
+import aiRoutes from "./routes/ai";
 import { checkDemucsInstalled } from "./services/demucs";
 import { requireFeature } from "./middleware/tierGuard";
 import { checkBlacklist } from "./middleware/sessionBlacklist";
@@ -155,6 +156,7 @@ app.use("/api", presenceRoutes);
 app.use("/api", collabRoutes);
 app.use("/api", telemetryRoutes);
 app.use("/api", storageRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.use(
   (

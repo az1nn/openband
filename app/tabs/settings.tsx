@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { View, Text, ScrollView, Pressable, Alert, Platform } from "react-native";
 import Constants from "expo-constants";
-import { PageHeader, Avatar, Divider, Badge, Button } from "../../src/components";
+import { useRouter } from "expo-router";
+import { PageHeader, Avatar, Divider, Badge, Button, CardRow } from "../../src/components";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useAuth } from "../../src/context/AuthContext";
 import { LAYOUT_MAX_WIDTHS } from "../../src/lib/responsive";
@@ -22,6 +23,7 @@ export default function Settings() {
   const { user, tier, tierLimits } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
+  const router = useRouter();
 
   const handleReset = () => {
     const doReset = () => {
@@ -172,6 +174,24 @@ export default function Settings() {
             <Text className="text-white text-sm font-medium">React Native 0.85</Text>
           </View>
         </View>
+
+        <Divider label={t("settings.ai", "IA")} />
+
+        <CardRow
+          onPress={() => router.push("/settings-ai")}
+          testID="settings-ai-link"
+          accessibilityLabel={t("settings.aiKeys", "IA & Chaves de API")}
+        >
+          <View className="flex-1 pr-4">
+            <Text className="text-white text-sm font-medium">
+              {t("settings.aiKeys", "IA & Chaves de API")}
+            </Text>
+            <Text className="text-gray-500 text-xs mt-1">
+              {t("settings.aiKeysHint", "Gerencie chaves para gerar capas com IA")}
+            </Text>
+          </View>
+          <Text className="text-gray-400 text-lg">›</Text>
+        </CardRow>
 
         <Divider label={t("settings.audio", "Áudio")} />
 

@@ -25,6 +25,8 @@ export function buildProjectData(fields: {
   genre?: string;
   key?: string;
   mood?: Mood;
+  lyrics?: string;
+  coverUrl?: string;
   metronome: MetronomeSettings;
   tracks: TrackDef[];
   groups: GroupDef[];
@@ -43,6 +45,8 @@ export function buildProjectData(fields: {
     genre: fields.genre || "",
     key: fields.key || "",
     mood: fields.mood,
+    lyrics: fields.lyrics,
+    coverUrl: fields.coverUrl,
     bpm: fields.metronome.bpm,
     tracks: fields.tracks,
     groups: fields.groups,

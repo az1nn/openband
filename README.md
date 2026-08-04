@@ -148,6 +148,17 @@ Multi-track DAW with real-time audio playback via `expo-audio`:
 - Automation lanes per track with linear/exponential curves
 - Bounce/export dialog (WAV/AIFF/FLAC, 16/24/32-bit, cross-platform)
 
+### IA & Capas
+
+AI album-cover generation with **bring-your-own-key (BYOK)** providers — Gemini, OpenAI, OpenRouter, Claude (refine only) and Hugging Face:
+
+- Keys are stored **only on-device** and never logged or persisted on OpenBand servers
+- Manage keys in **Configurações → IA & Chaves de API** (`app/settings-ai.tsx`)
+- Studio → **✨ Gerar Capa com IA** opens the generation modal (source from project lyrics or a custom text, optional prompt refinement, aspect ratio/quality settings)
+- Generated covers persist on the project and render in the library cards
+
+Full business rules live in [`docs/AI_INTEGRATION_AGENT_SPEC.md`](docs/AI_INTEGRATION_AGENT_SPEC.md). Backend endpoints are under `POST /api/ai/*` (`backend/src/routes/ai.ts`).
+
 ### Stem Extraction (`app/extractor.tsx`)
 
 3-phase separation pipeline:

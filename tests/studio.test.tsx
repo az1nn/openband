@@ -223,13 +223,14 @@ vi.mock("../src/components", () => {
   const TrackColorPicker = ({ visible }: any) => visible ? <div data-testid="track-color-picker" /> : null;
   const LoadingModal = ({ visible }: any) => visible ? <div data-testid="loading-modal" /> : null;
   const MasteringSuite = ({ testID }: any) => <div data-testid={testID} />;
+  const GenerateCoverModal = ({ visible }: any) => visible ? <div data-testid="generate-cover-modal" /> : null;
   return {
     Metronome, MixManager, Sidebar, PluginRack, MasterRack, PluginEditor, RecordOptions,
     WaveformCanvas, AutomationLane, TrackGroupManager, LufsMeter, BounceDialog,
     SampleBrowser, CodeSampler, Tuner, PedalRack, PianoRoll, Looper, Sampler,
     Synth, PromptSampler, VisualEQ, ChordTrack, CommandPalette, BranchManager,
     CommitModal, OutputSelector, Patchbay, VuMeter, TrackColorPicker, LoadingModal, MidiLearnPanel,
-    MasteringSuite,
+    MasteringSuite, GenerateCoverModal,
     OneKnob, ONE_KNOB_TYPES: ["volume"],
   };
 });

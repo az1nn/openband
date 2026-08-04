@@ -17,6 +17,7 @@ import {
   Patchbay,
   MidiLearnPanel,
   LoadingModal,
+  GenerateCoverModal,
 } from "../../src/components";
 import type {
   Plugin,
@@ -75,6 +76,12 @@ interface StudioModalsProps {
   showPatchbay: boolean;
   trackIds: string[];
   showMidi: boolean;
+  // GenerateCover
+  showGenerateCover: boolean;
+  projectGenre?: string;
+  projectLyrics?: string;
+  onProjectLyricsChange: (text: string) => void;
+  onUseAsCover: (coverDataUrl: string) => void;
   // LoadingModal (autoplay blocked)
   autoplayBlocked: boolean;
   setAutoplayBlocked: (v: boolean) => void;
@@ -123,6 +130,11 @@ export function StudioModals(props: StudioModalsProps) {
     showPatchbay,
     trackIds,
     showMidi,
+    showGenerateCover,
+    projectGenre,
+    projectLyrics,
+    onProjectLyricsChange,
+    onUseAsCover,
     autoplayBlocked,
     setAutoplayBlocked,
     closeModal,
@@ -276,6 +288,15 @@ export function StudioModals(props: StudioModalsProps) {
         visible={showMidi}
         onClose={() => closeModal("midi")}
         tracks={tracks}
+      />
+      <GenerateCoverModal
+        visible={showGenerateCover}
+        onClose={() => closeModal("generateCover")}
+        projectTitle={projectTitle}
+        genre={projectGenre}
+        lyrics={projectLyrics}
+        onLyricsChange={onProjectLyricsChange}
+        onUseAsCover={onUseAsCover}
       />
       <LoadingModal
         visible={autoplayBlocked}

@@ -21,6 +21,8 @@ export interface ProjectData {
   mood?: string;
   parentProjectId?: string;
   isPublished?: boolean;
+  coverUrl?: string;
+  lyrics?: string;
   tracks: TrackDef[];
   groups: GroupDef[];
   buses: BusDef[];
@@ -125,7 +127,7 @@ async function deleteViaBridge(id: string): Promise<void> {
 export function saveProject(
   id: string,
   data: Omit<ProjectData, "id" | "lastSaved">,
-): void {
+): boolean {
   const project: ProjectData = { ...data, id, lastSaved: Date.now() };
   const storage = getStorage();
   if (storage) {
@@ -137,9 +139,11 @@ export function saveProject(
       onProjectSaved?.(id, project);
     } catch (e) {
       console.warn("Project save failed:", e);
+      return false;
     }
   }
   queueBridgeSave(id, project);
+  return true;
 }
 
 export function loadProject(id: string): ProjectData | null {
@@ -211,6 +215,8 @@ function sanitizeProjectData(raw: unknown): ProjectData | null {
       typeof data.parentProjectId === "string" ? data.parentProjectId : undefined,
     isPublished:
       typeof data.isPublished === "boolean" ? data.isPublished : undefined,
+    coverUrl: typeof data.coverUrl === "string" ? data.coverUrl : undefined,
+    lyrics: typeof data.lyrics === "string" ? data.lyrics : undefined,
     bpm: data.bpm as number,
     tracks: Array.isArray(data.tracks) ? data.tracks : [],
     groups: Array.isArray(data.groups) ? data.groups : [],
@@ -321,6 +327,7 @@ export function createRemix(originalId: string, _userId: string): string | null 
     title: `Remix: ${original.title}`,
     parentProjectId: originalId,
     isPublished: false,
+    coverUrl: undefined,
   });
   return newId;
 }

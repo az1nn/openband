@@ -203,7 +203,7 @@ export function useStudioPersistence(params: {
   hydrate: (saved: ProjectData) => void;
 }): {
   lastSavedLabel: string | null;
-  save: (overrideTitle?: string) => void;
+  save: (override?: string | Partial<Snapshot>) => boolean;
   handleManualSave: () => void;
 } {
   const { id, snapshot, hydrate } = params;
@@ -218,12 +218,13 @@ export function useStudioPersistence(params: {
   hydrateRef.current = hydrate;
 
   const save = useCallback(
-    (overrideTitle?: string) => {
+    (override?: string | Partial<Snapshot>): boolean => {
       const snap = snapshotRef.current;
-      saveProject(
-        id,
-        overrideTitle != null ? { ...snap, title: overrideTitle } : snap,
-      );
+      if (override == null) return saveProject(id, snap);
+      if (typeof override === "string") {
+        return saveProject(id, { ...snap, title: override });
+      }
+      return saveProject(id, { ...snap, ...override });
     },
     [id],
   );
@@ -383,7 +384,8 @@ export type ModalId =
   | "patchbay"
   | "midi"
   | "toolbarOverflow"
-  | "pianoRoll";
+  | "pianoRoll"
+  | "generateCover";
 
 type ModalState = Record<ModalId, boolean>;
 
@@ -402,7 +404,7 @@ function modalReducer(
 }
 
 /**
- * Owns the 17 Studio modal/overlay open/closed flags in a single `useReducer`
+ * Owns the 18 Studio modal/overlay open/closed flags in a single `useReducer`
  * record. Exposes `modals` (read state), `openModal`, `closeModal`, `toggleModal`.
  */
 export function useStudioModals(init: { synth: boolean; pianoRoll: boolean }) {
@@ -424,6 +426,7 @@ export function useStudioModals(init: { synth: boolean; pianoRoll: boolean }) {
     midi: false,
     toolbarOverflow: false,
     pianoRoll: init.pianoRoll,
+    generateCover: false,
   }));
   const openModal = useCallback((id: ModalId) => dispatch({ type: "open", id }), []);
   const closeModal = useCallback(

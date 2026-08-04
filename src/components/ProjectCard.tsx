@@ -1,5 +1,5 @@
 
-import { View, Text, Pressable } from "react-native";
+import { View, Text, Pressable, Image } from "react-native";
 import { Badge } from "./Badge";
 import { ProjectMenu } from "./ProjectMenu";
 import type { ProjectData } from "../lib/projectStore";
@@ -31,6 +31,11 @@ export function ProjectCard({
   onRefresh,
   flex = 1,
 }: ProjectCardProps) {
+  const coverUrl =
+    project.metadata?.coverUrl?.startsWith("data:image/")
+      ? project.metadata.coverUrl
+      : undefined;
+
   return (
     <View className="card-premium mb-2.5" style={{ flex }}>
       <View className="p-4 flex-row items-center">
@@ -38,9 +43,18 @@ export function ProjectCard({
           onPress={() => onOpen(project.id)}
           className="flex-1 flex-row items-center active:opacity-80"
         >
-          <View className="w-12 h-12 rounded-xl bg-brand-primary/15 items-center justify-center">
-            <Text className="text-xl">♫</Text>
-          </View>
+          {coverUrl ? (
+            <Image
+              source={{ uri: coverUrl }}
+              accessibilityLabel="Capa do projeto"
+              className="w-12 h-12 rounded-xl bg-dark-muted"
+              resizeMode="cover"
+            />
+          ) : (
+            <View className="w-12 h-12 rounded-xl bg-brand-primary/15 items-center justify-center">
+              <Text className="text-xl">♫</Text>
+            </View>
+          )}
           <View className="flex-1 ml-3.5 mr-2">
             <Text className="text-white font-semibold text-base" numberOfLines={1} ellipsizeMode="tail">{project.title}</Text>
             <View className="flex-row items-center gap-2 mt-1.5 flex-wrap">

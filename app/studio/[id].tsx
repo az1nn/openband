@@ -111,6 +111,8 @@ export default function Studio() {
   } = useProjectParams();
   const router = useRouter();
   const [projectTitle, setProjectTitle] = useState(initialTitle);
+  const [projectLyrics, setProjectLyrics] = useState("");
+  const [coverUrl, setCoverUrl] = useState<string | undefined>(undefined);
   const [editingTitle, setEditingTitle] = useState(false);
   const titleInputRef = useRef<TextInput>(null);
   const [tooltipDismissed, setTooltipDismissed] = useState(false);
@@ -245,6 +247,8 @@ export default function Studio() {
         genre: genreParam,
         key: projectKey,
         mood: projectMood,
+        lyrics: projectLyrics,
+        coverUrl,
         metronome,
         tracks,
         groups,
@@ -260,6 +264,8 @@ export default function Studio() {
       }),
     [
       projectTitle,
+      projectLyrics,
+      coverUrl,
       genreParam,
       projectKey,
       projectMood,
@@ -291,6 +297,8 @@ export default function Studio() {
     setTrackAmpChains(saved.trackAmpChains ?? {});
     if (saved.metronome) setMetronome(saved.metronome);
     if (saved.recordSettings) setRecordSettings(saved.recordSettings);
+    if (typeof saved.lyrics === "string") setProjectLyrics(saved.lyrics);
+    if (typeof saved.coverUrl === "string") setCoverUrl(saved.coverUrl);
   }, [setTracks]);
 
   const {
@@ -309,6 +317,23 @@ export default function Studio() {
     setProjectTitle(trimmed);
     saveProjectNow(trimmed);
   }, [projectTitle, saveProjectNow]);
+
+  const handleProjectLyricsChange = useCallback((text: string) => {
+    setProjectLyrics(text);
+  }, []);
+
+  const handleUseAsCover = useCallback(
+    (coverDataUrl: string) => {
+      const ok = saveProjectNow({ coverUrl: coverDataUrl });
+      if (!ok) {
+        Alert.alert("Capa", "Capa não salva: armazenamento cheio");
+        return;
+      }
+      setCoverUrl(coverDataUrl);
+      closeModal("generateCover");
+    },
+    [saveProjectNow, closeModal],
+  );
 
   useEffect(() => {
     if (rawTool !== "piano" || editingMidiTrackId || !modals.pianoRoll) return;
@@ -1405,6 +1430,14 @@ export default function Studio() {
             className="w-8 h-8 rounded-lg bg-dark-muted items-center justify-center active:opacity-70 focus-ring"
           >
             <Text className="text-gray-300 text-xs">⏮</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => openModal("generateCover")}
+            accessibilityRole="button"
+            accessibilityLabel="Gerar capa com IA"
+            className="h-8 rounded-lg items-center justify-center px-2 bg-brand-accent/20 border border-brand-accent/30 active:opacity-70"
+          >
+            <Text className="text-brand-accent text-xs font-bold">✨ Gerar Capa com IA</Text>
           </Pressable>
           <Pressable
             onPress={togglePlay}
@@ -2731,6 +2764,11 @@ export default function Studio() {
         showPatchbay={modals.patchbay}
         trackIds={trackIds}
         showMidi={modals.midi}
+        showGenerateCover={modals.generateCover}
+        projectGenre={genreParam}
+        projectLyrics={projectLyrics}
+        onProjectLyricsChange={handleProjectLyricsChange}
+        onUseAsCover={handleUseAsCover}
         autoplayBlocked={autoplayBlocked}
         setAutoplayBlocked={setAutoplayBlocked}
         closeModal={closeModal}
