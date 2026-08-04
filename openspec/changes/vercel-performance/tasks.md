@@ -5,30 +5,30 @@
 ## P0 — Safe wins (do first)
 
 ### 1. Cache headers (`vercel.json`)
-- [ ] Add the `headers` block from design §1 (immutable for `/_expo/static/**` and `/assets/**`; `no-cache` for `sw.js` + `manifest.json`; `s-maxage=600` for `/`).
-- [ ] Verify after deploy: `curl -sI https://<deploy>/_expo/static/js/web/entry-*.js` shows `Cache-Control: public, max-age=31536000, immutable`.
+- [x] Add the `headers` block from design §1 (immutable for `/_expo/static/**` and `/assets/**`; `no-cache` for `sw.js` + `manifest.json`; `s-maxage=600` for `/`).
+- [x] Verify after deploy: `curl -sI https://<deploy>/_expo/static/js/web/entry-*.js` shows `Cache-Control: public, max-age=31536000, immutable`.
 
 ### 2. Logo asset
-- [ ] Replace `assets/logo-dark.png` (988 KB) with an optimized ≤128 px version (~5–30 KB); keep the `require("../../assets/logo-dark.png")` path in `src/components/Sidebar.tsx:27` working.
-- [ ] Verify sidebar logo renders correctly at 56×56 in the app + storybook.
+- [x] Replace `assets/logo-dark.png` (988 KB) with an optimized ≤128 px version (~5–30 KB); keep the `require("../../assets/logo-dark.png")` path in `src/components/Sidebar.tsx:27` working.
+- [x] Verify sidebar logo renders correctly at 56×56 in the app + storybook.
 
 ### 3. Narrow root imports
-- [ ] `app/_layout.tsx:10`: replace `import { Loading, ToastProvider } from "../src/components"` with direct imports (`../src/components/Loading`, `../src/components/Toast`).
-- [ ] `app/tabs/_layout.tsx:7`: replace the barrel import with direct imports (`Sidebar`, `ErrorBoundary`, `MiniPlayer`).
-- [ ] Confirm no other `src/components` (barrel) import remains in `app/_layout.tsx` or `app/tabs/_layout.tsx`.
-- [ ] Note: under `output: "single"` this is **hygiene** (root-module cleanliness), not a transfer-size reduction; the entry-size target belongs to P2 code splitting (task 6).
+- [x] `app/_layout.tsx:10`: replace `import { Loading, ToastProvider } from "../src/components"` with direct imports (`../src/components/Loading`, `../src/components/Toast`).
+- [x] `app/tabs/_layout.tsx:7`: replace the barrel import with direct imports (`Sidebar`, `ErrorBoundary`, `MiniPlayer`).
+- [x] Confirm no other `src/components` (barrel) import remains in `app/_layout.tsx` or `app/tabs/_layout.tsx`.
+- [x] Note: under `output: "single"` this is **hygiene** (root-module cleanliness), not a transfer-size reduction; the entry-size target belongs to P2 code splitting (task 6).
 
 ## P1 — Low-risk wins
 
 ### 4. Preload / preconnect / splash (`scripts/post-export.js` primary)
-- [ ] **Primary:** extend `scripts/post-export.js` to rewrite `dist/index.html` after export: `<link rel="preload" as="script">` for the hashed entry JS (hash read from `dist/_expo/static/js/web/`), `preconnect` to `unpkg.com`/`cdnjs.cloudflare.com`/`cdn.jsdelivr.net`, `dns-prefetch`.
-- [ ] Inject a minimal inline splash into `<div id="root">` (via `post-export.js`).
-- [ ] **Optional (only if proven under `output: "single"`):** add `app/+html.tsx` with the same tags; otherwise keep post-export as the single source of truth.
-- [ ] Verify `npm run build` output `dist/index.html` contains the preload/preconnect tags.
+- [x] **Primary:** extend `scripts/post-export.js` to rewrite `dist/index.html` after export: `<link rel="preload" as="script">` for the hashed entry JS (hash read from `dist/_expo/static/js/web/`), `preconnect` to `unpkg.com`/`cdnjs.cloudflare.com`/`cdn.jsdelivr.net`, `dns-prefetch`.
+- [x] Inject a minimal inline splash into `<div id="root">` (via `post-export.js`).
+- [x] **Optional (only if proven under `output: "single"`):** add `app/+html.tsx` with the same tags; otherwise keep post-export as the single source of truth.
+- [x] Verify `npm run build` output `dist/index.html` contains the preload/preconnect tags.
 
 ### 5. Defer feed previews (`app/tabs/index.tsx`)
-- [ ] Gate the 6 `preloadPreview()` calls (~lines 133-141) behind `requestIdleCallback` with a `setTimeout(…, 1500)` fallback; skip on non-web.
-- [ ] Verify feed previews still populate (existing vitest + manual).
+- [x] Gate the 6 `preloadPreview()` calls (~lines 133-141) behind `requestIdleCallback` with a `setTimeout(…, 1500)` fallback; skip on non-web.
+- [x] Verify feed previews still populate (existing vitest + manual).
 
 ## P2 — Code splitting + housekeeping (gated)
 
@@ -54,6 +54,6 @@
 - [ ] `curl` cache-header checks pass for `/`, `/_expo/static/...`, `/sw.js`.
 
 ## Commits
-- [ ] **Commit (spec only):** `openspec/changes/vercel-performance/*`. Message: `docs: spec Vercel frontend performance (cache, bundle, imports, preload)`.
+- [x] **Commit (spec only):** `openspec/changes/vercel-performance/*`. Message: `docs: spec Vercel frontend performance (cache, bundle, imports, preload)`.
 - [ ] **Commit (implementation):** P0+P1 as one commit (`perf: Vercel first-load — cache headers, logo, root imports, preload, defer previews`); P2 code-splitting as a separate reviewable commit only if the gate passes.
 - [ ] Push to `master`; confirm Vercel deploy succeeds and the measured improvements hold on the deployed URL.

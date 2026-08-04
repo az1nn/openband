@@ -133,11 +133,19 @@ export default function Feed() {
   useEffect(() => {
     if (!isWeb) return;
     const page = posts.slice(0, FEED_PAGE_SIZE);
-    for (const p of page) {
-      if (!getCachedPreview(p.id)) {
-        preloadPreview(p.id, p.duration).catch(() => {});
+    const runPreloads = () => {
+      for (const p of page) {
+        if (!getCachedPreview(p.id)) {
+          preloadPreview(p.id, p.duration).catch(() => {});
+        }
       }
+    };
+    if (typeof globalThis.requestIdleCallback === "function") {
+      const handle = globalThis.requestIdleCallback(runPreloads);
+      return () => globalThis.cancelIdleCallback(handle);
     }
+    const timeout = setTimeout(runPreloads, 1500);
+    return () => clearTimeout(timeout);
   }, [posts, isWeb]);
 
   const onRefresh = useCallback(() => {
