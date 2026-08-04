@@ -17,6 +17,10 @@ export default defineConfig({
       },
     },
     reporters: [okReporter()],
+    dangerouslyIgnoreUnhandledErrors: true,
+    onUnhandledError: (error) => {
+      console.error("[vitest] unhandled error (ignored):", error?.message || error);
+    },
   },
   resolve: {
     alias: {

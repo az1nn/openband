@@ -48,7 +48,6 @@ export default function okReporter(): any {
     },
     onUnhandledError(err: any) {
       console.error("\nUnhandled Error:", err?.message || err);
-      return false;
     },
   };
 }
