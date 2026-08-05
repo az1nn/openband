@@ -11,7 +11,7 @@ Current feature inventory against [BandLab](https://www.bandlab.com/features) (w
 All 7 phases from the original build plan are **shipped**. The "Build Plan" section at the bottom is kept as historical reference. For current feature inventory, see the table below.
 
 **Shipped:** 40 features total — see `docs/features-implementation.md` for details.
-**Tests:** 505 Vitest (10 files) + 24 legacy node:test
+**Tests:** 1456 Vitest (78 files) + 24 legacy node:test
 
 ---
 
@@ -158,12 +158,10 @@ All 7 phases from the original build plan are **shipped**. The "Build Plan" sect
 
 ## Test Suite
 
-Vitest (505 tests across 10 files): `components.test.tsx` (153), `components2.test.tsx` (28), `components3.test.tsx` (20), `lib.test.ts` (66), `lib2.test.ts` (57), `lib3.test.ts` (77), `lib4.test.ts` (40), `lib5.test.ts` (20), `screens.test.tsx` (28), `responsive.test.ts` (16).
-
-Legacy `node:test` (24 tests): `types.test.ts` (12), `presets.test.ts` (12).
+Vitest (`npx vitest run`): **1456 tests across 78 files** (components*, lib*, screens*, specs-group*, studio*, and misc module tests). Legacy `node:test` (`npm run test:legacy`): 24 tests across 2 files (`types.test.ts` 12, `presets.test.ts` 12).
 
 ```bash
-npx vitest run          # Run 505 vitest tests
+npx vitest run          # Run 1456 vitest tests
 npm run test:legacy     # Run 24 legacy tests
 npx tsc --noEmit        # TypeScript check (must pass before build)
 npm run build           # Production build

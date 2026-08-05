@@ -9,7 +9,7 @@
 
 OpenBand is an **open-source, cross-platform DAW** (web-first, also Android/iOS/Electron desktop) built on **Expo Router + React Native Web + NativeWind (Tailwind v3) + TypeScript**, with a **Supabase** (prod) / **SQLite** (dev) backend, an **Express** audio backend (Demucs stem separation + mastering bounce), and a **swappable desktop bridge** (`src/bridge/`) so the same code runs in browser, Electron, or (future) Tauri.
 
-The app already implements a remarkably complete DAW surface: multi-track studio, 19-type plugin DSP, mastering suite, stem extraction, piano roll, sampler, synth, looper, chord track, automation lanes, CRDT collaboration, command palette, project branching, i18n (en/es/pt), and a 56+ component design system. **~505 Vitest tests + legacy `node:test` suite + Playwright E2E** exist.
+The app already implements a remarkably complete DAW surface: multi-track studio, 19-type plugin DSP, mastering suite, stem extraction, piano roll, sampler, synth, looper, chord track, automation lanes, CRDT collaboration, command palette, project branching, i18n (en/es/pt), and a 56+ component design system. **~1456 Vitest tests + legacy `node:test` suite + Playwright E2E** exist.
 
 What is *not* done is the integration/hardening layer: several complete subsystems (modulation matrix, real LUFS meter, native hardware I/O, real plugin DSP, web playback pipeline) are **partially wired or stubbed**, and there are known correctness gaps (silent audio-region playback on web, leaky blob URLs, beat drift, param-id mismatches). The recommended next phase is to **close these gaps and ship the next-product pillars** (Video Export, MIDI Learn+MCU, DAWproject interop, AI Voice Cleaner) already specified in `openspec/changes/next-product-design`.
 
@@ -30,7 +30,7 @@ What is *not* done is the integration/hardening layer: several complete subsyste
 | Stem separation | Demucs (HTDEMUCS) via Python subprocess | Mock silent-WAV fallback when Demucs absent. |
 | Desktop | Electron 35 (`electron/`) | Bridge pattern: `OpenBandNative` from `@bridge`. |
 | 3D | Three.js (`three ^0.160`, `@react-three/fiber`, `@react-three/drei`) | Virtual Studio (Habbo-style room). |
-| Testing | Vitest 4 (~505 tests), Playwright, legacy `node:test` | See §7. |
+| Testing | Vitest 4 (~1456 tests), Playwright, legacy `node:test` | See §7. |
 | i18n | i18next + react-i18next | Locales: `src/locales/{en,es,pt}.json`. |
 
 ### Scripts (`package.json`)

@@ -3,7 +3,7 @@
 > The vitest exit-1 failure was observed in CI but did NOT reproduce on the current tree (Node 22.23.x / vitest 4.1.10 → exit 0). Execute §1 (gate) first; the rest is defensive hardening + the verified backend-lockfile fix.
 
 ## 0. Baseline + reproduction gate
-- [x] `node --version`; `npx vitest run; echo "EXIT=$?"` → record the exit code on the CI Node line. Current baseline expectation: `# tests 1421 | 1421 passed`, exit 0.
+- [x] `node --version`; `npx vitest run; echo "EXIT=$?"` → record the exit code on the CI Node line. Current baseline expectation: `# tests 1456 | 1456 passed`, exit 0.
 - [x] If exit ≠ 0, capture stderr after the summary and confirm it is `Unhandled Rejection: ReferenceError: AudioContext is not defined` before proceeding.
 
 ## 1. Root-cause fix: Web Audio guard
