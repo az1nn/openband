@@ -49,5 +49,8 @@ export default function okReporter(): any {
     onUnhandledError(err: any) {
       console.error("\nUnhandled Error:", err?.message || err);
     },
+    onUnhandledRejection(err: any) {
+      console.error("\nUnhandled Rejection:", err?.message || err, err?.stack || "");
+    },
   };
 }

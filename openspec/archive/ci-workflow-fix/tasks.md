@@ -24,9 +24,9 @@
 - [x] `.github/workflows/ci.yml`: confirm `cache-dependency-path: backend/package-lock.json` resolves after the file is committed (no workflow change expected).
 
 ## 5. Version alignment (documentation only)
-- [x] Add `"engines": { "node": ">=22" }` to root `package.json`.
-- [x] Add root `.nvmrc` with `22`.
-- [x] Keep both CI jobs on `node-version: 22`; no workflow logic for the informational Node-20 deprecation notice.
+- [x] Add `"engines": { "node": ">=22" }` to root `package.json` — added in `0a762c2` (shared-prep), not the ci-workflow-fix commit.
+- [x] `.nvmrc` with `22` — created in `0a762c2` (shared-prep), not the ci-workflow-fix commit.
+- [x] Both CI jobs pin `node-version: 22` in `.github/workflows/ci.yml` (verify both jobs have this pin).
 
 ## 6. Verification
 - [x] `npx vitest run; echo "EXIT=$?"` exits **0** on Node 22; output contains no "Unhandled Rejection" lines; baseline from §0 recorded in the PR description.

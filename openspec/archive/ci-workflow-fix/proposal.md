@@ -20,7 +20,7 @@ The GitHub Actions workflow (`.github/workflows/ci.yml`, two jobs `web` and `bac
 - **Make unhandled errors visible**: add `onUnhandledError`/`onUnhandledRejection` hooks to `tests/ok-reporter.ts` so any future stray rejection prints the actual error instead of vanishing.
 - **Fix the backend job** (verified defect): commit `backend/package-lock.json` (remove from `.gitignore`) so `setup-node` caching and `npm ci` work on a fresh checkout.
 - **Reproduction gate**: before/after this change, record `npx vitest run; echo $?` on the CI Node line to prove the suite is green; if the exit-1 failure does not reproduce locally, document that and rely on the hardening + CI run to validate.
-- **Align versions**: add `"engines": { "node": ">=22" }` to `package.json` and a root `.nvmrc` with `22`; keep CI on `node-version: 22`. Treat the Node-20 deprecation notice as informational.
+- **Align versions**: confirm `"engines": { "node": ">=22" }` in `package.json` and root `.nvmrc` with `22` are present at HEAD (both added in the shared-prep commit `0a762c2`); keep CI on `node-version: 22`. Treat the Node-20 deprecation notice as informational.
 
 ## Scope
 **S/M** — two source files for the root-cause fix, one reporter file, one `.gitignore` line, one `package.json` field, optional `.nvmrc`. No new dependencies, no build-system changes.

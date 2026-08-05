@@ -60,7 +60,7 @@ These make any future stray rejection **visible** in CI output (today it is swal
 
 ## 6. Version alignment
 
-- Add `"engines": { "node": ">=22" }` to root `package.json` (documented minimum) — **done** (added in `0a762c2` shared-prep). A root `.nvmrc` with `22` was **NOT** created as part of this change (only `engines` was added); local dev and CI still share Node 22 via the workflow pin.
+- Add `"engines": { "node": ">=22" }` to root `package.json` (added in `0a762c2` shared-prep) and root `.nvmrc` with `22` (also from `0a762c2`); local dev and CI still share Node 22 via the workflow pin (`node-version: 22` on both jobs).
 - Note: `backend/package-lock.json` is now **committed** (removed from `.gitignore` line 11), enabling `setup-node` npm caching and `npm ci` on fresh checkouts.
 - The "Node 20 is being deprecated" notice is informational (runner-internal actions); because the workflow pins `node-version: 22`, no action is required. Bumping to 24 later is out of scope.
 
