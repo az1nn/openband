@@ -1,5 +1,7 @@
 # Design Notes — Plugin Specs
 
+> **Status (docs only, uncommitted):** §1 + §5 complete; §2 per-plugin Vitest cases and §3 coverage target remain open.
+
 ## Source of Truth
 Specs were derived from `docs/features-implementation.md` and the plugin
 comparison table in the roadmap. File paths in the spec tables point to the

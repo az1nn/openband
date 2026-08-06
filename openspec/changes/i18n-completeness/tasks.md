@@ -1,46 +1,36 @@
-# Tasks — i18n Completeness
+# Tasks — i18n Completeness (deferred follow-up)
 
-Docs-only change spec. No source code is committed in this change; the checklist below is the implementation contract for a follow-up Apply phase.
+Canonical spec: `openspec/specs/i18n/spec.md`. All items below are the OPEN/DEFERRED remainder of the i18n batch. Shipped work (pt-BR default locale, `useT` hook, expanded `settings`/`feed`/`library`/`account`/`newProject`/`moments`/`extractor` dictionaries, and migrated `app/tabs/{settings,index,library,account,moments}.tsx`, `app/extractor.tsx`, `src/components/NewProject.tsx`) is captured in the spec and is out of scope here.
 
-## 1. Locale defaults (src/lib/i18n.ts)
-- [x] Promote `pt-BR` to the canonical default locale: add `pt-BR` resource key (alias `pt` → same JSON), set `lng` default to `'pt-BR'`, `fallbackLng: 'en'`.
-- [x] Normalize device `languageCode` (`pt`→`pt-BR`) in the init resolver (`src/lib/i18n.ts:28-30`).
-- [x] Export `useT` convenience hook: `export const useT = () => useTranslation().t;`
+## 1. Studio namespace (deferred)
+- [ ] Add `studio` namespace to `src/locales/{en,pt,es}.json` (from `app/studio/[id].tsx`): permission alert, record/generate/MIDI-import errors, command-palette labels (`Play`, `Record`, `Undo`, `Redo`, `Delete`, `Add Track`, …), track menu, "Salvo ✓" toast, compare/mix labels.
+- [ ] Migrate `app/studio/[id].tsx` to `t("studio.*", "English fallback")` — currently hardcodes pt strings (e.g. `app/studio/[id].tsx:329`).
 
-## 2. Expand dictionaries (src/locales/{en,pt,es}.json)
-- [x] Extend `settings` namespace: mock-profile fields (`profileName`, `profileBio`, `profileLocation`, `memberSince`), `local`, `memberSinceLabel`, `appearance`, `themeDark`, `themeLight`, `info`, `appVersion`, `framework`, `engine`, `plan`, `planCurrent`, `publishFeed`, `createRemixes`, `exportVideo`, `yes`, `no`.
-- [x] Extend `feed` namespace: `errorTitle`, `playbackError`, `shareTitle`, `shareCopied`, `loadingFeed`, `upgradeRequired`, `remixUpgrade`.
-- [x] Extend `account` namespace: `error`, `saveError`, `signOut`, `signOutConfirm`, `cancel`, `editProfile`, `displayName`, `namePlaceholder`, `save`, `session`, `status`, `connected`, `plan`, `planTier`, `maxProjects`, `maxTracks`, `exportVideo`, `yes`, `no`.
-- [x] Add `newProject` namespace (from `src/components/NewProject.tsx`): `title`, `moodPrompt`, `chooseGenre`, `selectedGenre`, `startFromScratch`, `startFromScratchDesc`, `back`, `skip`, `projectName`, `genre`, `change`, `bars`, `timeSignature`, `key`, `suggestedTracks`, `create`, `defaultName`.
-- [ ] Add `studio` namespace (from `app/studio/[id].tsx`) — DEFERRED to next batch (out of scope for this tabs+settings+NewProject batch).
-- [ ] Add `extractor` namespace (from `app/extractor.tsx`) — DEFERRED.
-- [ ] Add `mastering` namespace (from `app/mastering/index.tsx`) — DEFERRED.
-- [x] Add `moments` namespace (from `app/tabs/moments.tsx`): `title`, `subtitle`, `tabMoments`, `tabPacks`, `credits`, `creditNote`, `freePacksIntro`.
-- [ ] Add `explorer` namespace (from `app/tabs/explorer.tsx`) — DEFERRED (explorer.tsx not part of this batch).
-- [x] Mirror every new key into all three files (en default + pt-BR + es).
+## 2. Mastering namespace (deferred)
+- [ ] Add `mastering` namespace to `src/locales/{en,pt,es}.json` (from `app/mastering/index.tsx`): chain labels, export strings, LUFS labels.
+- [ ] Migrate `app/mastering/index.tsx` to `t("mastering.*", ...)`.
 
-## 3. Migrate screens (replace literals with t())
-- [x] `app/tabs/settings.tsx` — mock profile, appearance labels, info section (keep language toggle; update to `pt-BR` key).
-- [x] `app/tabs/index.tsx` (feed) — share toast, genre "all" label, error alerts, loading message. (Note: `app/tabs/feed.tsx` is a separate file not yet migrated — DEFERRED.)
-- [x] `app/tabs/library.tsx` — already fully uses `t()` (verified); no literals remaining.
-- [x] `app/tabs/account.tsx` — already fully uses `t()` (verified); no literals remaining.
-- [x] `app/tabs/moments.tsx` — title, subtitle, tab labels, credits, credit note, free-packs intro.
-- [ ] `app/tabs/explorer.tsx` — DEFERRED.
-- [x] `src/components/NewProject.tsx` — all visible strings migrated.
-- [ ] `app/studio/[id].tsx` — DEFERRED to next batch.
-- [ ] `app/extractor.tsx`, `app/mastering/index.tsx`, `app/mixing-console.tsx` — DEFERRED.
-- [ ] Swap `useTranslation()` → `useT()` where it simplifies calls (optional, non-breaking) — partially available via exported `useT`; not force-swapped to keep diff minimal.
+## 3. Explorer namespace + screen (deferred)
+- [ ] Add `explorer` namespace to `src/locales/{en,pt,es}.json` (from `app/tabs/explorer.tsx`): browse strings.
+- [ ] Migrate `app/tabs/explorer.tsx` to `t("explorer.*", ...)` — currently has no `useTranslation` usage.
 
-## 4. Coverage test (new)
+## 4. Mixer namespace (deferred)
+- [ ] Add `mixer` namespace to `src/locales/{en,pt,es}.json` (from `app/mixing-console.tsx`): transport glyphs are unicode (keep), migrate any text labels.
+- [ ] Migrate `app/mixing-console.tsx` text labels to `t("mixer.*", ...)`.
+
+## 5. Secondary screen (deferred)
+- [ ] `app/tabs/feed.tsx` — separate feed screen not yet migrated (feed namespace already covers `app/tabs/index.tsx`).
+
+## 6. Coverage test (new)
 - [ ] Create `tests/i18n-coverage.test.ts`:
-  - Asserts `en.json`, `pt.json`, `es.json` have identical key sets (deep key parity).
+  - Asserts `en.json`, `pt.json`, `es.json` have identical nested key sets (deep key parity).
   - Counts extracted keys per namespace and asserts growth vs. the ~14-key baseline.
-  - Greps the migrated batch (`app/tabs/*`, `src/components/NewProject.tsx`) for leftover user-visible hardcoded string literals and fails if any remain outside `t(...)`.
+  - Greps the migrated batch (`app/tabs/*`, `src/components/NewProject.tsx`, `app/extractor.tsx`) for leftover user-visible hardcoded string literals and fails if any remain outside `t(...)`.
 
-## 5. Verification
+## 7. Verification (remaining)
 - [ ] `npx tsc --noEmit` clean
 - [ ] `cd backend && npx tsc --noEmit` clean (no backend i18n changes, sanity only)
-- [ ] `npx vitest run` passes
+- [ ] `npx vitest run` passes, including the new coverage test
 - [ ] `npm run test:legacy` passes
 - [ ] `npm run build` succeeds
-- [ ] Manual: Settings language toggle flips pt-BR / en / es across migrated screens with no hardcoded leakage.
+- [ ] Manual: Settings language toggle flips pt-BR / en / es across ALL migrated screens (including newly migrated studio/mastering/explorer/mixer) with no hardcoded leakage.

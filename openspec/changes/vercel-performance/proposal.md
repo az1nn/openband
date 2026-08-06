@@ -1,5 +1,7 @@
 # Proposal — Vercel Frontend Performance
 
+> Status: P0+P1 shipped; P2 gated. See openspec/specs/vercel-performance/spec.md.
+
 ## Context
 The OpenBand web app is exported as a static site (`expo export -p web`, output `dist/`, deployed on Vercel via `vercel.json`) and users report the deployed frontend loads **"veeeeery slow"**. A performance audit was completed and found the root causes (all measured against the current `dist/` export):
 

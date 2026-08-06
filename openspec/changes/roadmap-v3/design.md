@@ -1,5 +1,7 @@
 # Design: OpenBand V3 Roadmap
 
+> **Status:** M1 Cloud Sync, M2 Audio Recording, and M3 Advanced MIDI are shipped. M4 Desktop: Electron shell + bridge methods shipped, bundle compile/verify pending (`native-builds`). M5 i18n: install/dictionaries/provider shipped, component refactor deferred to `i18n-completeness`.
+
 ## Architecture Overview
 
 ### 1. Supabase Cloud Sync

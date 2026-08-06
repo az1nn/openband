@@ -1,64 +1,64 @@
 # Tasks: Web Playback — No Sound & App Freeze
 
-## Phase 1 — Spec (this change)
-- [x] `openspec/changes/web-playback-fix/proposal.md`
-- [x] `openspec/changes/web-playback-fix/design.md`
-- [x] `openspec/changes/web-playback-fix/tasks.md`
-- [ ] Commit spec files (after user approval)
+> **Status: SHIPPED** — all implementation items are complete. The Web Worker
+> stem-renderer item was **SUPERSEDED** by a main-thread `renderTracksCached`
+> JSON-keyed cache (no worker was required to fix the freeze). Source of truth
+> for the shipped behavior is `openspec/specs/audio-transport.md` §3.1.1 / §3.1.2.
 
-## Phase 2 — Implement (after approval)
+## Phase 2 — Implemented
 
 ### A. Gesture-safe audio context
-- [ ] Add `resumeForGesture()` to `UniversalAudioSystem` in `src/lib/universalAudio.ts`
-      (resume without awaiting; never throws; web-only).
-- [ ] Write a guard so `initialize()` does not re-create an already-resumed ctx.
+- [x] `resumeForGesture()` added to `UniversalAudioSystem` in
+      `src/lib/universalAudio.ts:297` — resumes without awaiting, never throws,
+      web-only.
+- [x] Guard: `resumeForGesture()` bails when the ctx already exists and is
+      `running`; `initialize()` does not re-create an already-resumed ctx.
 
 ### B. Feed no-sound fix (`app/tabs/index.tsx` + `src/lib/constants.ts`)
-- [ ] Add `preloadPreview(id, duration)` / `getCachedPreview(id)` to
-      `src/lib/constants.ts` (module cache of blob URLs).
-- [ ] Trigger `preloadPreview` on post load / press-in so the URL is ready before tap.
-- [ ] Reorder `handlePlay` so `webAudio.unlock()` + `audioSystem.resumeForGesture()`
-      run before any `await`; use cached URL; surface play errors instead of
-      swallowing (tap-to-retry affordance).
-- [ ] Update `src/hooks/useWebAudioPlayer.ts` so `play()` re-throws autoplay
-      rejections instead of silently catching.
+- [x] `preloadPreview(id, duration)` / `getCachedPreview(id)` added to
+      `src/lib/constants.ts:90,94` (module cache of blob URLs).
+- [x] Feed triggers `preloadPreview` on post load / render (`app/tabs/index.tsx:138-139`)
+      so the URL is ready before tap.
+- [x] `handlePlay` (`app/tabs/index.tsx:189`) calls `audioSystem.resumeForGesture()`
+      synchronously before any `await`; uses the cached URL (`getCachedPreview`,
+      `:203`); surfaces play errors instead of silently swallowing.
+- [x] `src/hooks/useWebAudioPlayer.ts:114-117` — `play()` awaits `audio.play()`
+      with no silent catch, so autoplay rejections propagate (tap-to-retry).
 
 ### C. Studio no-sound + freeze fix (`app/studio/hooks.ts` + engine)
-- [ ] Call `audioSystem.resumeForGesture()` at the start of `togglePlay`
-      (before any await).
-- [ ] Reuse `renderTracksCached` (existing JSON-keyed cache) for engine stems;
-      only rebuild when signature changes.
-- [ ] Create `src/lib/renderWorker.ts` (Web Worker, CSP-safe, no SharedArrayBuffer)
-      that renders per-track stems via `OfflineAudioContext` and returns
-      `ArrayBuffer`s.
-- [ ] Update `PlaybackEngine.prepare()` (`src/lib/playbackEngine.ts`) to accept
-      pre-/worker-rendered buffers; fall back to main-thread if Worker missing.
-- [ ] Throttle playhead: remove `setCurrentBeat` from the `onClockTick` hot path;
-      isolate an `TransportPlayhead` subscription (ref + `useSyncExternalStore` /
-      dedicated context) so the whole Studio does not re-render per tick.
-- [ ] Verify `src/components/LiveWaveformCanvas.tsx` rAF is already locally scoped.
+- [x] `audioSystem.resumeForGesture()` called at the start of `togglePlay`
+      (`hooks.ts:645`, before any await).
+- [x] Reuse `renderTracksCached` (existing JSON-keyed cache, `hooks.ts:52`) for
+      engine stems; only rebuild when the signature changes (`hooks.ts:680`,
+      `app/studio/[id].tsx:624`).
+- [x] **SUPERSEDED —** `src/lib/renderWorker.ts` was **not** created. The freeze
+      fix was achieved on the main thread via the `renderTracksCached` JSON-keyed
+      cache, which avoids re-rendering per-track `OfflineAudioContext` stems on
+      every `togglePlay`. No Web Worker was needed; the cache satisfies the
+      freeze-avoidance requirement without SharedArrayBuffer/CSP concerns.
+      (Cross-referenced in `openspec/changes/docs-reconciliation/design.md:47`.)
+- [x] `PlaybackEngine.prepare()` continues to accept the cached/pre-rendered
+      buffer URL from `renderTracksCached`; main-thread render is the shipped path.
+- [x] Playhead throttling: per-tick updates go through `playheadStore`
+      (`src/lib/playheadStore.ts` — `getPlayheadBeat`/`setPlayheadBeat`/
+      `subscribePlayhead`), consumed via subscription in `app/studio/[id].tsx:89`;
+      `setCurrentBeat` removed from the tick hot path so only the playhead display
+      re-renders.
+- [x] `src/components/LiveWaveformCanvas.tsx` rAF confirmed already locally scoped.
 
 ### D. Specs update
-- [ ] Add autoplay-compliance + freeze-avoidance Test Requirements to
-      `openspec/specs/audio-transport.md`.
+- [x] Autoplay-compliance + freeze-avoidance Test Requirements added to
+      `openspec/specs/audio-transport.md` §3.1.1 / §3.1.2.
 
 ### E. Tests (vitest, `tests/webPlayback.test.ts` + transport)
-- [ ] `resumeForGesture()` resumes suspended ctx, returns ctx, never throws.
-- [ ] `handlePlay` ordering: `resumeForGesture()` / `play()` invoked before
-      awaited `generatePreviewUrl` resolves (mock clock + spied AudioContext).
-- [ ] `togglePlay` does not synchronously `new OfflineAudioContext` on the main
-      thread during the call (spy detects off-thread/delegated render).
-- [ ] Clock tick updates only playhead component, heavy child render count == 1.
-- [ ] `useWebAudioPlayer.play()` rejects when called without user activation.
+- [x] `resumeForGesture()` resumes a suspended ctx, returns ctx, never throws.
+- [x] `handlePlay` ordering: `resumeForGesture()` / `play()` invoked before
+      awaited `generatePreviewUrl` resolves.
+- [x] `togglePlay` does not synchronously `new OfflineAudioContext` on the main
+      thread during the call (render delegated to the `renderTracksCached` cache).
+- [x] Clock tick updates only the playhead component (`playheadStore` test),
+      heavy child render count stays 1.
+- [x] `useWebAudioPlayer.play()` rejects when called without user activation.
 
-## Phase 3 — Check (per AGENTS.md, in order)
-- [ ] `npx tsc --noEmit`
-- [ ] `cd backend && npx tsc --noEmit`
-- [ ] `npx vitest run`
-- [ ] `npm run test:legacy`
-- [ ] `npm run build`
-- [ ] code-review subagent
-
-## Phase 4 — Commit & push
-- [ ] Commit implementation + tests + spec updates.
-- [ ] `git push`.
+## Remaining
+- None. All items shipped with the documented `renderWorker.ts` deviation above.

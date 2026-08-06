@@ -1,5 +1,9 @@
 # Proposal: Web Playback — No Sound & App Freeze
 
+> **Status: SHIPPED.** Folded-in test requirements for the shipped work live in
+> `openspec/specs/audio-transport.md` §3.1.1 / §3.1.2. `tasks.md` records the
+> implemented items (incl. the `renderWorker.ts` superseded deviation).
+
 ## Context
 
 On web builds, playback in the Feed (`app/tabs/index.tsx`) and Studio

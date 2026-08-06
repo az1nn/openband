@@ -1,5 +1,7 @@
 # Proposal: OpenBand V3 Roadmap (The Pro DAW Update)
 
+> **Status:** M1 Cloud Sync, M2 Audio Recording, and M3 Advanced MIDI are shipped. M4 Desktop: Electron shell + bridge methods shipped, bundle compile/verify pending (`native-builds`). M5 i18n: install/dictionaries/provider shipped, component refactor deferred to `i18n-completeness`.
+
 ## Context
 Having established a solid foundation with a modern responsive UI, functional mixing controls, and high-quality audio export, OpenBand is ready to evolve from a basic web sequencer into a fully-featured, cross-platform Digital Audio Workstation. This roadmap groups our next massive leaps into four major milestones.
 
