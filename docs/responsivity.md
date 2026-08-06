@@ -7,8 +7,8 @@ envolve `useWindowDimensions` do React Native.
 
 | Breakpoint | Largura    | isMobile | isTablet | isDesktop |
 | ---------- | ---------- | -------- | -------- | --------- |
-| mobile     | < 480px    | true     | false    | false     |
-| tablet     | 480–1023px | false    | true     | false     |
+| mobile     | < 768px    | true     | false    | false     |
+| tablet     | 768–1023px | false    | true     | false     |
 | desktop    | ≥ 1024px   | false    | false    | true      |
 
 Desktop layout é ativado para todas as plataformas quando `breakpoint === 'desktop'`.
@@ -57,15 +57,16 @@ Ajustes) seguem o mesmo padrão:
 
 | Tela       | Max-width     |
 | ---------- | ------------- |
-| Feed       | full-screen   |
-| Biblioteca | full-screen   |
-| Momentos   | full-screen   |
-| Extractor  | full-screen   |
-| Conta      | full-screen   |
-| Ajustes    | full-screen   |
-| Login      | full-screen   |
+| Feed       | 1024          |
+| Biblioteca | 1200          |
+| Momentos   | 1200          |
+| Extractor  | 1024          |
+| Conta      | 800           |
+| Ajustes    | 800           |
+| Login      | 600           |
 
-All screens use `width: 100%` without max-width constraints.
+All content screens use `width: 100%` with a max-width constraint declared via
+`LAYOUT_MAX_WIDTHS` in `src/lib/responsive.ts` (feed 1024 · ~wide 1440 · library/moments 1200 · extractor/mastering 1024 · account/settings 800 · login 600).
 
 ### 2. Tab Navigator + Sidebar (`app/tabs/_layout.tsx`)
 
@@ -137,4 +138,4 @@ style={{ height: resp.isDesktop ? 104 : 80 }}
 - Não use prefixos `sm:`/`md:`/`lg:` do Tailwind — eles não batem com os
   breakpoints do app.
 - Não adicione media queries no CSS. Toda responsividade deve ser runtime.
-- Match the breakpoint pattern (mobile < 480, tablet 480–1023, desktop ≥ 1024).
+- Match the breakpoint pattern (mobile < 768, tablet 768–1023, desktop ≥ 1024).

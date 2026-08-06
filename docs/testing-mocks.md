@@ -149,7 +149,7 @@ Missing exports cause `[vitest] No "X" export is defined on the "..." mock` at r
 
 ## Bridged Modules Must Be Complete
 
-The `NativeBridge` interface (`src/bridge/interface.ts`) has 11 methods. When a component calls any of them during render, the mock must provide it:
+The `NativeBridge` interface (`src/bridge/interface.ts`) has 19 methods (18 required + optional `runVoiceCleaner`). When a component calls any of them during render, the mock must provide it:
 
 ```ts
 vi.mock("../src/bridge", () => ({
@@ -166,6 +166,13 @@ vi.mock("../src/bridge", () => ({
     onMenuAction: vi.fn(),
     removeMenuActionListener: vi.fn(),
     getAppDataPath: vi.fn(),
+    enumerateAudioDevices: vi.fn(),
+    openHardwareInput: vi.fn(),
+    closeHardwareInput: vi.fn(),
+    createPatchRoute: vi.fn(),
+    removePatchRoute: vi.fn(),
+    getPatchRoutes: vi.fn(),
+    runVoiceCleaner: vi.fn(),    // optional
   },
 }));
 ```

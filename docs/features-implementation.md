@@ -38,7 +38,7 @@ Transport toolbar has rate selector (0.5x–2x) and pitch shift buttons (±12 se
 
 ### Task 3.1: CRDT implementation — ✅ DONE
 
-`src/lib/crdt.ts` implements operation-based CRDT with Lamport timestamps and LWW conflict resolution. `src/lib/yjsCRDT.ts` adds WebSocket sync with auto-reconnect. Backend SSE endpoints for operation broadcast.
+`src/lib/crdt.ts` implements operation-based CRDT with Lamport timestamps and LWW conflict resolution. `src/lib/collaboration.ts` adds WebSocket sync with auto-reconnect. Backend SSE endpoints for operation broadcast.
 
 ### Task 3.2: Presence service — ✅ DONE
 
@@ -111,12 +111,11 @@ Transport toolbar has rate selector (0.5x–2x) and pitch shift buttons (±12 se
 
 ## Remaining Gaps (No Priority)
 
-The following features from the original analysis are **lower priority** and not yet implemented:
+The following feature from the original analysis is **lower priority** and not yet implemented:
 
-- Video export (low)
 - AUv3 plugin support (low)
-- MIDI Learn / MCU control surface (low)
-- Cloud sync auto-push (medium)
+
+Video export, MIDI Learn (via `src/lib/midiLearn.ts`), and cloud-sync auto-push (via `src/lib/cloudSync.ts` / `src/lib/supabaseRemote.ts`) are now shipped.
       // ... color, plugins, etc
     },
   ]);
@@ -441,7 +440,7 @@ function autoMix(tracks: TrackDef[], genre: string): TrackDef[] {
 ✅ **Pan Automation** (parallel to volume lane, purple color curve)
 ✅ **Multi-Band EQ Display** (20Hz-20kHz curve, 5 band labels, spectrum analyzer, draggable)
 
-**All features shipped. No remaining gaps.**
+**All features shipped except AUv3 plugin support (see Remaining Gaps above).**
 
 ## Playback Improvements (Latest)
 
