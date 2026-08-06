@@ -73,10 +73,10 @@ The `PluginEditor` (and `OneKnob`) MUST let a user assign any `ModSource` to a p
 - **When** the editor renders with `playing=true` and a base value of `0` in range `[-24, 24]` at `contextTime: 0`
 - **Then** `computeModulation("volume", { time: 0 })` equals `0.5` and the displayed value equals `24` (`0 + 0.5 * (24 - (-24))`)
 
-#### Scenario: Follow-up — audio-path hookup (not yet wired)
+#### Scenario: Audio-path hookup (wired)
 - **Given** modulation routes are stored in the `modulationMatrix` module singleton
 - **When** the audio engine processes a track/plugin chain
-- **Then** (FUTURE) `applyPluginChain` applies `applyModulation(target, baseValue, min, max, context)` per routed param using the live transport clock — this hookup is tracked as a follow-up and is not yet connected to the offline `pluginChain` render.
+- **Then** `applyPluginChain` applies `applyModulation(target, baseValue, min, max, context)` per routed param using the live transport clock — `scheduleModulated`/`modulateParam` in `src/lib/pluginChain.ts:192` and `applyModulationToPluginParams` in `src/lib/mastering.ts:212` (see the `modulation-matrix` spec).
 
 ## Test Requirements (Vitest)
 - [ ] `interpolateAutomationValue` returns midpoint for linear points at t=0.5

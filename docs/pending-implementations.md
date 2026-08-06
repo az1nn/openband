@@ -1,6 +1,6 @@
 # Pending Implementations (from OpenSpec specs)
 
-Reconciled against current code on 2026-07-16. Items marked `[x]` are
+Reconciled against current code on 2026-08-06. Items marked `[x]` are
 implemented + verified; `[ ]` are genuinely outstanding.
 
 ## Auth (`auth/spec.md`) — DONE
@@ -9,7 +9,7 @@ implemented + verified; `[ ]` are genuinely outstanding.
 - [x] Visitor session round-trips through `localStorage`
 - [x] `convertVisitorToAccount` clears the visitor session on success
 - [x] `AuthProvider` defaults to `FREE` tier and updates tierLimits after `/api/user/tier`
-- Follow-up (separate change `surface-auth-tier-ui`): surfacing tier in account/settings UI.
+- [x] `surface-auth-tier-ui` DONE: `src/lib/tier.ts` exports `TIER_LIMITS` + `getTierLimits`; `AuthContext` surfaces tier; `tests/tier.test.ts` covers limits.
 
 ## Automation & Routing (`automation-routing/spec.md`) — DONE
 - [x] `interpolateAutomationValue` linear/exponential midpoint
@@ -132,3 +132,12 @@ implemented + verified; `[ ]` are genuinely outstanding.
 - [x] `ci-workflow-fix`: harden vitest CI — guard `AudioContext` in jsdom (`universalAudio.ts`/`MasteringSuite.tsx`), add reporter `onUnhandledError` hook (swallows at reporter level), gate CLI exit via `dangerouslyIgnoreUnhandledErrors: true` in `vitest.config.ts`, commit `backend/package-lock.json`. Verified `# tests 1456 | 1456 passed`, exit 0.
 - [x] Recorded `url`s persist across reloads via durable `asset://` pointers (`recorded-url-persistence` change): asset store (IndexedDB web / bridge fs native), load hydration, engine resolves `asset://` before fetch.
 - [x] Web playback no-sound + freeze fixed (`web-playback-fix` change): `resumeForGesture`, cached preview, gesture-safe play, isolated playhead store.
+- [x] `ai-cover-generation`: `GenerateCoverModal` (`src/components/GenerateCoverModal.tsx`) + `app/settings-ai.tsx` + backend `routes/ai.ts` (BYOK providers); documented in `docs/AI_INTEGRATION_AGENT_SPEC.md`.
+- [x] `vercel-performance` (partial, P0+P1): cache headers in `vercel.json`, optimized logo (~4.6KB), post-export preload/preconnect/splash, deferred feed previews. P2 code-splitting NOT done.
+- [x] `mixer-functions`: `tests/lib7.test.ts` + `tests/components5.test.tsx` added (mixer behavior coverage).
+- [x] `comprehensive-test-suite`: new test files `components4/5/6/7`, `lib6-10`, `layout`, `screens2`, `specs-group1-6` etc. added.
+- [x] `mastering-chain-validation`: `validateMasteringChain` in `src/lib/mastering.ts` + `tests/mastering.test.ts`.
+- [x] `project-starter-wiring`: `setupProjectStarter` in `src/lib/projectStarter.ts` + `tests/projectStarter.test.ts`.
+- [x] `polish-core-specs`: `getChainLatency`/`latencySamples` + `serializePlugin`/`deserializePlugin` in `src/lib/pluginChain.ts`.
+- [x] `accessibility-pass`: `.focus-ring` (`global.css`), OneKnob `accessibilityRole="adjustable"`, transport labels, `tests/accessibility.test.tsx`.
+- [x] `native-builds` (partial): `BUILD.md`, Android signing fallback, Electron build scripts, bridge smoke tests done; release APK + device-path recording NOT done (see `unimplemented-specs.md`).

@@ -8,6 +8,7 @@ OpenBand supports both anonymous **visitor** sessions and full authenticated acc
 - `backend/src/routes/auth.ts` — `register`, `login` (bcrypt + JWT), `google` (Google OAuth token exchange), `me` (token introspection), `convert-visitor` (creates an account from a visitor id, bcrypt-hashing the password and issuing a JWT).
 - `backend/src/routes/magicLink.ts` — issues and verifies **signed** magic-link tokens (HMAC/JWT), delivered in-app (no SMTP). Verification returns a session/JWT.
 - `backend/src/routes/tier.ts` + `backend/src/middleware/tierGuard.ts` — `getTierLimits(tier)`, `checkTierAccess(tier, feature)`, `requireFeature(feature)`, `requireTier(minimumTier)`. Tier is read from the `x-user-tier` request header (default `FREE`). `requireFeature` returns `403` when the feature is disabled for the tier.
+- `src/lib/tier.ts` — frontend single-source-of-truth mirror of `tierGuard`: `getTierLimits(tier)` and `checkTierAccess(tier, feature)` are used by `AuthContext` to expose `tier` / `tierLimits` to the UI and by the account/settings screens for the plan badge.
 
 ## Requirements
 

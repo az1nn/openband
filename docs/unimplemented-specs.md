@@ -1,131 +1,41 @@
-# Unimplemented Specs — Tracking List
+# Unimplemented / Outstanding Items
 
-Compiled from `docs/pending-implementations.md` (unchecked Test Requirements / Known Gaps / Follow-ups in `openspec/specs/*.md`) and the open `openspec/changes/` specs not yet archived.
-
-This is a live checklist of spec functionality that is **defined but not yet implemented**. Items are grouped by domain and mapped to the OpenSpec change that should own them.
-
-Legend: `[ ]` = not implemented · `CHANGE:` = owning open change spec in `openspec/changes/`.
+This file lists only genuinely open work, reconciled against the current repo state on **2026-08-06**. `docs/pending-implementations.md` is the **authoritative** tracker for implemented items; cross-check any "unimplemented" claim here against code and that file before acting. Legend: `[ ]` = open.
 
 ---
 
-## 1. Auth & Tier Gating — `CHANGE: surface-auth-tier-ui` (HIGH)
-- [ ] `getTierLimits("FREE")` disables `canExportVideo`; `TIER1_LIVE` enables it
-- [ ] `checkTierAccess` returns the boolean limit for a feature
-- [ ] Visitor session round-trips through `localStorage`
-- [ ] `convertVisitorToAccount` clears the visitor session on success
-- [ ] `AuthProvider` defaults to `FREE` tier (`canCreateRemixes:false`) and updates tierLimits after `/api/user/tier` fetch
-- [ ] Surface tier in account/settings UI + gate remix/publish
+## 1. i18n completeness (`openspec/changes/i18n-completeness`) — MEDIUM
+Deferred remainder of the i18n batch. Shipped dictionaries (`settings`/`feed`/`library`/`account`/`newProject`/`moments`/`extractor`) and migrated screens are out of scope here (see `openspec/specs/i18n/spec.md`).
+- [ ] Add `studio` namespace to `src/locales/{en,pt,es}.json` and migrate `app/studio/[id].tsx` to `t("studio.*", ...)` (currently hardcodes pt strings).
+- [ ] Add `mastering` namespace and migrate `app/mastering/index.tsx` to `t("mastering.*", ...)`.
+- [ ] Add `explorer` namespace and migrate `app/tabs/explorer.tsx` to `t("explorer.*", ...)` (currently no `useTranslation` usage).
+- [ ] Add `mixer` namespace and migrate `app/mixing-console.tsx` text labels to `t("mixer.*", ...)` (keep unicode transport glyphs).
+- [ ] Migrate `app/tabs/feed.tsx` (separate feed screen not yet migrated).
+- [ ] Create `tests/i18n-coverage.test.ts` (deep key parity across the 3 locale files, per-namespace growth, hardcoded-string leak scan).
 
-## 2. Automation & Modulation Matrix — `CHANGE: wire-modulation-matrix` (HIGH)
-- [ ] `interpolateAutomationValue` linear/exponential midpoint
-- [ ] `buildAutomationSchedule` beats→seconds at given bpm
-- [ ] `createDefaultBuses` + `assignTrackToBus` name-based mapping
-- [ ] `wouldCreateCycle` acyclic/back-edge
-- [ ] `getModSources`/`getModTargets` each return 11 entries
-- [ ] `computeModulation` scaled + clamped contribution
-- [ ] `applyModulation` offsets base within [min,max]
-- [ ] `PluginEditor` "MOD" affordance per supported param + route assignment
-- [ ] `applyPluginChain` applies `applyModulation` per routed param using live transport clock (offline `pluginChain` render NOT connected to modulation matrix)
+## 2. Native builds (`openspec/changes/native-builds`) — MEDIUM
+Implementation pass (scaffolding, signing fallback, bridge chain, smoke tests, `BUILD.md`) is shipped; only the document runs and real-device verification remain open.
+- [ ] Run `cd android && ./gradlew assembleRelease` and confirm `android/app/build/outputs/apk/release/app-release.apk` is produced (Gradle toolchain / SDK not available here).
+- [ ] Run `cd electron && npm run build:linux` and confirm `electron/out/` distributables exist.
+- [ ] Device-path recording: `Platform.OS !== "web"` branch using `expo-audio` `AudioRecorder` writing into an armed `TrackDef` region (native `hardwareIO` bridge path is in place).
+- [ ] Verify a device-recorded region persists into the mix (blocked on the device path).
+- [ ] Real-device/shell verification: Electron dialogs + save/load through `OpenBandNative`; Android installs APK and plays/records without `navigator.mediaDevices` crash; `hardwareIO` returns a real device list in Electron.
 
-## 3. Studio DAW — `CHANGE: web-player-studio-audio` (HIGH)
-- [ ] VuMeter per track on "mixer" tab
-- [ ] Play → `startClock(25)` + `onClockTick` updates `currentBeat`
-- [ ] Stop → `stopClock()` + reset beat
-- [ ] Record flips `isRecording` + appends `TrackRegion`
-- [ ] Add clip appends valid `TrackRegion`
-- [ ] Track plugin slot opens `PluginEditor`
-- [ ] Draw `AutomationLane` populates `track.automation.volume`
-- [ ] Group creation updates `groups`+`trackAssignments`
-- [ ] Master `MasterRack` included in `renderTracksToUrl` mixdown
+## 3. Vercel performance P2 (`openspec/changes/vercel-performance`) — LOW
+P0 + P1 shipped (`1026fb8`); only the gated P2 work remains.
+- [ ] Code splitting: `web.output: "static"` + `unstable_settings` client-only on data-driven routes, OR Metro `asyncRoutes` (gate: build + vitest + Playwright smoke; else revert and rely on P0/P1).
+- [ ] SW precache of hashed entry JS/CSS in the service worker.
+- [ ] Housekeeping: remove `@react-three/fiber`/`@react-three/drei` (confirm `zustand` explicit dep first), compress `assets/icon.png`/`icon-512.png`, remove unreferenced `public/logo-openband.png`.
 
-## 4. Social Feed Backend — `CHANGE: build-social-feed-backend` (HIGH)
-- [ ] FeedPostCard/MomentCard/SamplePackCard/ProjectCard render from mock data ✅ (UI)
-- [ ] Genre filter reduces visible posts
-- [ ] Sort mode reorders posts
-- [ ] Like increments local count
-- [ ] **Not persisted:** likes/remixes/favorites need backend `/api/feed` (`backend/src/routes/feed.ts` + `src/lib/feedApi.ts`)
+## 4. Roadmap V3 remaining (`openspec/changes/roadmap-v3`) — LOW
+M1–M3 fully shipped; M4 has shell + bridge shipped but bundle not compiled.
+- [ ] M4: compile and verify the Desktop App bundle (deferred/blocked — see `openspec/specs/native-builds/spec.md`).
+- [ ] M5: refactor remaining UI components to `useTranslation` — **deferred** to `i18n-completeness`.
 
-## 5. Studio Resilience — `CHANGE: web-player-studio-audio` (MEDIUM)
-- [ ] `scheduleCrashSave` coalesces rapid calls (latest wins)
-- [ ] `restoreCrashState` fails soft when IndexedDB unavailable
-- [ ] Ring buffer caps `count` at `ringBufferSize`; `getLatestMetrics` latest
-- [ ] `getAverageMetrics` averages + `peakCpu`
-- [ ] Threshold report callback fires above thresholds
-- [ ] `sendTelemetryReport` resolves `false` without throwing (endpoint mounted)
-- [ ] `measureInputLatency` = `(outputLatency+baseLatency)*1000`
-- [ ] `createLatencyCompensationNode` returns `null` for non-positive delay
+## 5. Plugin test coverage (`openspec/changes/document-plugin-specs`) — LOW
+Spec scaffolding shipped; per-plugin Vitest coverage gaps remain.
+- [ ] Add Vitest for `eq.ts`, `gate.ts`, `autopitch.ts`, `mbcomp.ts`, `tplimiter.ts`, `LufsMeter`, `MixManager`, `VisualEQ`.
+- [ ] Coverage target: each of 19 plugin files has ≥ 3 cases (~60 new tests), `npx tsc --noEmit` clean.
 
-## 6. Cloud Sync — `CHANGE: (none open)` (MEDIUM)
-- [ ] `uploadAsset` dedups identical SHA-256 bytes (`duplicated:true`, 64-char hash)
-- [ ] `uploadAsset` yields different hashes for different bytes
-- [ ] `syncNow`/`useCloudSync` push path no-throw under mock client
-- [ ] `fetchCloudProjects` returns mapped `state_json` rows
-- [ ] `syncProject` records conflict when remote `commitId` differs
-
-## 7. Collaboration CRDT — `CHANGE: (none open)` (MEDIUM)
-- [ ] `mergeOperations` retains two distinct ops
-- [ ] Concurrent same-path ops last-writer-wins
-- [ ] `encodeState`→`decodeState` round-trips op list
-- [ ] `applyOperation` applies `track.add`/`track.update`
-- [ ] `usePresence` throttles cursor sends
-- [ ] `usePresence` SSE subscribe + POST cursors + receive remote
-- [ ] `mergeRemoteCursor` keys by userId, excludes local
-
-## 8. Mixer Console — `CHANGE: (none open)` (MEDIUM)
-- [ ] `VuMeter` fill proportional to level, clamped [0,1]
-- [ ] `VuMeter` color thresholds (green<0.94, yellow 0.94-0.99, red>=1.0)
-- [ ] `VuMeter` peak-hold indicator only when `peakLevel>0.01`
-- [ ] Header "MIXING CONSOLE" + back button
-- [ ] `createChannelStrip` schedules CHANNEL_COUNT (16) strips
-- [ ] Renders 4 VU meter groups; master section with MASTER label
-- [ ] `loadThree` reject → `loadError` + fallback overlay
-
-## 9. Backend API — `CHANGE: (none open)` (MEDIUM)
-- [ ] `addJob` returns id; `getJobStatus` reflects pending/processing
-- [ ] `runMock` emits 4 stems w/ valid WAV (>44 bytes)
-- [ ] `requireFeature` blocks FREE tier for `canExportVideo`
-- [ ] `GET /api/stems/:filename` rejects path traversal (403)
-
-## 10. Project Storage — `CHANGE: (none open)` (MEDIUM)
-- [ ] `saveProject`→`loadProject` round-trips
-- [ ] `importProject` valid JSON → id; invalid → null (sanitize)
-- [ ] `.openband` archive round-trips via create/parse; corrupt magic → null
-- [ ] `commitState` yields 64-char SHA-256 `stateHash`
-- [ ] `sanitizeProjectData` defaults missing arrays + metronome
-
-## 11. AI Automix — `CHANGE: (none open)` (LOW)
-- [ ] `analyzeBuffer` finite rms/peak/lufs + normalized spectral balance
-- [ ] `analyzeBuffer` detects role from name ("Kick")
-- [ ] `generateAutoMix` per-track suggestions volume [0,1]
-- [ ] `autoMix` classifies "Kick" + adjusts volume
-- [ ] `AUTOMIX_GENRES` includes `rock`
-- [ ] `suggestNextChords([])`, `chordsToMIDINotes`, `PROGRESSION_PRESETS.length===10`, `resolveProgression`
-
-## 12. AI Voice Cleaner — `CHANGE: (none open)` (LOW)
-- [ ] `PLUGIN_SPECS["voiceCleaner"]` declares all params w/ clamped ranges
-- [ ] `buildPluginGraph()` includes enabled (excludes disabled) voiceCleaner
-- [ ] `measureSNR` increases/holds after denoise pass (web)
-- [ ] `measureRMS` in [0,1] for normalized buffer (web)
-
-## 13. Looper / Waveform / Tuner / Chord Track — `CHANGE: (none open)` (LOW)
-- [ ] Looper: record/stop/overdub/clearSlot/beatDuration/onClose
-- [ ] Waveform: `generatePeakData`, `renderWaveformCanvas`, `getVisibleRange`, `LiveWaveformCanvas` rAF
-- [ ] Tuner: `noteNameFromFreq` mapping, ±5¢ in-tune, instrument swap, onClose
-- [ ] Chord Track: `PROGRESSION_PRESETS` 10, `suggestNextChords`, `chordsToMIDINotes`, `buildVoicing`, `keySignature` resolve
-
-## 14. Cross-cutting Follow-ups (MEDIUM)
-- [ ] `real-lufs-meter`: `src/lib/lufs.ts` (BS.1770 K-weighting, true peak) NOT implemented — `LufsMeter.tsx` stub
-- [ ] `first-run-onboarding`: `OnboardingFlow.tsx` created; persistence helpers pending
-- [ ] `i18n-completeness`: pt-BR default + namespace extensions pending — `CHANGE: i18n-completeness`
-- [ ] `build-social-feed-backend`: `posts`/`post_likes` schema + `routes/feed.ts` pending
-- [ ] `ci-pipeline`: `.github/workflows/ci.yml` not created (config only in `design.md`)
-- [ ] `PluginEditor`/`OneKnob` import `modulationMatrix` but modulation NOT applied at playback time
-- [ ] `audio-system.md`: recorded `url`s not persisted across reloads (follow-up spec needed)
-
----
-
-## Open `changes/` specs NOT yet archived
-These propose work that has not been verified as implemented/merged:
-`accessibility-pass`, `comprehensive-test-suite`, `document-plugin-specs`, `i18n-completeness`, `mastering-chain-validation`, `mixer-functions`, `native-builds`, `polish-core-specs`, `project-starter-wiring`, `roadmap-v3`, `ship-wasm-binary`, `surface-auth-tier-ui`, `web-player-studio-audio`, `wire-modulation-matrix` (and empty/partial: `mastering-preset-fixes`, `project-starter-fixes`).
-
-See `docs/pending-implementations.md` for the original compiled list and `openspec/specs/*.md` for authoritative requirement checkboxes.
+## 6. Immersive studio avatar palette (`openspec/specs/immersive-studio`) — LOW
+- [ ] Wire `src/lib/habboAssets.ts` into a screen — depots only experimental color constants; no screen imports it (confirmed via grep). Model-building logic, screen wiring, and avatar system remain future work.

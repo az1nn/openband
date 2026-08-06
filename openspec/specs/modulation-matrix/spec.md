@@ -12,6 +12,8 @@ The matrix core is `src/lib/modulationMatrix.ts`. Eleven sources (`MOD_SOURCES` 
 
 In `src/components/PluginEditor.tsx`, `paramToTarget(paramId)` (`:36`) maps a plugin param id to a `ModTarget`; `ParamRow` (`:61`) renders a `MOD●` badge (testID `mod-<paramId>`) when routes are active and a source picker that calls `addModRoute`/`removeModRoute`. `OneKnob.tsx` (`:26`) accepts `modTarget` + `modContext` and folds `computeModulation` into the dragged value.
 
+Modulation is applied at playback, not just in the editor. `src/lib/pluginChain.ts` `scheduleModulated` (`:192`) / `modulateParam` (`:223`) offset any mapped `AudioParam` via `applyModulation` at the live transport clock (`opts.modTime`), ramping per-block over the render duration. The mastering render path (`src/lib/mastering.ts` `applyModulationToPluginParams` at `:212`, consumed per-plugin in `applyMasteringPlugin` at `:183`) replaces every routed plugin param with its value at `modTime`; params without an active route keep their base value. `computeModulatedParams` (`src/lib/modulationMatrix.ts:400`) applies the same pass over a param map.
+
 ## Requirements
 
 ### Requirement: Source → Target Assignment
