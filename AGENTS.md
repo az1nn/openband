@@ -40,7 +40,7 @@ Before starting any task:
 - [ ] Review `src/components/index.ts` for existing design system components
 - [ ] Read `tailwind.config.js` for design tokens (colors, spacing, radii)
 - [ ] Check `package.json` for available dependencies — **do not add new ones without approval**
-- [ ] Read the exact Expo SDK docs at https://docs.expo.dev/versions/v56.0.0/ before using any Expo API
+- [ ] Read the exact Expo SDK docs at https://docs.expo.dev/versions/v57.0.0/ before using any Expo API
 - [ ] Check `docs/supabase.md` when setting up or modifying Supabase integration
 - [ ] Check git log (`git log --oneline -10`) to understand recent context
 - [ ] Run code review via the `code-review` agent before every commit
@@ -86,7 +86,7 @@ Before starting any task:
 - **No comments in code.** The code should be self-documenting.
 - **Tailwind v3 syntax.** Use `@tailwind base/components/utilities` directives, NOT `@import "tailwindcss/..."` (that's v4).
 - **Don't modify config files** (`tailwind.config.js`, `metro.config.js`, `babel.config.js`, `tsconfig.json`) unless the task explicitly requires it. (Adding `@bridge` alias to tsconfig.json is allowed for desktop architecture changes.)
-- **Keep changes documentation updated:** Always consult and update `docs/ui-overhaul-v2-changes.md` when modifying visual layouts, themes, stylesheets, or core components to ensure all UI overhaul features remain fully documented.
+- **Keep changes documentation updated:** Always consult and update `docs/features-implementation.md` when modifying visual layouts, themes, stylesheets, or core components to ensure all implemented features remain fully documented.
 - **No dead code.** Don't leave unused imports, variables, or files.
 - **Root cause, not suppression.** For bugs, fix the underlying issue. Don't add try/catch wrappers that silence errors.
 - **Test output format:** Every test must follow the node:test pattern — `▶ SuiteName` for describe blocks, `  ✔ test description (Xms)` for passing tests, and `✔ SuiteName (Xms)` at suite end. See legacy tests (`tests/presets.test.ts`, `tests/types.test.ts`) for reference.
@@ -369,25 +369,20 @@ src/
   context/
     AuthContext.tsx    — Auth state context (session, user, loading, signOut)
   bridge/            — Desktop bridge (interface, electron, tauri stub, browser fallback, auto-detect)
-  components/         — Design system (56 components, see table above)
+  components/         — Design system (70 components, see table above)
   hooks/
     useUniversalAudio.ts — expo-audio wrapper with AudioContext resume
 
 tests/
-  components.test.tsx — Vitest component rendering + interaction tests (153 tests)
-  components2.test.tsx — Vitest additional component tests (28 tests)
-  components3.test.tsx — Vitest additional component tests (20 tests)
-  screens.test.tsx  — Vitest screen-level tests (28 tests)
-  lib.test.ts        — Vitest library function tests (66 tests)
-  lib2.test.ts       — Vitest additional library tests (57 tests)
-  lib3.test.ts       — Vitest additional library tests (77 tests)
-  lib4.test.ts       — Vitest additional library tests (40 tests)
-  lib5.test.ts       — Vitest universalAudio + hardwareIO tests (20 tests)
-  responsive.test.ts — Vitest breakpoint & dimension tests (16 tests)
-  types.test.ts      — Legacy node:test type structure tests (12 tests)
-  presets.test.ts    — Legacy node:test preset count + structure tests (12 tests)
+  Accessibility, assetStore, audioExport, audioPlayback (aux audioMock.ts), authTier, cloudSync, dawproject, feed, feedApi, generateCoverModal, hardwareIO.native + hardwareIONative, i18n, instrumentPresets, layout, mastering, midiLearn, mixer, modes, modulation (.test.ts + .test.tsx), modulationMatrix + modulationMatrixRender, nativeBridge, nav-shell, objectStorage, onboarding, patchbay, playbackEngine, presence, projectBranching, projectCover, projectStarter, recording, regionEdit, responsive, scenes, settingsAI, settingsStore, studio, studio-audio-pure, telemetry, tier, transport, tune, videoExport, voiceCleaner + voiceCleanerMetrics, webPlayback
+  lib, lib2..lib10, lib_wasm  — library/test helpers (grouped)
+  components, components2..components7  — component tests (grouped)
+  specs-group1..specs-group6  — spec/canonical test groups
+  plugins/ (dsp, presetSerial)  — plugin sub-suite
+  presets.test.ts, types.test.ts  — Legacy node:test suite (supporting ok-reporter.ts, setup.ts)
+  Full suite totals: 1456 vitest tests + 24 legacy node:test tests across 80 test files (78 at tests/ root + 2 in tests/plugins/)
 
-stories/              — Storybook stories for all 56 components (49 stories)
+stories/                      — Storybook for all 70 components (50 stories)
   *.stories.tsx       — Run: `npx storybook dev -p 6006`
 
 .storybook/
