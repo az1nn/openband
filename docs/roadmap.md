@@ -1,10 +1,10 @@
 # OpenBand Roadmap
 
-**Last updated:** July 3, 2026
+**Last updated:** August 6, 2026
 
 ---
 
-## ✅ Shipped (43 features)
+## ✅ Shipped (41 features)
 
 ### Core DAW
 - ✅ Multi-track DAW with responsive layout (mobile/tablet/desktop)
@@ -18,12 +18,15 @@
 - ✅ Track grouping (shared volume/mute)
 - ✅ Sidechain routing (per-track source selector)
 - ✅ Looper / overdub (4 independent slots)
+- ✅ Standalone "Add Clip" action in Studio (appends region to selected track)
+- ✅ Recorded URL persistence across reloads (durable `asset://` pointers)
 
 ### Instruments
 - ✅ Synth (16-voice polyphonic, 25 presets, OSC/FLT/ENV/LFO/ARP)
 - ✅ Sampler (velocity, melodic keyboard, transient slicing, stereo slicing)
 - ✅ Chord track (10 presets, Markov suggestions, MIDI generation)
 - ✅ CodeSampler (token-based beat sequencer)
+- ✅ MIDI Learn (map hardware CC to plugin/track parameters)
 
 ### Effects & Processing
 - ✅ Plugin system (19 types: EQ, comp, limiter, reverb, delay, etc.)
@@ -31,18 +34,32 @@
 - ✅ Mastering suite (10 presets, VisualEQ, LUFS meter, A/B versions)
 - ✅ AutoMix (11 genres, role classification, LUFS targets)
 - ✅ Multi-band EQ display (20Hz-20kHz curve, draggable bands, spectrum analyzer)
+- ✅ Wasm plugin binary (assets/openband-plugin.wasm)
+
+### AI
+- ✅ AI Cover Generation (BYOK providers)
+- ✅ AI Voice Cleaner (SNR/RMS metrics)
+
+### Export & Performance
+- ✅ Video export (MP4)
+- ✅ Vercel performance (cache headers, preload/preconnect, deferred feed previews)
 
 ### Collaboration & Sharing
-- ✅ CRDT + SSE collaboration (real-time sync, project branching)
+- ✅ CRDT + SSE collaboration (real-time sync, presence cursors, project branching)
 - ✅ Social feed (posts, likes, remix, favorites)
 - ✅ Project export/import (JSON, cross-platform download)
 - ✅ Commit/push-to-cloud (version history, selective merge)
+- ✅ Cloud sync (Supabase push/pull, SHA-256 dedup)
 
 ### Platform
 - ✅ Web (Expo Router, HTML5 Audio fallback)
 - ✅ Desktop (Electron with swappable bridge)
 - ✅ Android (EAS build, APK)
 - ✅ MiniPlayer (persistent transport controls, shared state)
+- ✅ i18n (pt-BR default, en/pt/es dictionaries, useT hook)
+- ✅ 3D mixing console (spatial studio rooms, VU meter groups)
+- ✅ Project starter templates (setupProjectStarter)
+- ✅ CI pipeline (GitHub Actions frontend + backend)
 
 ---
 
@@ -81,27 +98,12 @@ These are the highest-impact items that improve the core experience.
 
 These add new capabilities that users frequently request.
 
-### 2.1 MIDI Learn
-**Files:** `src/components/PluginEditor.tsx`, `src/lib/midiSynth.ts`
-**What:** Map hardware MIDI controller knobs/faders to plugin parameters. Learning mode + persistent mapping.
-**Effort:** High
-
-### 2.2 Cloud sync (auto-push)
-**Files:** `src/lib/projectStore.ts`, `src/lib/supabase.ts`
-**What:** Auto-sync local projects to Supabase Storage on save. Conflict resolution via CRDT timestamps.
-**Effort:** High
-
-### 2.3 Video export
-**Files:** `src/components/BounceDialog.tsx`, `src/lib/universalAudio.ts`
-**What:** Export project as video (MP4) with waveform visualization + audio for TikTok/Reels.
-**Effort:** High
-
-### 2.4 One Knob simplifiers
+### 2.1 One Knob simplifiers
 **Files:** `src/components/OneKnob.tsx`
 **What:** Single-dial effects (Warmth, Presence, Bass Boost, Air, Room, Punch, Lo-Fi, Telephone) that map to multi-effect chains.
 **Effort:** Medium
 
-### 2.5 Vocal Verb + Shimmer
+### 2.2 Vocal Verb + Shimmer
 **Files:** `src/lib/types.ts`, `src/components/PluginEditor.tsx`
 **What:** Two new reverb types matching BandLab's signature effects.
 **Effort:** Medium
@@ -116,21 +118,13 @@ These are ambitious features that require significant architecture.
 **What:** Load third-party iOS audio unit plugins in Cubasis-style plugin rack.
 **Effort:** Very High
 
-### 3.2 AI Voice Cleaner
-**What:** Remove background noise/reverb from vocal tracks using AI model.
-**Effort:** High
-
-### 3.3 FX Preset Generator (text → chain)
+### 3.2 FX Preset Generator (text → chain)
 **What:** Type "warm vintage vocal" → AI generates a plugin chain with settings.
 **Effort:** High
 
-### 3.4 MCU Control Surface
+### 3.3 MCU Control Surface
 **What:** Mackie Control Universal protocol for hardware mixer control.
 **Effort:** High
-
-### 3.5 Multi-user real-time collaboration
-**What:** WebSocket-based live session with multiple cursors, shared playback, chat.
-**Effort:** Very High
 
 ---
 
@@ -139,8 +133,8 @@ These are ambitious features that require significant architecture.
 | Phase | Items | Total Effort | User Impact |
 |-------|-------|-------------|-------------|
 | 1 | 5 items | Low-Medium | **High** — polish core workflow |
-| 2 | 5 items | Medium-High | **High** — new capabilities |
-| 3 | 5 items | High-Very High | **Medium** — advanced features |
+| 2 | 2 items | Medium | **High** — new capabilities |
+| 3 | 3 items | High-Very High | **Medium** — advanced features |
 
 ---
 
@@ -148,6 +142,5 @@ These are ambitious features that require significant architecture.
 
 These are explicitly deferred per user decisions:
 
-- ❌ Online collaboration (deferred — offline-first is the focus)
 - ❌ Backend route TypeScript errors (pre-existing, don't block deployment)
 - ❌ `any` types in test files (acceptable in test context)
