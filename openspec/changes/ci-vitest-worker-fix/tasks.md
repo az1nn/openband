@@ -1,45 +1,40 @@
-# Tasks — Fix intermittent CI Vitest worker OOM failure (`ci-vitest-worker-fix`)
+# Tasks: Pin the Vitest worker pool for deterministic CI results
 
-> Follow the OpenSpec SDD loop: spec first (commit `spec:`), then implement, verify,
-> then final commit.
+## Implementation
 
-## Phase A — Spec commit (done when the three spec files are committed)
-
-- [x] `openspec/changes/ci-vitest-worker-fix/proposal.md`
-- [x] `openspec/changes/ci-vitest-worker-fix/design.md`
-- [x] `openspec/changes/ci-vitest-worker-fix/tasks.md`
-
-## Phase B — Implement
-
-- [ ] `vitest.config.ts`: add to the `test` block
+- [ ] `vitest.config.ts` — within the `test` block, add:
   - `pool: "forks"`
-  - `maxWorkers: 2`
+  - `maxWorkers: 1`
   - `maxConcurrency: 1`
   - `execArgv: ["--max-old-space-size=4096"]`
-  - `testTimeout: 15000`
-  - `hookTimeout: 20000`
-  - Keep `dangerouslyIgnoreUnhandledErrors: true` and `onUnhandledError` unchanged.
-- [ ] `tests/ok-reporter.ts`: remove the discarded `return false;` from
-      `onUnhandledError` (keep the `console.error` line).
+  - `isolate: true` (already implied default; set explicitly)
+  - preserve all existing keys (`globals`, `environment`, `setupFiles`, `include`,
+    `exclude`, `server.deps.inline`, `reporters`, `dangerouslyIgnoreUnhandledErrors`,
+    `onUnhandledError`) unchanged.
+- [ ] Confirm `tests/ok-reporter.ts` has no invalid hook (`onUnhandledRejection`
+  does not exist as a vitest reporter hook; keep only valid reporter methods;
+  reporter `onUnhandledError` is fine to keep logging, return value is ignored).
 
-## Phase C — Verify (run in order)
+## Verification
 
-1. `npx tsc --noEmit` — zero errors.
-2. `npx vitest run` — all tests pass (1456 locally), exit 0.
-3. `npx vitest run --maxWorkers=2` — passes under the configured worker topology.
-4. Pristine-clone check: `npm ci` in a temp clone, `taskset -c 0,1 npx vitest run`
-   — passes, exit 0.
-5. `npm run test:legacy` — 24 tests pass.
-6. `npm run build` — succeeds.
-7. Run the `code-review` subagent over the staged diff; fix anything it flags.
+- [ ] `npx tsc --noEmit` — exit 0, no type errors.
+- [ ] `npx vitest run` — exit 0, reports `# tests N | N passed` (1438 base).
+- [ ] Repeat `npx vitest run` 2 more times — stable exit 0 (deterministic).
+- [ ] `npm run test:legacy` — exit 0 (24 legacy tests).
+- [ ] `npm run build` — succeeds.
+- [ ] If CI access is available: confirm the `Vitest` step goes green after push.
+     Otherwise, note the local-only verification and the bounded-pool rationale for
+     a follow-up CI confirmation.
 
-## Phase D — Commit & push
+## Docs / spec sync
 
-- [ ] Commit implementation (type `fix:`) with a bullet list of the specific changes.
-- [ ] Push to `master` so the `CI` workflow runs the new pool config.
-- [ ] Poll `https://api.github.com/repos/cpxlabs/openband/actions/runs?per_page=1` for
-      the next run's conclusion to confirm the Vitest step is green (this is the
-      acceptance test for this change).
-- [ ] If still red, inspect the new run's annotation and iterate (the annotation for the
-      Vitest step is public).
-- [ ] Update `docs/features-implementation.md` if any doc references the vitest config.
+- [ ] Update `docs/pending-implementations.md` (if it references the CI vitest fix)
+  to reflect the pool pin + memory bounds as the implemented approach.
+- [ ] Update `docs/unimplemented-specs.md` if it lists the CI-vitest item, moving it
+  to implemented/pending as appropriate.
+
+## Follow-up (only if locally reproducible after the above)
+
+- [ ] If exit-1 still reproduces deterministically, capture the exact crash file and
+  inspect its heavy allocations (unguarded `OfflineAudioContext`/`WebAssembly`) and
+  add targeted guards. Otherwise no test-file changes are needed.
