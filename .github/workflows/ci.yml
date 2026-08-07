@@ -18,12 +18,19 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
       - name: Type check (frontend)
         run: npx tsc --noEmit
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
 
       - name: Vitest
         run: npx vitest run

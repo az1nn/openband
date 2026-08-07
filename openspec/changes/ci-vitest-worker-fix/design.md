@@ -1,84 +1,64 @@
-# Design: Pin the Vitest worker pool for deterministic CI results
+# Design: Install backend dependencies in the CI web job
 
-## Background / verification of validation options
+## Background / root cause
 
-vitest **4.1.10** (from `package-lock.json`) uses the Vitest 4 "pool rework".
-Confirmed available top-level `test` keys (research of installed typings + runtime):
+The root cause is NOT memory, wasm, or worker-pool related. It is a **missing
+dependency** in the CI environment:
 
-| Key | Valid values | Default |
-|---|---|---|
-| `pool` | `'threads' \| 'forks' \| 'vmThreads' \| 'vmForks' \| 'typescript'` (+ custom) | `'forks'` |
-| `fileParallelism` | `boolean` (`false` forces `maxWorkers` to `1`) | `true` |
-| `maxWorkers` | `number` or percentage string (e.g. `"50%"`) | `max(numCpus-1, 1)` run mode |
-| `maxConcurrency` | `number` (in-file concurrency) | `5` |
-| `execArgv` | `string[]` of extra node args, e.g. `['--max-old-space-size=4096']` | `[]` |
-| `isolate` | `boolean` | `true` |
-| `testTimeout` | `number` (ms) | `5000` |
-| `hookTimeout` | `number` (ms) | `10000` |
-| `dangerouslyIgnoreUnhandledErrors` | `boolean` | `false` |
+- `tests/feed.test.ts` (line 138) and `tests/telemetry.test.ts` (line 3) do
+  `import app from "../backend/src/app"`.
+- `backend/src/app.ts` imports `express`, which is installed only in
+  `backend/node_modules` (via `backend/package.json` / `backend/package-lock.json`).
+- The CI `web` job runs `npm ci` only at the repo root, so `express` is
+  unresolvable from the backend source during vitest collection.
+- Result: both test files fail at import (zero test cases), yet the custom reporter
+  counts only the 1438 executed test cases; vitest's `hasFailed(modules)` still sets
+  exit code 1.
 
-**Removed/ignored in v4 (do NOT use):** `poolOptions` (deprecation warning,
-sub-options are now top-level), `minWorkers`, `maxForks`, `minForks`, `singleFork`,
-`maxThreads`, `minThreads`. Env override is `VITEST_MAX_WORKERS`.
+Local developer machines pass because they have `backend/node_modules` installed
+from normal backend development.
 
-## Chosen configuration
+## Chosen fix
 
-The change keeps things deterministic on the 2-core CI runner while bounding memory:
+Add a step in the `web` job (`.github/workflows/ci.yml`) to install backend
+dependencies before running vitest:
 
-```ts
-const isCI = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
+```yaml
+- name: Install backend dependencies
+  working-directory: backend
+  run: npm ci
 
-test: {
-  // (existing keys preserved)
-  // CI runners get a deterministic single-fork pool; local runs keep the default
-  // parallel pool (numCpus-1 workers) for fast day-to-day iteration.
-  ...(isCI
-    ? {
-        pool: "forks",                         // explicit child-process pool
-        maxWorkers: 1,                         // deterministic single worker
-        maxConcurrency: 1,                     // serial in-file execution
-        execArgv: ["--max-old-space-size=4096"], // explicit generous per-worker heap
-        isolate: true,
-      }
-    : {}),
-}
+- name: Vitest
+  run: npx vitest run
 ```
 
-### Rationale
+The backend `package-lock.json` is committed (92KB), so `npm ci` is
+deterministic and fast (backend deps are small: express, cors, multer,
+supabase, jsonwebtoken, etc.).
 
-- The pool pins are applied **only when `CI` (or `GITHUB_ACTIONS`) is set**, so GitHub
-  Actions gets the bounded pool while local `npx vitest run` keeps the default
-  parallel pool. This avoids a local-dev performance regression.
-- `maxWorkers: 1` removes dependence on `availableParallelism()` (which can be 4 on
-  GH runners due to hyperthreading even though the cgroup grants 2 vCPU). A single
-  fork worker is exactly what a 2-core runner already tends toward, but pinned.
-- `execArgv: ["--max-old-space-size=4096"]`: the default heap cap is derived from the
-  host's cgroup memory, which on CI can produce an intermittent V8 heap OOM inside
-  the heavy DSP/Wasm files. Giving the single worker an explicit 4GB heap headroom
-  avoids a default-derived crash. HR corresponding cap stays under CI's ~7GB cgroup
-  (4GB worker + main + overhead).
-- `maxConcurrency: 1` prevents the in-file `Promise.all`/parallel-heavy audio suites
-  from stacking buffers concurrently.
-- Keeping `dangerouslyIgnoreUnhandledErrors: true` as defense-in-depth (it gates the
-  `errors → exit 1` path). The worker-pool bounds address the `hasFailed(modules)`
-  crash path that this flag does NOT cover.
+### Why not other options
+
+- **Exclude the two test files from vitest** — reduces coverage; they are real
+  backend-integration tests that should run.
+- **Add `express` to root `package.json`** — pollutes the frontend dependency graph
+  with a backend-only server dependency; incorrect layering.
+- **Pool/memory config tweaks** — disproven root cause (verified: the failure is
+  purely the missing express import, reproduced cleanly).
 
 ## Files to change
 
-1. `vitest.config.ts` — extend the `test` block with the pool keys above (only adds
-   keys; no existing values removed except where redundant).
+1. `.github/workflows/ci.yml` — insert the `Install backend dependencies` step
+   between `Type check (frontend)` and `Vitest` in the `web` job.
 
 ## Verification
 
-- `npx tsc --noEmit` — must pass (config remains type-valid).
-- `npx vitest run` — local must still exit 0 and report `# tests N | N passed`.
-- Repeat `npx vitest run` 3× to confirm deterministic/stable exit 0 (no flakiness).
-- `npm run test:legacy` — 24 legacy tests still pass.
-- `npm run build` — production build succeeds.
-- CI trigger: after push, confirm GitHub Actions `Vitest` step concludes success.
+- Local: `cd backend && npm ci` then `npx vitest run` exits 0 with
+  `# tests 1438+ | ... passed` (feed/telemetry now run).
+- CI: the `web` job's `Vitest` step concludes success after push.
+- `npx tsc --noEmit` unaffected (no source changes).
+- `npm run test:legacy` and `npm run build` unaffected.
 
 ## Targeted safety check
 
-- No changes to any test file, `package.json` scripts, or build config.
-- `poolOptions`, `minWorkers`, `maxForks`, `singleFork` intentionally avoided as
-  invalid-in-v4, to prevent runtime `Warning: ... unknown/ignored option` noise.
+- No changes to `package.json`, `vitest.config.ts`, any test file, or backend code.
+- Only the CI workflow gains one step; the backend job is untouched.

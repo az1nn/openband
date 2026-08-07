@@ -1,38 +1,41 @@
-# Tasks: Pin the Vitest worker pool for deterministic CI results
+# Tasks: Install backend dependencies in the CI web job
 
 ## Implementation
 
-- [ ] `vitest.config.ts` — add `const isCI = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";` and, within the `test` block, spread the bounded pool only when `isCI`:
-  - `pool: "forks"`, `maxWorkers: 1`, `maxConcurrency: 1`,
-    `execArgv: ["--max-old-space-size=4096"]`, `isolate: true`
-  - local (non-CI) runs keep the default parallel pool
-  - preserve all existing keys (`globals`, `environment`, `setupFiles`, `include`,
-    `exclude`, `server.deps.inline`, `reporters`, `dangerouslyIgnoreUnhandledErrors`,
-    `onUnhandledError`) unchanged.
-- [ ] Confirm `tests/ok-reporter.ts` has no invalid hook (`onUnhandledRejection`
-  does not exist as a vitest reporter hook; keep only valid reporter methods;
-  reporter `onUnhandledError` is fine to keep logging, return value is ignored).
+- [ ] `.github/workflows/ci.yml` — in the `web` job, insert between the
+      `Type check (frontend)` and `Vitest` steps:
+
+      ```yaml
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      ```
+
+  - The root `Install dependencies` step (`npm ci` at the repo root) stays as-is.
+  - The `backend` job is unchanged.
 
 ## Verification
 
-- [ ] `npx tsc --noEmit` — exit 0, no type errors.
-- [ ] `npx vitest run` — exit 0, reports `# tests N | N passed` (1438 base).
-- [ ] Repeat `npx vitest run` 2 more times — stable exit 0 (deterministic).
-- [ ] `npm run test:legacy` — exit 0 (24 legacy tests).
-- [ ] `npm run build` — succeeds.
-- [ ] If CI access is available: confirm the `Vitest` step goes green after push.
-     Otherwise, note the local-only verification and the bounded-pool rationale for
-     a follow-up CI confirmation.
+- [ ] Confirm the workflow YAML is valid (`npx actionlint` if available, or manual
+      review for indentation/key correctness).
+- [ ] Local pristine-clone repro of exact CI:
+      1. `git clone` a fresh copy, run `npm ci` at root (do NOT install backend).
+      2. `npx vitest run` → currently exits 1 with
+         `Failed to resolve import "express" from "backend/src/app.ts"`.
+      3. `cd backend && npm ci`, then `npx vitest run` → exits 0, all tests pass.
+- [ ] Confirm `cd backend && npm ci` completes cleanly (committed lockfile).
+- [ ] After committing + pushing, verify GitHub Actions `web` job `Vitest` step goes
+      green (via the public Actions API: run conclusion == `success`).
 
 ## Docs / spec sync
 
-- [ ] Update `docs/pending-implementations.md` (if it references the CI vitest fix)
-  to reflect the pool pin + memory bounds as the implemented approach.
-- [ ] Update `docs/unimplemented-specs.md` if it lists the CI-vitest item, moving it
-  to implemented/pending as appropriate.
+- [ ] Grep for references to the old "worker pool pin" rationale
+      (`docs/pending-implementations.md`, `docs/unimplemented-specs.md`,
+      `docs/features-implementation.md`) and update them to the confirmed root cause
+      (missing backend deps in the CI web job). Remove any stale claim that the
+      vitest pool was the fix.
 
-## Follow-up (only if locally reproducible after the above)
+## Notes
 
-- [ ] If exit-1 still reproduces deterministically, capture the exact crash file and
-  inspect its heavy allocations (unguarded `OfflineAudioContext`/`WebAssembly`) and
-  add targeted guards. Otherwise no test-file changes are needed.
+- The speculative pool/memory hypothesis was disproven by clean reproduction; do
+  not re-introduce `pool`/`maxWorkers`/`execArgv` changes to `vitest.config.ts`.
