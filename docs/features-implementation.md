@@ -109,6 +109,22 @@ Transport toolbar has rate selector (0.5x–2x) and pitch shift buttons (±12 se
 
 ---
 
+## ✅ 3D Virtual Studio (Web 3D Hub + 12 Tool Rooms) — COMPLETE
+
+**Effort:** Medium · **Impact:** Medium — immersive navigation
+
+- Web-only Three.js Virtual Studio (`app/tabs/virtual-studio.tsx` → `app/virtual-studio.tsx`): isometric hub, 12 `FurnitureDef`, Raycaster click-to-open, WASD avatar
+- 12 3D tool rooms (beatmaker, dj-stage, vocal-booth, autotune, mixing-console, lofi-tape, cover-jam, synth-lab, stem-collider, live-room, spatial-audio, acoustics)
+- `src/lib/loadThree.ts` — runtime CDN loader (unpkg → cdnjs → jsdelivr), no static three import
+- `src/lib/sceneLighting.ts` — procedural pendant + RGB strip light rigs (no HDRI/assets)
+- `LightControls` ref → scene lights; `Screen3DFallback` for non-web/CDN-failure
+- Scene rAF decoupled from audio/DAW state (render is reflection, never engine)
+- Tests: `tests/scenes.test.tsx`, `tests/lib6.test.ts` (sceneLighting)
+
+> See `docs/3d-scene-guidelines.md` for the full knowledge base and the T1–T10 target playbook.
+
+---
+
 ## Remaining Gaps (No Priority)
 
 The following feature from the original analysis is **lower priority** and not yet implemented:

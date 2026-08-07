@@ -19,7 +19,7 @@ To cherry-pick individual features:
 - `src/components/Toast.tsx` (new) — toast notification system (**re-added — present in the tree**)
 
 ## 2. 3D Scene Guidelines + Polish
-- `docs/3d-scene-guidelines.md` — 3D scene documentation
+- `docs/3d-scene-guidelines.md` — 3D scene documentation (**restored — present in the tree**, canonical knowledge doc)
 - Various 3D scene screens polished (virtual-studio, acoustics, autotune, etc.)
 - `scripts/polish-screens.mjs` — screenshot script
 
@@ -30,7 +30,7 @@ To cherry-pick individual features:
 - `public/manifest.json` + `public/assets/` icons — PWA manifest for Vercel
 - `package-lock.json` — dependency changes
 
-The following remain absent from the tree (not re-added): `docs/3d-scene-guidelines.md`, `scripts/polish-screens.mjs`, `scripts/build.js`, `public/manifest.json`.
+The following remain absent from the tree (not re-added): `scripts/polish-screens.mjs`, `scripts/build.js`, `public/manifest.json`.
 
 ## Why master was reverted
 The Expo web export (`expo export --platform web`) hangs during Metro bundling of `app/_layout.tsx` on both Node 24 (local) and Node 22 (Vercel). Root cause is likely a Metro deadlock in the dependency graph — possibly NativeWind CSS processing on new animation classes or a circular import from the UI polish commits.

@@ -1,7 +1,11 @@
 # Proposal: 3D Virtual Studio — Canonical Guidelines & Knowledge Doc
 
-> **Status: IN PROGRESS.** Implementation is documentation-only; no source code
-> is touched.
+> **Status: SHIPPED.** Full implementation landed: `docs/3d-scene-guidelines.md`
+> created, `AGENTS.md` wired (component rows, app tree, `### 3D & WebGL` section,
+> pre-flight bullet), `docs/features-implementation.md` gained a 3D studio phase,
+> `docs/reverted-features.md` §2 marks the guideline doc as restored,
+> `docs/unimplemented-specs.md` §6 links the T1–T10 playbook, and
+> `openspec/specs/architecture.md` lists the Three.js stack line.
 
 ## Context
 
@@ -63,7 +67,7 @@ external model assets, single local avatar). Documentation must reflect reality.
 
 ## Non-Goals
 
-- Implementing post-processing, SSAO, bloom, AgX, glTF importpipeline, IBL, or
+- Implementing post-processing, SSAO, bloom, AgX, glTF import pipeline, IBL, or
   WebSocket avatars now — these are documented as targets, not built here.
 - Touching the 12 scene screens or `src/lib` electron web code.
-- Not a reference any stale claim of features as shipped.
+- Does not reference any stale claim of features as shipped.

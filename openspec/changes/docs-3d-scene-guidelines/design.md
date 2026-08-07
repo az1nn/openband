@@ -14,8 +14,8 @@ Sections (with strict status markers on every claim):
      `FURNITURE` array of 12 `FurnitureDef`, Raycaster click-to-open, local
      CapsuleGeometry ("You") avatar, `LightControls` ref-driven colors).
    - `app/tabs/virtual-studio.tsx` (tab shell → `<VirtualStudio/>`).
-   - 12 sibling screens (perspective + custom spherical-drag orbit + wheel/pinch
-     zoom, `ACESFilmicToneMapping`).
+- 12 sibling screens (perspective + custom spherical-drag orbit + wheel/pinch
+      zoom, `ACESFilmicToneMapping` — all tool rooms except `beatmaker.tsx`).
    - `src/lib/loadThree.ts` (memoized single-flight CDN loader, cascading
      unpkg → cdnjs → jsdelivr, `three@0.160.0`, `new Function` dynamic import).
    - `src/lib/sceneLighting.ts` (`addSceneBulb` pendant + `addRGBStrip` neon).
@@ -32,10 +32,10 @@ Sections (with strict status markers on every claim):
    - No bridge between 3D scene and audio today → visually-live furniture is
      scripted ambient (avatar bob, emissive pulse, vinyl spin).
 4. **Pipeline & quality today** — `renderer.setPixelRatio(min(dpr,2))`,
-   `ACESFilmicToneMapping` (12 of 14 screens; hub intentionally
-   NoToneMapping/toon), no composer, no SSAO/bloom, fog on a few screens,
-   procedural-only geometry, no external assets. Lifecycle: on unmount cancel
-   rAF, remove listeners, `container.removeChild`, `renderer.dispose()`.
+   `ACESFilmicToneMapping` (11 of 14 screens; all tool rooms except `beatmaker.tsx`,
+   hub intentionally NoToneMapping/toon), no composer, no SSAO/bloom, fog on 13 of 14
+   screens (all except hub), procedural-only geometry, no external assets. Lifecycle:
+   on unmount cancel rAF, remove listeners, `container.removeChild`, `renderer.dispose()`.
 5. **Target playbook (NOT implemented — aspirational alignment with the CS
    Brasil approach)** — each item tagged `[TODO]`:
    - extract managers (`SceneManager`/`CameraController`/`LightingSystem`);
@@ -87,9 +87,10 @@ Mark `docs/3d-scene-guidelines.md` as **restored** (was reverted; recreated).
 Amend §6 (Immersive studio avatar palette) to note guideline-doc pointer and
 frame it as not-wired; keep as open item.
 
-### 6. `openspec/specifications.md`
+### 6. `openspec/specs/architecture.md`
 
-Add Three.js to the tech stack, cross-linking guideline doc.
+Add a Three.js stack line to the Technology Stack section, cross-linking the
+guideline doc.
 
 ## Notes
 

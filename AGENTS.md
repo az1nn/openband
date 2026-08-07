@@ -43,6 +43,7 @@ Before starting any task:
 - [ ] Read the exact Expo SDK docs at https://docs.expo.dev/versions/v57.0.0/ before using any Expo API
 - [ ] Check `docs/supabase.md` when setting up or modifying Supabase integration
 - [ ] Check git log (`git log --oneline -10`) to understand recent context
+- [ ] Read `docs/3d-scene-guidelines.md` before editing any Three.js screen (`app/virtual-studio.tsx`, the 12 tool rooms, `explorer.tsx`)
 - [ ] Run code review via the `code-review` agent before every commit
 
 ---
@@ -152,6 +153,8 @@ Available in `src/components/`:
 | `QuickActions`            | `visible, onClose`                                                                                         | Quick action shortcuts bar                                   |
 | `QuickTools`              | `visible, onClose`                                                                                         | Quick tool selector                                          |
 | `ProjectMenu`             | `visible, onClose`                                                                                         | Project-level menu (save, export, share)                     |
+| `LightControls`           | `defaultColor?, defaultIntensity?` — forwardRef implements `LightControlHandle` exposing `{color, intensity}` | RGB preset + brightness control feeding 3D scene lights via ref (no React state in rAF loop) |
+| `Screen3DFallback`        | `title`, plus `Screen3DHeader` | Web-only/CDN-failure fallback + shared back header for 3D screens |
 
 CSS component classes (from `global.css`):
 
@@ -181,6 +184,18 @@ const path = await OpenBandNative.showOpenDialog({ filters: [...] });
 ```
 
 **Motto:** The frontend has zero knowledge of whether it's running in Electron, Tauri, or a browser tab. Swap the backend by replacing one file.
+
+### 3D & WebGL (Three.js Virtual Studio)
+
+All 3D scenes are **web-only** (native renders `Screen3DFallback`). See `docs/3d-scene-guidelines.md` — **read it before editing any 3D screen.** Key points:
+
+- **Three.js is loaded at runtime from CDN** via `src/lib/loadThree.ts` (memoized single-flight loader, `three@0.160.0`, cascading unpkg → cdnjs → jsdelivr). Screens use the returned `THREE` object — no static `from "three"` import.
+- **Hub** (`app/virtual-studio.tsx`, tab `app/tabs/virtual-studio.tsx`): isometric `OrthographicCamera`, 12 `FurnitureDef` routed via Raycaster click → `router.push(route)`, local "You" avatar (WASD), `LightControls` bubbling color via a mutable ref (no React state in rAF loop).
+- **12 tool rooms** (`app/beatmaker.tsx`, `dj-stage.tsx`, `vocal-booth.tsx`, `autotune.tsx`, `mixing-console.tsx`, `lofi-tape.tsx`, `cover-jam.tsx`, `synth-lab.tsx`, `stem-collider.tsx`, `live-room.tsx`, `spatial-audio.tsx`, `acoustics.tsx`): perspective camera + custom spherical-drag orbit + wheel/pinch zoom, `ACESFilmicToneMapping` (all tool rooms except `beatmaker.tsx`).
+- **Lighting rigs** in `src/lib/sceneLighting.ts` (`addSceneBulb` pendant, `addRGBStrip` neon) — all procedural; **no HDRI/texture/model assets** in the repo.
+- **Render is reflection, never engine.** The rAF loop NEVER computes audio/DAW state (no gain, EQ, automation, sync). Scene runs its own clock, decoupled from `clockManager`/AudioContext. `src/lib/presence.ts` (SSE, DAW-editor cursors) is NOT connected to the 3D scene — no avatar sync exists (aspirational).
+- **No post-processing** (no EffectComposer/SSAO/bloom/AgX), **no adaptive resolution** beyond `setPixelRatio(min(dpr,2))` — see the T1–T10 target playbook in the guideline doc before planning visual upgrades.
+- **Lifecycle**: rAF canceled, listeners removed, `renderer.dispose()` on unmount. No rAF pause on tab-hidden yet.
 
 ### Audio System
 
@@ -317,7 +332,9 @@ app/
     moments.tsx       — Sample pack store / artist moments
     account.tsx       — Profile + sign-out
     settings.tsx      — App settings
+    virtual-studio.tsx — 3D Studio tab shell (renders app/virtual-studio.tsx)
   extractor.tsx       — Stem separation (select → process → results)
+  virtual-studio.tsx  — 3D hub screen: isometric OrthographicCamera room, 12 FurnitureDef, Raycaster click-to-open, WASD avatar, LightControls ref (web-only; native → Screen3DFallback)
   mastering/
     index.tsx         — Mastering suite page (full chain EQ, comp, limiter, LUFS)
   studio/[id].tsx     — DAW-style multi-track mixer with waveform + transport (parses numBars, timeSignature, scratch params). Uses clockManager for beat tracking, busRouter for auto-assignment, automationEngine for volume interpolation

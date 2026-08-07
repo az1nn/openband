@@ -39,3 +39,4 @@ Spec scaffolding shipped; per-plugin Vitest coverage gaps remain.
 
 ## 6. Immersive studio avatar palette (`openspec/specs/immersive-studio`) — LOW
 - [ ] Wire `src/lib/habboAssets.ts` into a screen — depots only experimental color constants; no screen imports it (confirmed via grep). Model-building logic, screen wiring, and avatar system remain future work.
+- [ ] 3D scene improvement work is tracked in `docs/3d-scene-guidelines.md` (T1–T10 target playbook: post-processing, IBL, procedural quality tiers, avatar sync, headless invariants) — none implemented yet.

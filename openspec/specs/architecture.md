@@ -32,6 +32,7 @@ openband/
 - **Styling**: NativeWind v4 (Tailwind CSS v3) + CSS variable variables in `global.css`.
 - **Database/Auth**: Local zero-config SQLite (`better-sqlite3`) in development, Supabase (PostgreSQL) in production.
 - **Audio Engine**: `expo-audio` + Web Audio API (`UniversalAudioSystem` + lazy AudioContext resume).
+- **3D / WebGL**: Three.js **v0.160.0 loaded at runtime from CDN** (`src/lib/loadThree.ts`) for the web-only Virtual Studio hub + 12 tool rooms. No static `import from "three"`. See `docs/3d-scene-guidelines.md`.
 - **Desktop Wrapper**: Electron 35 utilizing contextBridge (`preload.js`) and IPC menus/dialogs.
 
 ---
