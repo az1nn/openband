@@ -26,18 +26,29 @@ sub-options are now top-level), `minWorkers`, `maxForks`, `minForks`, `singleFor
 The change keeps things deterministic on the 2-core CI runner while bounding memory:
 
 ```ts
+const isCI = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
+
 test: {
   // (existing keys preserved)
-  pool: "forks",                // explicit (already default) — child-process pool
-  maxWorkers: 1,                // deterministic: a single fork worker runs the suite
-  maxConcurrency: 1,           // serial in-file test execution (avoids heap spikes)
-  execArgv: ["--max-old-space-size=4096"], // explicit generous per-worker heap
-  isolate: true,
+  // CI runners get a deterministic single-fork pool; local runs keep the default
+  // parallel pool (numCpus-1 workers) for fast day-to-day iteration.
+  ...(isCI
+    ? {
+        pool: "forks",                         // explicit child-process pool
+        maxWorkers: 1,                         // deterministic single worker
+        maxConcurrency: 1,                     // serial in-file execution
+        execArgv: ["--max-old-space-size=4096"], // explicit generous per-worker heap
+        isolate: true,
+      }
+    : {}),
 }
 ```
 
 ### Rationale
 
+- The pool pins are applied **only when `CI` (or `GITHUB_ACTIONS`) is set**, so GitHub
+  Actions gets the bounded pool while local `npx vitest run` keeps the default
+  parallel pool. This avoids a local-dev performance regression.
 - `maxWorkers: 1` removes dependence on `availableParallelism()` (which can be 4 on
   GH runners due to hyperthreading even though the cgroup grants 2 vCPU). A single
   fork worker is exactly what a 2-core runner already tends toward, but pinned.

@@ -2,12 +2,10 @@
 
 ## Implementation
 
-- [ ] `vitest.config.ts` — within the `test` block, add:
-  - `pool: "forks"`
-  - `maxWorkers: 1`
-  - `maxConcurrency: 1`
-  - `execArgv: ["--max-old-space-size=4096"]`
-  - `isolate: true` (already implied default; set explicitly)
+- [ ] `vitest.config.ts` — add `const isCI = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";` and, within the `test` block, spread the bounded pool only when `isCI`:
+  - `pool: "forks"`, `maxWorkers: 1`, `maxConcurrency: 1`,
+    `execArgv: ["--max-old-space-size=4096"]`, `isolate: true`
+  - local (non-CI) runs keep the default parallel pool
   - preserve all existing keys (`globals`, `environment`, `setupFiles`, `include`,
     `exclude`, `server.deps.inline`, `reporters`, `dangerouslyIgnoreUnhandledErrors`,
     `onUnhandledError`) unchanged.

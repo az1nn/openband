@@ -4,6 +4,8 @@ import okReporter from "./tests/ok-reporter";
 
 const rootDir = process.cwd();
 
+const isCI = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
+
 export default defineConfig({
   test: {
     globals: true,
@@ -11,6 +13,15 @@ export default defineConfig({
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/**/*.test.{ts,tsx}"],
     exclude: ["tests/types.test.ts", "tests/presets.test.ts"],
+    ...(isCI
+      ? {
+          pool: "forks",
+          maxWorkers: 1,
+          maxConcurrency: 1,
+          execArgv: ["--max-old-space-size=4096"],
+          isolate: true,
+        }
+      : {}),
     server: {
       deps: {
         inline: ["react-native"],
