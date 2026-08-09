@@ -9,7 +9,9 @@ import {
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Button, TextInput, Divider } from "../components";
+import { Button } from "./Button";
+import { TextInput } from "./TextInput";
+import { Divider } from "./Divider";
 import {
   AI_PROVIDERS,
   ASPECT_RATIOS,

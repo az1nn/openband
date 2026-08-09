@@ -3,7 +3,7 @@ import { View, Text, Pressable, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { addSceneBulb, addRGBStrip } from "../src/lib/sceneLighting";
 import LightControls from "../src/components/LightControls";
-import { Screen3DFallback } from "../src/components";
+import { Screen3DFallback } from "../src/components/Screen3DFallback";
 import { loadThree } from "../src/lib/loadThree";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

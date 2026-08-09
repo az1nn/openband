@@ -1,7 +1,9 @@
 import { useEffect, useMemo } from "react";
 import { ScrollView, View, Text, Pressable } from "react-native";
 import { useRouter } from "expo-router";
-import { PageHeader, Card, CardIcon, Divider } from "../../src/components";
+import { PageHeader } from "../../src/components/PageHeader";
+import { Card, CardIcon } from "../../src/components/Card";
+import { Divider } from "../../src/components/Divider";
 import { useResponsive } from "../../src/lib/responsive";
 import {
   CREATIVE_MODES,

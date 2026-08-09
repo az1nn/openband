@@ -13,19 +13,17 @@ import {
 import { useRouter } from "expo-router";
 import { useAuth } from "../../src/context/AuthContext";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
-import {
-  PageHeader,
-  Button,
-  QuickActions,
-  setMiniPlayerState,
-  QuickTools,
-  NewProject,
-  OnboardingFlow,
-  FeedPostCard,
-  Loading,
-  FeedSkeletonCard,
-  useToast,
-} from "../../src/components";
+import { PageHeader } from "../../src/components/PageHeader";
+import { Button } from "../../src/components/Button";
+import { QuickActions } from "../../src/components/QuickActions";
+import { setMiniPlayerState } from "../../src/components/MiniPlayer";
+import { QuickTools } from "../../src/components/QuickTools";
+import { NewProject } from "../../src/components/NewProject";
+import { OnboardingFlow } from "../../src/components/OnboardingFlow";
+import { FeedPostCard } from "../../src/components/FeedPostCard";
+import { Loading } from "../../src/components/Loading";
+import { FeedSkeletonCard } from "../../src/components/Skeleton";
+import { useToast } from "../../src/components/Toast";
 import type { FeedPost } from "../../src/components/FeedPostCard";
 import { fetchFeed, toggleLike, toggleFavorite, createRemix } from "../../src/lib/feedApi";
 import { generatePreviewUrl, getCachedPreview, preloadPreview, SCREEN_BOTTOM_PADDING } from "../../src/lib/constants";

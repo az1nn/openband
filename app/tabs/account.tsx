@@ -2,15 +2,13 @@ import { useState, useEffect } from "react";
 import { View, Text, ScrollView, Alert, Platform, Pressable } from "react-native";
 import { useAuth } from "../../src/context/AuthContext";
 import { supabase } from "../../src/lib/supabase";
-import {
-  PageHeader,
-  Avatar,
-  Button,
-  TextInput,
-  Divider,
-  Badge,
-  Loading,
-} from "../../src/components";
+import { PageHeader } from "../../src/components/PageHeader";
+import { Avatar } from "../../src/components/Avatar";
+import { Button } from "../../src/components/Button";
+import { TextInput } from "../../src/components/TextInput";
+import { Divider } from "../../src/components/Divider";
+import { Badge } from "../../src/components/Badge";
+import { Loading } from "../../src/components/Loading";
 import { LAYOUT_MAX_WIDTHS } from "../../src/lib/responsive";
 import { SCREEN_BOTTOM_PADDING } from "../../src/lib/constants";
 import { useTranslation } from "react-i18next";

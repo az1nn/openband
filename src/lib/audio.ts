@@ -1,5 +1,3 @@
-import { Mp3Encoder } from "lamejs";
-
 const MAX_CACHE_SIZE = 100;
 const cache = new Map<string, number[]>();
 
@@ -114,6 +112,7 @@ export function audioBufferToWavBlob(buffer: AudioBuffer, bitDepth: number = 16)
 }
 
 export async function audioBufferToMp3BlobAsync(buffer: AudioBuffer, kbps: number = 192, onProgress?: (pct: number) => void): Promise<Blob> {
+  const { Mp3Encoder } = await import("lamejs");
   const numChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
   const encoder = new Mp3Encoder(numChannels, sampleRate, kbps);

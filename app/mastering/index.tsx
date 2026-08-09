@@ -1,7 +1,11 @@
 import { useState, useCallback } from "react";
 import { View, Text, Pressable } from "react-native";
 import { useRouter } from "expo-router";
-import { MasteringSuite, Sidebar, MobileDrawer, EmptyState, Button } from "../../src/components";
+import { MasteringSuite } from "../../src/components/MasteringSuite";
+import { Sidebar } from "../../src/components/Sidebar";
+import { MobileDrawer } from "../../src/components/MobileDrawer";
+import { EmptyState } from "../../src/components/EmptyState";
+import { Button } from "../../src/components/Button";
 import { useResponsive } from "../../src/lib/responsive";
 import { getMasteringInput } from "../../src/lib/masteringBridge";
 

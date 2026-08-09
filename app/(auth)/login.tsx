@@ -9,7 +9,8 @@ import {
   Pressable,
   type TextInput as RNTextInput,
 } from "react-native";
-import { Button, TextInput } from "../../src/components";
+import { Button } from "../../src/components/Button";
+import { TextInput } from "../../src/components/TextInput";
 import { supabase } from "../../src/lib/supabase";
 import { LAYOUT_MAX_WIDTHS } from "../../src/lib/responsive";
 import { useAuth } from "../../src/context/AuthContext";

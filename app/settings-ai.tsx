@@ -1,14 +1,12 @@
 import { useState } from "react";
 import { View, Text, ScrollView, Pressable, Linking } from "react-native";
 import { useRouter } from "expo-router";
-import {
-  PageHeader,
-  Button,
-  Badge,
-  TextInput,
-  Divider,
-  Card,
-} from "../src/components";
+import { PageHeader } from "../src/components/PageHeader";
+import { Button } from "../src/components/Button";
+import { Badge } from "../src/components/Badge";
+import { TextInput } from "../src/components/TextInput";
+import { Divider } from "../src/components/Divider";
+import { Card } from "../src/components/Card";
 import {
   AI_PROVIDERS,
   IMAGE_MODELS,

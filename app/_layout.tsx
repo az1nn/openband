@@ -9,7 +9,6 @@ import { ThemeProvider } from "../src/context/ThemeContext";
 import { View, Platform } from "react-native";
 import { Loading } from "../src/components/Loading";
 import { ToastProvider } from "../src/components/Toast";
-import { AudioEngineProvider } from "../src/context/AudioEngine";
 import { audioSystem, disposeAllAudio } from "../src/lib/universalAudio";
 
 import "../global.css";
@@ -112,11 +111,9 @@ export default function RootLayout() {
         <StatusBar style="light" />
         <ThemeProvider>
           <AuthProvider>
-            <AudioEngineProvider>
-              <ToastProvider>
-                <RootLayoutProtected />
-              </ToastProvider>
-            </AudioEngineProvider>
+            <ToastProvider>
+              <RootLayoutProtected />
+            </ToastProvider>
           </AuthProvider>
         </ThemeProvider>
       </View>

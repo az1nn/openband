@@ -49,10 +49,6 @@ vi.mock("../src/context/AuthContext", () => ({
   useAuth: () => mockAuthFn(),
 }));
 
-vi.mock("../src/context/AudioEngine", () => ({
-  AudioEngineProvider: ({ children }: any) => <div data-testid="audio-engine-provider">{children}</div>,
-}));
-
 const originalOS = Object.getOwnPropertyDescriptor(Platform, "OS");
 
 describe("Root Layout", () => {
@@ -78,12 +74,10 @@ describe("Root Layout", () => {
     expect(screen.getByTestId("safe-area-provider")).toBeTruthy();
     expect(screen.getByTestId("theme-provider")).toBeTruthy();
     expect(screen.getByTestId("auth-provider")).toBeTruthy();
-    expect(screen.getByTestId("audio-engine-provider")).toBeTruthy();
     expect(screen.getByTestId("stack")).toBeTruthy();
     const safeArea = container.firstChild as Element | null;
     expect(safeArea?.querySelector('[data-testid="theme-provider"]')).toBeTruthy();
     expect(safeArea?.querySelector('[data-testid="auth-provider"]')).toBeTruthy();
-    expect(safeArea?.querySelector('[data-testid="audio-engine-provider"]')).toBeTruthy();
     expect(safeArea?.querySelector('[data-testid="stack"]')).toBeTruthy();
   });
 

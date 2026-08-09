@@ -3,16 +3,14 @@ import { View, Text, Pressable, ScrollView, Alert, Platform } from "react-native
 import { useRouter } from "expo-router";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { useTranslation } from "react-i18next";
-import {
-  PageHeader,
-  Card,
-  Button,
-  Badge,
-  ProgressBar,
-  NewProject,
-  Sidebar,
-  MobileDrawer,
-} from "../src/components";
+import { PageHeader } from "../src/components/PageHeader";
+import { Card } from "../src/components/Card";
+import { Button } from "../src/components/Button";
+import { Badge } from "../src/components/Badge";
+import { ProgressBar } from "../src/components/ProgressBar";
+import { NewProject } from "../src/components/NewProject";
+import { Sidebar } from "../src/components/Sidebar";
+import { MobileDrawer } from "../src/components/MobileDrawer";
 import { DEMO_AUDIO_URL, SCREEN_BOTTOM_PADDING } from "../src/lib/constants";
 import { LAYOUT_MAX_WIDTHS, useResponsive } from "../src/lib/responsive";
 import { saveProject } from "../src/lib/projectStore";

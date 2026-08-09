@@ -1,7 +1,6 @@
 import { Platform } from "react-native";
 import { OpenBandNative } from "../bridge";
 import type { Plugin } from "../lib/types";
-import { applyPluginChain } from "../lib/pluginChain";
 import { resolveAssetUrl } from "../lib/assetStore";
 
 /**
@@ -352,6 +351,7 @@ class UniversalAudioSystem {
             const ab = await resp.arrayBuffer();
             let buf = await this.decodeAudio(ab);
             if (track.plugins && track.plugins.length > 0) {
+              const { applyPluginChain } = await import("../lib/pluginChain");
               buf = await applyPluginChain(buf, track.plugins, sampleRate, {
                 duration,
                 modTime: region.start,

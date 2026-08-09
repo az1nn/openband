@@ -1,7 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
 import { View, Text, Pressable, ScrollView, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
-import { PageHeader, NewProject, SamplePackCard, MomentCard, Loading, EmptyState } from "../../src/components";
+import { PageHeader } from "../../src/components/PageHeader";
+import { NewProject } from "../../src/components/NewProject";
+import { SamplePackCard } from "../../src/components/SamplePackCard";
+import { MomentCard } from "../../src/components/MomentCard";
+import { Loading } from "../../src/components/Loading";
+import { EmptyState } from "../../src/components/EmptyState";
 import type { MomentData } from "../../src/components/MomentCard";
 import { fetchFeed } from "../../src/lib/feedApi";
 import { GENRES } from "../../src/lib/projectTemplates";

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, Platform } from "react-native";
-import { Screen3DFallback, Screen3DHeader } from "../src/components";
+import { Screen3DHeader, Screen3DFallback } from "../src/components/Screen3DFallback";
 
 export default function ExplorerScreen() {
   const [loaded, setLoaded] = useState(false);
