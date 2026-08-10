@@ -8,7 +8,7 @@ import { applyPluginChain } from "./pluginChain";
 import { applyAutomationToParam, buildAutomationSchedule } from "./automationEngine";
 import { crossfadeGain } from "./regionEdit";
 import { timeStretch } from "./timeStretch";
-import Soundfont from "soundfont-player";
+import type Soundfont from "soundfont-player";
 import { resolveAssetUrl } from "./assetStore";
 
 /**
@@ -64,7 +64,8 @@ export async function preloadSoundfont(trackName: string) {
   const sfName = getTrackSfName(trackName);
   if (sfCache[sfName]) return;
   try {
-    sfCache[sfName] = await Soundfont.instrument(ctx as any, sfName as any);
+    const { instrument } = await import("soundfont-player");
+    sfCache[sfName] = await instrument(ctx as any, sfName as any);
   } catch (e) {
     console.warn("Failed to load soundfont", sfName, e);
   }

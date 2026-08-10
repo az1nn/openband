@@ -467,3 +467,11 @@ function autoMix(tracks: TrackDef[], genre: string): TrackDef[] {
 - **Extractor stems**: Per-stem web/native split, "Masterizar stems" button sends to mastering suite via bridge
 - **Transport controls**: Skip ±5s (⏮⏭), stop (⏹), time display (current/total in `M:SS.cc`)
 - **Performance**: Pre-computed automation schedules (useMemo), binary search interpolation per-frame
+
+## Startup Performance / Lazy Loading
+
+- **Route-level splitting on web**: `app.json` configures expo-router `asyncRoutes: { web: true, default: "development" }` so the web export emits an entry bundle plus per-route chunks; `web.output` stays `"single"` (no export-mode change)
+- **Eager routes de-barrelled**: Tabs, auth, extractor, settings-ai, mastering, and 3D screens now import directly from their source files instead of the `src/components` barrel, letting the bundler tree-shake per module
+- **Studio retains barrel by design**: `app/studio/[id].tsx` and `app/studio/StudioModals.tsx` intentionally keep the `src/components` barrel import — they live in a lazy route chunk, not the entry bundle, so they don't affect startup
+- **Dead provider removed**: `AudioEngineProvider` dropped from `app/_layout.tsx` and `src/context/AudioEngine.tsx` deleted (zero consumers)
+- **Heavy deps deferred (all platforms)**: `lamejs` (Mp3Encoder), `pluginChain`, and `soundfont-player` load via dynamic `import()` only when used; native keeps a single bundle but defers module evaluation until first use

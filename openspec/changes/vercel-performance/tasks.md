@@ -5,7 +5,7 @@
 ## P2 — Code splitting + housekeeping (gated)
 
 ### 6. Code splitting
-- [ ] Set `app.json:32` `web.output: "static"` AND add `export const unstable_settings = { render: "client-only" }` to data-driven routes (`app/tabs/index.tsx`, `app/tabs/library.tsx`, `app/tabs/moments.tsx`, `app/tabs/feed.tsx`, `app/studio/[id].tsx`, `app/mastering/index.tsx`, and any new auth-gated/modal routes e.g. `app/settings-ai.tsx`); OR enable Metro `experiments: { asyncRoutes: true }` in `metro.config.js` keeping `output: "single"`.
+- [x] Set `app.json:32` `web.output: "static"` AND add `export const unstable_settings = { render: "client-only" }` to data-driven routes (`app/tabs/index.tsx`, `app/tabs/library.tsx`, `app/tabs/moments.tsx`, `app/tabs/feed.tsx`, `app/studio/[id].tsx`, `app/mastering/index.tsx`, and any new auth-gated/modal routes e.g. `app/settings-ai.tsx`); OR enable Metro `experiments: { asyncRoutes: true }` in `metro.config.js` keeping `output: "single"` (subsumed by `openspec/changes/startup-lazy-loading` — shipped via `asyncRoutes` on web).
 - [ ] **Gate:** land only if `npm run build` succeeds AND `npx vitest run` passes AND a Playwright smoke of `/`, `/tabs`, `/studio/:id` renders. If it fails, revert and rely on P0+P1 (already shipped).
 - [ ] If landed: record new entry + route-chunk sizes (target ≥ 40% entry reduction).
 
