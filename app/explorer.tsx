@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, Platform } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Screen3DHeader, Screen3DFallback } from "../src/components/Screen3DFallback";
 
 export default function ExplorerScreen() {
+  const { t } = useTranslation();
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -21,17 +23,17 @@ export default function ExplorerScreen() {
   }, []);
 
   if (Platform.OS !== "web") {
-    return <Screen3DFallback title="MISSÃO" icon="🗺️" />;
+    return <Screen3DFallback title={t("explorer.title", "MISSION")} icon="🗺️" />;
   }
 
   return (
     <View className="flex-1 bg-dark-bg">
-      <Screen3DHeader title="MISSÃO" />
+      <Screen3DHeader title={t("explorer.title", "MISSION")} />
 
       <View className="flex-1 relative bg-[#4a4440]">
         <iframe
-          srcDoc={MISSION_HTML}
-          title="MISSÃO"
+          srcDoc={MISSION_HTML(t("explorer.title", "MISSION"))}
+          title={t("explorer.title", "MISSION")}
           className="w-full h-full border-0"
           onLoad={() => {
             setLoaded(true);
@@ -43,7 +45,7 @@ export default function ExplorerScreen() {
           <View className="absolute inset-0 items-center justify-center bg-[#4a4440]">
             <Text className="text-4xl mb-3">🗺️</Text>
             <Text className="text-white font-bold text-base">
-              Carregando MISSÃO...
+              {t("explorer.loading", "Loading MISSION...")}
             </Text>
           </View>
         )}
@@ -52,10 +54,10 @@ export default function ExplorerScreen() {
           <View className="absolute inset-0 items-center justify-center bg-[#4a4440] px-8">
             <Text className="text-4xl mb-3">⚠️</Text>
             <Text className="text-white font-bold text-base mb-1">
-              Não foi possível carregar a cena 3D
+              {t("explorer.loadError", "Could not load the 3D scene.")}
             </Text>
             <Text className="text-gray-300 text-sm text-center">
-              Verifique sua conexão e tente novamente.
+              {t("explorer.loadErrorHint", "Check your connection and try again.")}
             </Text>
           </View>
         )}
@@ -64,11 +66,11 @@ export default function ExplorerScreen() {
   );
 }
 
-const MISSION_HTML = `<!DOCTYPE html>
+const MISSION_HTML = (title: string) => `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>MISSÃO</title>
+<title>${title}</title>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #4a4440; }
   canvas { display: block; }
@@ -96,7 +98,7 @@ const MISSION_HTML = `<!DOCTYPE html>
 </head>
 <body>
 <div id="vignette"></div>
-<div id="ui">MISSÃO</div>
+<div id="ui">${title}</div>
 
 <script type="importmap">
 { "imports": {

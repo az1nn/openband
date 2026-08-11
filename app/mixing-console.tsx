@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, Platform } from "react-native";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { addSceneBulb, addRGBStrip } from "../src/lib/sceneLighting";
 import LightControls from "../src/components/LightControls";
 import { Screen3DFallback } from "../src/components/Screen3DFallback";
@@ -335,6 +336,7 @@ function createVUMeterGroup(
 
 export default function MixingConsole() {
   const router = useRouter();
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [threeLoaded, setThreeLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -355,7 +357,7 @@ export default function MixingConsole() {
       try {
         THREE = await loadThree();
       } catch {
-        if (!cancelled) setLoadError("Three.js unavailable — 3D console disabled");
+        if (!cancelled) setLoadError(t("mixer.threeJsError", "Three.js unavailable — 3D console disabled"));
         return;
       }
       if (cancelled) return;
@@ -672,7 +674,7 @@ export default function MixingConsole() {
   }, []);
 
   if (Platform.OS !== "web") {
-    return <Screen3DFallback title="MIXING CONSOLE" icon="🎛️" />;
+    return <Screen3DFallback title={t("mixer.title", "MIXING CONSOLE")} icon="🎛️" />;
   }
 
   return (
@@ -688,7 +690,7 @@ export default function MixingConsole() {
           <Text className="text-gray-300 text-lg">←</Text>
         </Pressable>
         <View className="flex-1 items-center">
-          <Text className="text-white font-bold text-base">MIXING CONSOLE</Text>
+          <Text className="text-white font-bold text-base">{t("mixer.title", "MIXING CONSOLE")}</Text>
         </View>
         <View className="w-9" />
       </View>
@@ -703,14 +705,14 @@ export default function MixingConsole() {
         {!threeLoaded && !loadError && (
           <View className="absolute inset-0 items-center justify-center bg-black">
             <Text className="text-4xl mb-3">🎛</Text>
-            <Text className="text-white font-bold text-lg">Loading Mixing Console...</Text>
+            <Text className="text-white font-bold text-lg">{t("mixer.loading", "Loading Mixing Console...")}</Text>
           </View>
         )}
 
         {loadError && (
           <View className="absolute inset-0 items-center justify-center bg-black px-6">
             <Text className="text-4xl mb-3">🎛</Text>
-            <Text className="text-white font-bold text-lg mb-2">3D Unavailable</Text>
+            <Text className="text-white font-bold text-lg mb-2">{t("mixer.loadErrorTitle", "3D Unavailable")}</Text>
             <Text className="text-gray-400 text-center text-sm">{loadError}</Text>
           </View>
         )}
@@ -719,7 +721,7 @@ export default function MixingConsole() {
         {threeLoaded && (
           <View className="absolute bottom-6 left-4">
             <View className="bg-dark-surface/80 backdrop-blur-sm rounded-lg px-3 py-2">
-              <Text className="text-gray-300 text-xs">🖱 Drag to orbit • Scroll to zoom</Text>
+              <Text className="text-gray-300 text-xs">{t("mixer.controlsHint", "🖱 Drag to orbit • Scroll to zoom")}</Text>
             </View>
           </View>
         )}

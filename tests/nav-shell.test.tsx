@@ -1,7 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import Extractor from "../app/extractor";
 import MasteringScreen from "../app/mastering/index";
+import i18n from "../src/lib/i18n";
+
+beforeAll(async () => {
+  await i18n.changeLanguage("pt-BR");
+});
 
 const {
   mockResponsiveFn,
@@ -209,6 +214,6 @@ describe("Mastering Screen — Navigation Shell", () => {
 
   it("shows mobile header title 'Masterização'", () => {
     render(<MasteringScreen />);
-    expect(screen.getByText("Masterização")).toBeTruthy();
+    expect(screen.getAllByText("Masterização").length).toBeGreaterThan(0);
   });
 });

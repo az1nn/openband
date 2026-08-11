@@ -1,4 +1,5 @@
 import { View, Text, Pressable } from "react-native";
+import { useTranslation } from "react-i18next";
 import type { MasteringInput } from "../lib/masteringSuite";
 import {
   formatSampleRate,
@@ -23,6 +24,7 @@ export function MasteringUpload({
   onClear,
   testID,
 }: MasteringUploadProps) {
+  const { t } = useTranslation();
   return (
     <View
       testID={testID}
@@ -31,7 +33,7 @@ export function MasteringUpload({
       <View className="flex-row items-center gap-2 mb-3">
         <View className="w-1.5 h-1.5 rounded-full bg-green-500" />
         <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
-          Input
+          {t("mastering.inputLabel", "Input")}
         </Text>
       </View>
 
@@ -43,12 +45,12 @@ export function MasteringUpload({
           <Text
             className={`text-xs font-bold ${mode === "single" ? "text-green-400" : "text-gray-400"}`}
           >
-            Single File
+            {t("mastering.singleFile", "Single File")}
           </Text>
           <Text
             className={`text-[8px] mt-0.5 ${mode === "single" ? "text-green-400/70" : "text-gray-600"}`}
           >
-            Mix estéreo .wav
+            {t("mastering.stereoMixHint", "Stereo mix .wav")}
           </Text>
         </Pressable>
         <Pressable
@@ -58,12 +60,12 @@ export function MasteringUpload({
           <Text
             className={`text-xs font-bold ${mode === "stems" ? "text-green-400" : "text-gray-400"}`}
           >
-            Stems
+            {t("mastering.stemsLabel", "Stems")}
           </Text>
           <Text
             className={`text-[8px] mt-0.5 ${mode === "stems" ? "text-green-400/70" : "text-gray-600"}`}
           >
-            Multi-track .wav
+            {t("mastering.multiTrackHint", "Multi-track .wav")}
           </Text>
         </Pressable>
       </View>
@@ -113,7 +115,7 @@ export function MasteringUpload({
               className="px-2.5 py-1 rounded bg-red-500/20 border border-red-500/30"
             >
               <Text className="text-red-400 text-[10px] font-medium">
-                Trocar
+                {t("mastering.swap", "Swap")}
               </Text>
             </Pressable>
           </View>
@@ -125,12 +127,12 @@ export function MasteringUpload({
         >
           <Text className="text-3xl mb-2">⊞</Text>
           <Text className="text-gray-400 text-sm font-semibold">
-            {mode === "single" ? "Upload .wav Mix" : "Upload Stems"}
+            {mode === "single" ? t("mastering.uploadMix", "Upload .wav Mix") : t("mastering.uploadStems", "Upload Stems")}
           </Text>
           <Text className="text-gray-600 text-[10px] mt-1">
             {mode === "single"
-              ? "16-bit/44.1kHz ~ 32-bit/96kHz"
-              : "Drums, Bass, Vocals, Melodies..."}
+              ? t("mastering.uploadRangeHint", "16-bit/44.1kHz ~ 32-bit/96kHz")
+              : t("mastering.uploadStemsHint", "Drums, Bass, Vocals, Melodies...")}
           </Text>
         </Pressable>
       )}

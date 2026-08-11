@@ -8,6 +8,7 @@ import {
   Platform,
 } from "react-native";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import { useTranslation } from "react-i18next";
 import type { Plugin } from "../lib/types";
 import { MasteringChain } from "./MasteringChain";
 import { MasteringVersionManager } from "./MasteringVersionManager";
@@ -61,6 +62,7 @@ async function fetchAndRenderAudio(
 }
 
 export function MasteringSuite({ onBack, testID }: MasteringSuiteProps) {
+  const { t } = useTranslation();
   const resp = useResponsive();
   const [session, setSession] = useState<MasteringSession>(() => {
     const pending = takeMasteringInput();
@@ -284,7 +286,7 @@ export function MasteringSuite({ onBack, testID }: MasteringSuiteProps) {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       if (file.size > 200 * 1024 * 1024) {
-        Alert.alert("Erro", "Arquivo muito grande (max 200MB).");
+        Alert.alert(t("mastering.errorTitle", "Error"), t("mastering.fileTooLarge", "File too large (max 200MB)."));
         return;
       }
       const url = URL.createObjectURL(file);
@@ -319,8 +321,8 @@ export function MasteringSuite({ onBack, testID }: MasteringSuiteProps) {
   const handleExport = useCallback(async () => {
     if (Platform.OS !== "web") {
       Alert.alert(
-        "Indisponível",
-        "Exportação está disponível apenas na versão web.",
+        t("mastering.unavailableTitle", "Unavailable"),
+        t("mastering.webOnly", "Exporting is only available in the web version."),
       );
       setExporting(false);
       return;
@@ -361,13 +363,13 @@ export function MasteringSuite({ onBack, testID }: MasteringSuiteProps) {
         const bytes = await blob.arrayBuffer();
         await OpenBandNative.writeFile(path, bytes);
         Alert.alert(
-          "Exportado",
-          `Master exportado com áudio (${bd}bit, ${sr}Hz)`,
+          t("mastering.exportedTitle", "Exported"),
+          t("mastering.exportedSummary", "Master exported with audio ({{bd}}bit, {{sr}}Hz)", { bd, sr }),
         );
       }
     } catch (e) {
       console.error("Export failed:", e);
-      Alert.alert("Erro", "Falha ao exportar master.");
+      Alert.alert(t("mastering.errorTitle", "Error"), t("mastering.exportError", "Failed to export master."));
     }
     setExporting(false);
     setShowExport(false);
@@ -395,10 +397,10 @@ export function MasteringSuite({ onBack, testID }: MasteringSuiteProps) {
               <Text className="text-gray-400 text-lg">←</Text>
             </Pressable>
           )}
-          <PageHeader title="Mastering Suite" subtitle="OpenBand" />
+          <PageHeader title={t("mastering.title", "Mastering Suite")} subtitle="OpenBand" />
         </View>
         <Button
-          title="Export"
+          title={t("mastering.exportButton", "Export")}
           onPress={() => setShowExport(true)}
           variant="primary"
         />
@@ -475,15 +477,13 @@ export function MasteringSuite({ onBack, testID }: MasteringSuiteProps) {
           {masterLufs && (
             <View className="card mt-2 p-3">
               <Text className="label text-gray-400 text-xs mb-1">
-                Loudness da Master (pós-bounce)
+                {t("mastering.loudnessLabel", "Master Loudness (post-bounce)")}
               </Text>
               <Text className="text-brand-accent text-sm font-mono">
-                Integrado: {masterLufs.integrated.toFixed(1)} LUFS · True Peak:{" "}
-                {masterLufs.truePeak.toFixed(1)} dBTP
+                {t("mastering.lufsIntegrated", "Integrated: {{v}} LUFS · True Peak: {{p}} dBTP", { v: masterLufs.integrated.toFixed(1), p: masterLufs.truePeak.toFixed(1) })}
               </Text>
               <Text className="text-gray-500 text-[10px] font-mono mt-0.5">
-                Short-term: {masterLufs.shortTerm.toFixed(1)} LUFS · LRA:{" "}
-                {masterLufs.lra.toFixed(1)} LU
+                {t("mastering.lufsShortTerm", "Short-term: {{v}} LUFS · LRA: {{l}} LU", { v: masterLufs.shortTerm.toFixed(1), l: masterLufs.lra.toFixed(1) })}
               </Text>
             </View>
           )}
@@ -513,12 +513,12 @@ export function MasteringSuite({ onBack, testID }: MasteringSuiteProps) {
         <View className="mt-4 mb-8">
           <View className="flex-row items-center gap-2 mb-2">
             <View className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-            <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
-              Export
-            </Text>
+              <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                {t("mastering.exportButton", "Export")}
+              </Text>
           </View>
           <Button
-            title="Exportar Master"
+            title={t("mastering.exportMaster", "Export Master")}
             onPress={() => setShowExport(true)}
             variant="secondary"
           />
@@ -530,7 +530,7 @@ export function MasteringSuite({ onBack, testID }: MasteringSuiteProps) {
           <View className="bg-dark-elevated border-t border-dark-border rounded-t-3xl p-5">
             <View className="flex-row items-center justify-between mb-4">
               <Text className="text-white text-base font-bold">
-                Exportar Master
+                {t("mastering.exportMaster", "Export Master")}
               </Text>
               <Pressable
                 onPress={() => setShowExport(false)}
@@ -542,7 +542,7 @@ export function MasteringSuite({ onBack, testID }: MasteringSuiteProps) {
 
             <View className="mb-4">
               <Text className="text-gray-400 text-xs font-medium mb-2">
-                Formato
+                {t("mastering.format", "Format")}
               </Text>
               <View className="flex-row gap-2">
                 {(["wav", "mp3"] as const).map((f) => (
@@ -564,7 +564,7 @@ export function MasteringSuite({ onBack, testID }: MasteringSuiteProps) {
             {exportFormat === "wav" && (
               <View className="mb-4">
                 <Text className="text-gray-400 text-xs font-medium mb-2">
-                  Bit Depth
+                  {t("mastering.bitDepth", "Bit Depth")}
                 </Text>
                 <View className="flex-row gap-2">
                   {([16, 24] as const).map((b) => (
@@ -581,7 +581,7 @@ export function MasteringSuite({ onBack, testID }: MasteringSuiteProps) {
                       <Text
                         className={`text-[8px] ${exportBitDepth === b ? "text-brand-accent/70" : "text-gray-600"}`}
                       >
-                        {b === 16 ? "Com dithering" : "Alta resolução"}
+                        {b === 16 ? t("mastering.dithering16", "With dithering") : t("mastering.highResolution24", "High resolution")}
                       </Text>
                     </Pressable>
                   ))}
@@ -591,16 +591,16 @@ export function MasteringSuite({ onBack, testID }: MasteringSuiteProps) {
 
             {exportFormat === "mp3" && (
               <View className="mb-4 bg-dark-surface rounded-xl border border-dark-border p-3">
-                <Text className="text-gray-400 text-xs">MP3 320 kbps CBR</Text>
+                <Text className="text-gray-400 text-xs">{t("mastering.mp3Cbr", "MP3 320 kbps CBR")}</Text>
                 <Text className="text-gray-600 text-[10px] mt-0.5">
-                  Para distribuição rápida
+                  {t("mastering.mp3Fast", "For quick distribution")}
                 </Text>
               </View>
             )}
 
             <View className="mb-4">
               <Text className="text-gray-400 text-xs font-medium mb-2">
-                Sample Rate
+                {t("mastering.sampleRate", "Sample Rate")}
               </Text>
               <View className="flex-row gap-2">
                 {([44100, 48000, 96000] as const).map((r) => (
@@ -637,10 +637,10 @@ export function MasteringSuite({ onBack, testID }: MasteringSuiteProps) {
                 className={`text-sm font-bold ${session.inputFile && !exporting ? "text-white" : "text-gray-500"}`}
               >
                 {exporting
-                  ? exportFormat === "mp3" && exportProgress > 0 ? `Codificando MP3 (${exportProgress}%)...` : "Renderizando..."
+                  ? exportFormat === "mp3" && exportProgress > 0 ? t("mastering.encodingMp3", "Encoding MP3 ({{p}}%)...", { p: exportProgress }) : t("mastering.rendering", "Rendering...")
                   : session.inputFile
-                    ? "Renderizar & Exportar"
-                    : "Faça upload primeiro"}
+                    ? t("mastering.renderExport", "Render & Export")
+                    : t("mastering.uploadFirst", "Upload first")}
               </Text>
             </Pressable>
           </View>

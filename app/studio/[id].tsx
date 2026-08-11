@@ -9,6 +9,7 @@ import {
   Alert,
   Modal,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import {
   useAudioPlayer,
@@ -110,6 +111,7 @@ export default function Studio() {
     initialBottomTab,
   } = useProjectParams();
   const router = useRouter();
+  const { t } = useTranslation();
   const [projectTitle, setProjectTitle] = useState(initialTitle);
   const [projectLyrics, setProjectLyrics] = useState("");
   const [coverUrl, setCoverUrl] = useState<string | undefined>(undefined);
@@ -326,7 +328,7 @@ export default function Studio() {
     (coverDataUrl: string) => {
       const ok = saveProjectNow({ coverUrl: coverDataUrl });
       if (!ok) {
-        Alert.alert("Capa", "Capa não salva: armazenamento cheio");
+        Alert.alert(t("studio.coverTitle", "Cover"), t("studio.coverSaveError", "Cover could not be saved: storage is full."));
         return;
       }
       setCoverUrl(coverDataUrl);
@@ -586,12 +588,12 @@ export default function Studio() {
       const message = e instanceof Error ? e.message : "";
       if (message === "MIC_PERMISSION_DENIED") {
         Alert.alert(
-          "Permissão",
-          "Permissão para usar o microfone foi negada.",
+          t("studio.permissionTitle", "Permission"),
+          t("studio.permissionBody", "Permission to use the microphone was denied."),
         );
       } else {
         console.warn("Recording failed:", e);
-        Alert.alert("Erro", "Falha ao gravar áudio.");
+        Alert.alert(t("studio.errorTitle", "Error"), t("studio.recordError", "Failed to record audio."));
       }
       setIsRecording(false);
     }
@@ -699,19 +701,19 @@ export default function Studio() {
         setTracks(tracks.filter((t) => t.id !== trackId));
         if (selectedTrackId === trackId) setSelectedTrackId(null);
       };
-      const label = removed?.name ?? "esta track";
+      const label = removed?.name ?? t("studio.thisTrack", "this track");
       if (Platform.OS === "web") {
-        if (typeof window !== "undefined" && !window.confirm(`Excluir "${label}"? Esta ação não pode ser desfeita.`)) {
+        if (typeof window !== "undefined" && !window.confirm(t("studio.deleteTrackConfirm", "Delete \"{{name}}\"? This action cannot be undone.", { name: label }))) {
           return;
         }
         confirmDelete();
       } else {
         Alert.alert(
-          "Excluir track",
-          `Excluir "${label}"? Esta ação não pode ser desfeita.`,
+          t("studio.deleteTrackTitle", "Delete Track"),
+          t("studio.deleteTrackConfirm", "Delete \"{{name}}\"? This action cannot be undone.", { name: label }),
           [
-            { text: "Cancelar", style: "cancel" },
-            { text: "Excluir", style: "destructive", onPress: confirmDelete },
+            { text: t("studio.cancel", "Cancel"), style: "cancel" },
+            { text: t("studio.deleteTrack", "Delete"), style: "destructive", onPress: confirmDelete },
           ],
         );
       }
@@ -992,7 +994,7 @@ export default function Studio() {
 
   const handleImportAudio = useCallback(() => {
     if (Platform.OS !== "web") {
-      Alert.alert("Importar", "Importação disponível apenas na versão web.");
+      Alert.alert(t("studio.importTitle", "Import"), t("studio.importWebOnly", "Importing is only available in the web version."));
       return;
     }
     const input = document.createElement("input");
@@ -1166,7 +1168,7 @@ export default function Studio() {
         setSelectedTrackId(trackId);
       } catch (err) {
         console.warn("MIDI generation failed:", err);
-        Alert.alert("Erro", "Falha ao gerar MIDI.");
+        Alert.alert(t("studio.errorTitle", "Error"), t("studio.generateMidiError", "Failed to generate MIDI."));
       }
     },
     [tracks, setTracks],
@@ -1174,7 +1176,7 @@ export default function Studio() {
 
   const handleMidiImport = useCallback(() => {
     if (Platform.OS !== "web") {
-      Alert.alert("MIDI", "Importação MIDI disponível apenas na versão web.");
+      Alert.alert(t("studio.midiTitle", "MIDI"), t("studio.midiWebOnly", "MIDI import is only available in the web version."));
       return;
     }
     const input = document.createElement("input");
@@ -1189,7 +1191,7 @@ export default function Studio() {
         if (!result || typeof result === "string") return;
         const midi = parseMidi(result as ArrayBuffer);
         if (!midi) {
-          Alert.alert("Erro", "Não foi possível ler o arquivo MIDI.");
+          Alert.alert(t("studio.errorTitle", "Error"), t("studio.readMidiError", "Could not read the MIDI file."));
           return;
         }
         const newTracks: TrackDef[] = midi.tracks.map((trk, ti) => ({
@@ -1220,12 +1222,12 @@ export default function Studio() {
         }));
         setTracks([...tracks, ...newTracks]);
         Alert.alert(
-          "MIDI Importado",
-          `${newTracks.length} faixas criadas de "${file.name}" (${midi.bpm} BPM)`,
+          t("studio.midiImported", "MIDI Imported"),
+          t("studio.midiImportedSummary", "{{count}} tracks created from \"{{file}}\" ({{bpm}} BPM)", { count: newTracks.length, file: file.name, bpm: midi.bpm }),
         );
       };
       reader.onerror = () => {
-        Alert.alert("Erro", "Falha ao ler o arquivo MIDI.");
+        Alert.alert(t("studio.errorTitle", "Error"), t("studio.loadMidiError", "Failed to read the MIDI file."));
       };
       reader.readAsArrayBuffer(file);
     };
@@ -1322,27 +1324,27 @@ export default function Studio() {
   useKeyboardShortcuts(shortcuts);
 
   useEffect(() => {
-    registerCommand("transport.play", "Play", "Start/stop playback", "Transport", togglePlay, "Space");
-    registerCommand("transport.record", "Record", "Toggle recording", "Transport", toggleRecording, "R");
-    registerCommand("edit.undo", "Undo", "Undo last action", "Edit", undoHistory, "Ctrl+Z");
-    registerCommand("edit.redo", "Redo", "Redo last action", "Edit", redoHistory, "Ctrl+Shift+Z");
-    registerCommand("edit.delete", "Delete", "Delete selected track", "Edit", () => selectedTrack && deleteTrack(selectedTrack.id), "Delete", "Backspace");
-    registerCommand("track.add", "Add Track", "Add a new track to the project", "Track", handleAddTrack, "Ctrl+T");
-    registerCommand("clip.add", "Add Clip", "Add a clip region to the selected track", "Clip", handleAddClip, "Ctrl+Shift+C");
-    registerCommand("track.mute", "Mute Track", "Toggle mute on selected track", "Track", () => selectedTrack && toggleMute(selectedTrack.id));
-    registerCommand("track.solo", "Solo Track", "Toggle solo on selected track", "Track", () => selectedTrack && toggleSolo(selectedTrack.id));
-    registerCommand("mixer.open", "Open Mixer", "Switch to mixer view", "View", () => setBottomTab("mixer"), "Ctrl+M");
-    registerCommand("file.save", "Save", "Save current project", "File", handleManualSave, "Ctrl+S");
-    registerCommand("file.export", "Export", "Open export/bounce dialog", "File", () => openModal("bounce"), "Ctrl+Shift+E");
-    registerCommand("file.branch", "Branch Manager", "Open project branching", "File", () => openModal("branchManager"), "Ctrl+B");
-    registerCommand("file.commit", "Commit Changes", "Open commit modal", "File", () => openModal("commitModal"), "Ctrl+Shift+C");
-    registerCommand("view.browser", "Sample Browser", "Toggle sample browser", "View", () => toggleModal("sampleBrowser"), "Ctrl+I");
-    registerCommand("palette.toggle", "Command Palette", "Open command palette", "System", () => openModal("commandPalette"), "Ctrl+K");
+    registerCommand("transport.play", t("studio.command.play", "Play"), "Start/stop playback", "Transport", togglePlay, "Space");
+    registerCommand("transport.record", t("studio.command.record", "Record"), "Toggle recording", "Transport", toggleRecording, "R");
+    registerCommand("edit.undo", t("studio.command.undo", "Undo"), "Undo last action", "Edit", undoHistory, "Ctrl+Z");
+    registerCommand("edit.redo", t("studio.command.redo", "Redo"), "Redo last action", "Edit", redoHistory, "Ctrl+Shift+Z");
+    registerCommand("edit.delete", t("studio.command.delete", "Delete"), "Delete selected track", "Edit", () => selectedTrack && deleteTrack(selectedTrack.id), "Delete", "Backspace");
+    registerCommand("track.add", t("studio.command.addTrack", "Add Track"), "Add a new track to the project", "Track", handleAddTrack, "Ctrl+T");
+    registerCommand("clip.add", t("studio.command.addClip", "Add Clip"), "Add a clip region to the selected track", "Clip", handleAddClip, "Ctrl+Shift+C");
+    registerCommand("track.mute", t("studio.command.muteTrack", "Mute Track"), "Toggle mute on selected track", "Track", () => selectedTrack && toggleMute(selectedTrack.id));
+    registerCommand("track.solo", t("studio.command.soloTrack", "Solo Track"), "Toggle solo on selected track", "Track", () => selectedTrack && toggleSolo(selectedTrack.id));
+    registerCommand("mixer.open", t("studio.command.openMixer", "Open Mixer"), "Switch to mixer view", "View", () => setBottomTab("mixer"), "Ctrl+M");
+    registerCommand("file.save", t("studio.command.save", "Save"), "Save current project", "File", handleManualSave, "Ctrl+S");
+    registerCommand("file.export", t("studio.command.export", "Export"), "Open export/bounce dialog", "File", () => openModal("bounce"), "Ctrl+Shift+E");
+    registerCommand("file.branch", t("studio.command.branchManager", "Branch Manager"), "Open project branching", "File", () => openModal("branchManager"), "Ctrl+B");
+    registerCommand("file.commit", t("studio.command.commitChanges", "Commit Changes"), "Open commit modal", "File", () => openModal("commitModal"), "Ctrl+Shift+C");
+    registerCommand("view.browser", t("studio.command.sampleBrowser", "Sample Browser"), "Toggle sample browser", "View", () => toggleModal("sampleBrowser"), "Ctrl+I");
+    registerCommand("palette.toggle", t("studio.command.commandPalette", "Command Palette"), "Open command palette", "System", () => openModal("commandPalette"), "Ctrl+K");
     initKeyBindings();
     return () => {
       disposeKeyBindings();
     };
-  }, [togglePlay, toggleRecording, undoHistory, redoHistory, handleManualSave, selectedTrack, toggleMute, toggleSolo, deleteTrack, handleAddTrack, handleAddClip, setBottomTab, openModal, toggleModal, closeModal]);
+  }, [togglePlay, toggleRecording, undoHistory, redoHistory, handleManualSave, selectedTrack, toggleMute, toggleSolo, deleteTrack, handleAddTrack, handleAddClip, setBottomTab, openModal, toggleModal, closeModal, t]);
 
   const getEffectiveVolume = useCallback((trackId: string): number => {
     const gv = getGroupVolume(groups, trackId);
@@ -1352,13 +1354,13 @@ export default function Studio() {
   }, [groups, isPlaying, automatedVolume, tracks]);
 
   const bottomTabs: { key: BottomTab; label: string; icon: string }[] = [
-    { key: "mixer", label: "Mixer", icon: "◉" },
-    { key: "fx", label: "FX", icon: "✦" },
-    { key: "mastering", label: "Master", icon: "♛" },
-    { key: "groups", label: "Grupos", icon: "◈" },
-    { key: "buses", label: "Buses", icon: "⏚" },
-    { key: "mixes", label: "Mixes", icon: "☰" },
-    { key: "chords", label: "Chords", icon: "♪" },
+    { key: "mixer", label: t("studio.tabMixer", "Mixer"), icon: "◉" },
+    { key: "fx", label: t("studio.tabFx", "FX"), icon: "✦" },
+    { key: "mastering", label: t("studio.tabMastering", "Master"), icon: "♛" },
+    { key: "groups", label: t("studio.tabGroups", "Groups"), icon: "◈" },
+    { key: "buses", label: t("studio.tabBuses", "Buses"), icon: "⏚" },
+    { key: "mixes", label: t("studio.tabMixes", "Mixes"), icon: "☰" },
+    { key: "chords", label: t("studio.tabChords", "Chords"), icon: "♪" },
   ];
 
   return (
@@ -1398,7 +1400,7 @@ export default function Studio() {
               onChangeText={setProjectTitle}
               onBlur={commitTitle}
               onSubmitEditing={commitTitle}
-              accessibilityLabel="Título do projeto"
+              accessibilityLabel={t("studio.a11yProjectTitle", "Project title")}
               returnKeyType="done"
               autoFocus
               className="h-9 px-2 rounded-lg bg-dark-elevated text-white text-sm border border-brand-primary/60 min-w-[140px] max-w-[200px]"
@@ -1407,7 +1409,7 @@ export default function Studio() {
             <Pressable
               onPress={() => setEditingTitle(true)}
               accessibilityRole="button"
-              accessibilityLabel="Editar título do projeto"
+              accessibilityLabel={t("studio.a11yEditProjectTitle", "Edit project title")}
               className="h-9 px-2 rounded-lg items-center justify-center bg-dark-muted/30 active:opacity-70 focus-ring max-w-[200px]"
             >
               <Text className="text-white font-bold text-sm" numberOfLines={1} ellipsizeMode="tail">
@@ -1426,7 +1428,7 @@ export default function Studio() {
           <Pressable
             onPress={() => seekRelative(-5)}
             accessibilityRole="button"
-            accessibilityLabel="Voltar 5 segundos"
+            accessibilityLabel={t("studio.a11ySeekBack", "Back 5 seconds")}
             className="w-8 h-8 rounded-lg bg-dark-muted items-center justify-center active:opacity-70 focus-ring"
           >
             <Text className="text-gray-300 text-xs">⏮</Text>
@@ -1434,15 +1436,15 @@ export default function Studio() {
           <Pressable
             onPress={() => openModal("generateCover")}
             accessibilityRole="button"
-            accessibilityLabel="Gerar capa com IA"
+            accessibilityLabel={t("studio.a11yGenerateCover", "Generate AI cover")}
             className="h-8 rounded-lg items-center justify-center px-2 bg-brand-accent/20 border border-brand-accent/30 active:opacity-70"
           >
-            <Text className="text-brand-accent text-xs font-bold">✨ Gerar Capa com IA</Text>
+            <Text className="text-brand-accent text-xs font-bold">{t("studio.generateCoverButton", "✨ Generate AI Cover")}</Text>
           </Pressable>
           <Pressable
             onPress={togglePlay}
             accessibilityRole="button"
-            accessibilityLabel={isPlaying ? "Pausar" : "Reproduzir"}
+            accessibilityLabel={isPlaying ? t("studio.a11yPause", "Pause") : t("studio.a11yPlay", "Play")}
             className={`w-11 h-11 rounded-full items-center justify-center focus-ring ${isPlaying ? "bg-green-600" : "bg-dark-border"}`}
           >
             <Text className="text-white text-lg">{isPlaying ? "⏸" : "▶"}</Text>
@@ -1450,7 +1452,7 @@ export default function Studio() {
           <Pressable
             onPress={toggleRecording}
             accessibilityRole="button"
-            accessibilityLabel={isRecording ? "Parar gravação" : "Gravar"}
+            accessibilityLabel={isRecording ? t("studio.a11yStopRecording", "Stop recording") : t("studio.a11yRecord", "Record")}
             className={`w-11 h-11 rounded-full items-center justify-center focus-ring ${isRecording ? "bg-red-600" : recordSettings.armed ? "bg-red-500/30" : "bg-dark-border"}`}
           >
             <View
@@ -1460,7 +1462,7 @@ export default function Studio() {
           <Pressable
             onPress={() => seekRelative(5)}
             accessibilityRole="button"
-            accessibilityLabel="Avançar 5 segundos"
+            accessibilityLabel={t("studio.a11ySeekForward", "Forward 5 seconds")}
             className="w-8 h-8 rounded-lg bg-dark-muted items-center justify-center active:opacity-70 focus-ring"
           >
             <Text className="text-gray-300 text-xs">⏭</Text>
@@ -1468,7 +1470,7 @@ export default function Studio() {
           <Pressable
             onPress={stopPlayback}
             accessibilityRole="button"
-            accessibilityLabel="Parar"
+            accessibilityLabel={t("studio.a11yStop", "Stop")}
             className="w-8 h-8 rounded-lg bg-dark-muted items-center justify-center active:opacity-70 focus-ring"
           >
             <Text className="text-gray-300 text-xs">⏹</Text>
@@ -1479,7 +1481,7 @@ export default function Studio() {
           <Pressable
             onPress={undoHistory}
             accessibilityRole="button"
-            accessibilityLabel="Desfazer"
+            accessibilityLabel={t("studio.a11yUndo", "Undo")}
             accessibilityState={{ disabled: !canUndo }}
             className={`w-8 h-8 rounded-lg items-center justify-center focus-ring ${canUndo ? "bg-dark-muted active:opacity-70" : "opacity-30"}`}
           >
@@ -1488,7 +1490,7 @@ export default function Studio() {
           <Pressable
             onPress={redoHistory}
             accessibilityRole="button"
-            accessibilityLabel="Refazer"
+            accessibilityLabel={t("studio.a11yRedo", "Redo")}
             accessibilityState={{ disabled: !canRedo }}
             className={`w-8 h-8 rounded-lg items-center justify-center focus-ring ${canRedo ? "bg-dark-muted active:opacity-70" : "opacity-30"}`}
           >
@@ -1524,7 +1526,7 @@ export default function Studio() {
           <Pressable
             onPress={() => openModal("commandPalette")}
             accessibilityRole="button"
-            accessibilityLabel="Abrir paleta de comandos"
+            accessibilityLabel={t("studio.a11yOpenCommands", "Open command palette")}
             className="h-8 rounded-lg items-center justify-center px-2 bg-dark-muted active:opacity-70 focus-ring"
           >
             <Text className="text-gray-300 text-xs font-bold">⌘K</Text>
@@ -1605,10 +1607,10 @@ export default function Studio() {
           <Pressable
             onPress={() => openModal("toolbarOverflow")}
             accessibilityRole="button"
-            accessibilityLabel="Mais ferramentas"
+            accessibilityLabel={t("studio.a11yMoreTools", "More tools")}
             className="h-8 rounded-lg flex-row items-center justify-center px-2 bg-dark-muted active:opacity-70 focus-ring"
           >
-            <Text className="text-gray-300 text-xs">⋯ mais</Text>
+            <Text className="text-gray-300 text-xs">{t("studio.moreTools", "⋯ more")}</Text>
           </Pressable>
         )}
 
@@ -1624,19 +1626,19 @@ export default function Studio() {
           >
             <View className="mt-14 mr-2 ml-auto w-56 bg-dark-muted rounded-lg p-2 gap-1">
               {[
-                { label: "🎵  Afinador", action: () => openModal("tuner") },
-                { label: "⌘K  Comandos", action: () => openModal("commandPalette") },
-                { label: "⎇  Branches", action: () => openModal("branchManager") },
-                { label: "✓  Commit", action: () => openModal("commitModal") },
-                { label: "🎛️  Sampler", action: () => openModal("sampler") },
-                { label: "🎹  Synth", action: () => openModal("synth") },
-                { label: "🔊  Saída de áudio", action: () => openModal("outputSelector") },
-                { label: "🔌  Patchbay", action: () => openModal("patchbay") },
-                { label: "🎹  MIDI", action: () => openModal("midi") },
-                { label: "🔁  Looper", action: () => openModal("looper") },
-                { label: "⌨  Code Sampler", action: () => openModal("codeSampler") },
-                { label: "✨  Prompt Sampler", action: () => openModal("promptSampler") },
-                { label: "📂  Samples", action: () => toggleModal("sampleBrowser") },
+                { label: t("studio.toolTuner", "🎵  Tuner"), action: () => openModal("tuner") },
+                { label: t("studio.toolCommands", "⌘K  Commands"), action: () => openModal("commandPalette") },
+                { label: t("studio.toolBranches", "⎇  Branches"), action: () => openModal("branchManager") },
+                { label: t("studio.toolCommit", "✓  Commit"), action: () => openModal("commitModal") },
+                { label: t("studio.toolSampler", "🎛️  Sampler"), action: () => openModal("sampler") },
+                { label: t("studio.toolSynth", "🎹  Synth"), action: () => openModal("synth") },
+                { label: t("studio.toolOutput", "🔊  Audio output"), action: () => openModal("outputSelector") },
+                { label: t("studio.toolPatchbay", "🔌  Patchbay"), action: () => openModal("patchbay") },
+                { label: t("studio.toolMidi", "🎹  MIDI"), action: () => openModal("midi") },
+                { label: t("studio.toolLooper", "🔁  Looper"), action: () => openModal("looper") },
+                { label: t("studio.toolCodeSampler", "⌨  Code Sampler"), action: () => openModal("codeSampler") },
+                { label: t("studio.toolPromptSampler", "✨  Prompt Sampler"), action: () => openModal("promptSampler") },
+                { label: t("studio.toolSamples", "📂  Samples"), action: () => toggleModal("sampleBrowser") },
               ].map((item) => (
                 <Pressable
                   key={item.label}
@@ -1728,7 +1730,7 @@ export default function Studio() {
           {lastSavedLabel && (
             <Text className="text-gray-500 text-[10px] font-medium">
               {lastSavedLabel}
-              {syncState.pending ? " · syncing..." : ""}
+              {syncState.pending ? t("studio.syncing", " · syncing...") : ""}
               {syncState.error ? ` · ${syncState.error}` : ""}
             </Text>
           )}
@@ -1736,7 +1738,7 @@ export default function Studio() {
             onPress={handleManualSave}
             className="bg-brand-primary px-5 py-2 rounded-xl active:opacity-80 shadow-sm shadow-brand-primary/20"
           >
-            <Text className="text-white font-bold text-sm">Salvar</Text>
+            <Text className="text-white font-bold text-sm">{t("studio.saveButton", "Save")}</Text>
           </Pressable>
         </View>
       </View>
@@ -1744,7 +1746,7 @@ export default function Studio() {
       <View className="h-10 bg-dark-surface/40 border-b border-dark-border/50 flex-row items-center px-4">
         <View style={{ width: resp.tracksSidebarWidth }} className="pr-2">
           <Text className="text-gray-500 text-[10px] font-bold tracking-wider">
-            TRACKS
+            {t("studio.tracksHeader", "TRACKS")}
           </Text>
         </View>
         <ScrollView
@@ -1775,21 +1777,21 @@ export default function Studio() {
         </ScrollView>
         <View className="flex-row items-center gap-1 pl-2">
           <Pressable
-            accessibilityLabel="Diminuir zoom"
+            accessibilityLabel={t("studio.a11yZoomOut", "Zoom out")}
             onPress={() => setZoom((z) => Math.max(0.5, +(z / 1.5).toFixed(2)))}
             className="w-7 h-7 rounded items-center justify-center bg-dark-muted/40 border border-dark-border text-gray-300 active:opacity-70"
           >
             <Text className="text-gray-300 text-sm font-bold">−</Text>
           </Pressable>
           <Pressable
-            accessibilityLabel="Aumentar zoom"
+            accessibilityLabel={t("studio.a11yZoomIn", "Zoom in")}
             onPress={() => setZoom((z) => Math.min(3, +(z * 1.5).toFixed(2)))}
             className="w-7 h-7 rounded items-center justify-center bg-dark-muted/40 border border-dark-border text-gray-300 active:opacity-70"
           >
             <Text className="text-gray-300 text-sm font-bold">+</Text>
           </Pressable>
           <Pressable
-            accessibilityLabel="Resetar zoom"
+            accessibilityLabel={t("studio.a11yResetZoom", "Reset zoom")}
             onPress={() => setZoom(1)}
             className="w-7 h-7 rounded items-center justify-center bg-dark-muted/40 border border-dark-border text-gray-400 active:opacity-70"
           >
@@ -1951,14 +1953,14 @@ export default function Studio() {
               className="h-8 rounded-lg bg-dark-muted/30 items-center justify-center flex-row gap-1.5 active:opacity-70 border border-dark-border/30"
             >
               <Text className="text-gray-300 text-xs font-bold">+</Text>
-              <Text className="text-gray-300 text-[10px] font-semibold">Track</Text>
+              <Text className="text-gray-300 text-[10px] font-semibold">{t("studio.addTrackLabel", "Track")}</Text>
             </Pressable>
             <Pressable
               onPress={handleImportAudio}
               className="h-8 rounded-lg bg-dark-muted/30 items-center justify-center flex-row gap-1.5 active:opacity-70 border border-dark-border/30"
             >
               <Text className="text-gray-300 text-xs">📁</Text>
-              <Text className="text-gray-300 text-[10px] font-semibold">Audio</Text>
+              <Text className="text-gray-300 text-[10px] font-semibold">{t("studio.addAudioLabel", "Audio")}</Text>
             </Pressable>
             <Pressable
               onPress={handleAddMidiTrack}
@@ -1972,14 +1974,14 @@ export default function Studio() {
               className="h-8 rounded-lg bg-dark-muted/30 items-center justify-center flex-row gap-1.5 active:opacity-70 border border-dark-border/30"
             >
               <Text className="text-gray-300 text-xs">📂</Text>
-              <Text className="text-gray-300 text-[10px] font-semibold">Import</Text>
+              <Text className="text-gray-300 text-[10px] font-semibold">{t("studio.midiImportLabel", "Import")}</Text>
             </Pressable>
             <Pressable
               onPress={handleAddClip}
               className="h-8 rounded-lg bg-dark-muted/30 items-center justify-center flex-row gap-1.5 active:opacity-70 border border-dark-border/30"
             >
               <Text className="text-gray-300 text-xs">▦</Text>
-              <Text className="text-gray-300 text-[10px] font-semibold">Clip</Text>
+              <Text className="text-gray-300 text-[10px] font-semibold">{t("studio.addClipLabel", "Clip")}</Text>
             </Pressable>
           </View>
         </View>
@@ -1987,9 +1989,9 @@ export default function Studio() {
         <ScrollView horizontal className="flex-1 bg-dark-bg">
           {tracks.length === 0 ? (
               <View className="flex-1 items-center justify-center px-6" style={{ width: timelineWidth }}>
-              <Text className="text-gray-400 text-base font-semibold">Nenhuma track ainda</Text>
+              <Text className="text-gray-400 text-base font-semibold">{t("studio.noTracksTitle", "No tracks yet")}</Text>
               <Text className="text-gray-500 text-xs mt-1 text-center">
-                Adicione uma track para começar
+                {t("studio.noTracksHint", "Add a track to get started")}
               </Text>
             </View>
           ) : (
@@ -2109,7 +2111,7 @@ export default function Studio() {
         <View className="h-64 border-t border-dark-border bg-dark-bg">
           <View className="flex-row items-center justify-between px-4 py-1.5 border-b border-dark-border/50">
             <Text className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">
-              Sample Browser
+              {t("studio.sampleBrowserHeader", "Sample Browser")}
             </Text>
             <Pressable
               onPress={() => closeModal("sampleBrowser")}
@@ -2356,7 +2358,7 @@ export default function Studio() {
         {bottomTab === "buses" && (
           <View className="flex-1 p-3">
             <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-gray-300 label">Sub-Mix Buses</Text>
+              <Text className="text-gray-300 label">{t("studio.subMixBuses", "Sub-Mix Buses")}</Text>
               <Pressable
                 onPress={() => {
                   const id = `bus-${Date.now()}`;
@@ -2376,13 +2378,13 @@ export default function Studio() {
                 }}
                 className="px-3 py-1.5 rounded-lg bg-brand-accent/20 border border-brand-accent/40 active:opacity-70"
               >
-                <Text className="text-brand-accent text-xs font-bold">+ Bus</Text>
+                <Text className="text-brand-accent text-xs font-bold">{t("studio.addBus", "+ Bus")}</Text>
               </Pressable>
             </View>
             {buses.length === 0 && (
               <View className="flex-1 items-center justify-center">
                 <Text className="text-gray-600 text-xs">
-                  Nenhum bus de áudio. Crie um para agrupar tracks.
+                  {t("studio.noBuses", "No audio buses. Create one to group tracks.")}
                 </Text>
               </View>
             )}
@@ -2434,7 +2436,7 @@ export default function Studio() {
                       </View>
                     </View>
                     <View className="flex-row items-center gap-2 mb-2">
-                      <Text className="text-gray-500 text-xs w-12">Vol:</Text>
+                      <Text className="text-gray-500 text-xs w-12">{t("studio.volumeLabel", "Vol:")}</Text>
                       <View className="flex-1 h-1.5 bg-dark-bg rounded-full overflow-hidden">
                         <View
                           className="h-full bg-brand-accent rounded-full"
@@ -2446,7 +2448,7 @@ export default function Studio() {
                       </Text>
                     </View>
                     <View className="flex-row items-center gap-2">
-                      <Text className="text-gray-500 text-xs w-12">Vol:</Text>
+                      <Text className="text-gray-500 text-xs w-12">{t("studio.volumeLabel", "Vol:")}</Text>
                       <Pressable
                         onPress={() =>
                           setBuses((prev) =>
@@ -2541,7 +2543,7 @@ export default function Studio() {
                 </View>
                 <View className="mt-3">
                   <Text className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-2 px-1">
-                    Quick FX
+                    {t("studio.quickFx", "Quick FX")}
                   </Text>
                   <View className="flex-row flex-wrap gap-3 px-1">
                     {ONE_KNOB_TYPES.map((knobType) => (
@@ -2576,7 +2578,7 @@ export default function Studio() {
             ) : (
               <View className="py-4 items-center gap-2">
                 <Text className="text-gray-500 text-xs">
-                  Selecione uma track para ver os plugins
+                  {t("studio.fxNoTrack", "Select a track to see its plugins")}
                 </Text>
                 <MasterRack
                   plugins={masterPlugins}
@@ -2657,7 +2659,7 @@ export default function Studio() {
           <View className="px-4 py-3" style={{ maxHeight: 280 }}>
             <View className="flex-row items-center gap-2 mb-2">
               <Text className="text-gray-300 text-xs font-semibold">
-                AutoMix
+                {t("studio.autoMix", "AutoMix")}
               </Text>
               {AUTOMIX_GENRES.map((genre) => (
                 <Pressable
@@ -2718,7 +2720,7 @@ export default function Studio() {
               className="mt-2 h-8 rounded-lg bg-brand-accent/20 items-center justify-center active:opacity-70 border border-brand-accent/30"
             >
               <Text className="text-brand-accent text-[10px] font-bold">
-                Gerar MIDI da Progressão →
+                {t("studio.generateChordsMidi", "Generate Chord MIDI →")}
               </Text>
             </Pressable>
           </View>

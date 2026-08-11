@@ -1,4 +1,5 @@
 import { View, Text, Pressable } from "react-native";
+import { useTranslation } from "react-i18next";
 import type { Plugin } from "../lib/types";
 import { PLUGIN_ICONS } from "../lib/types";
 import { MASTERING_PLUGIN_DEFS } from "../lib/masteringSuite";
@@ -18,20 +19,21 @@ export function MasteringChain({
   onReset,
   testID,
 }: MasteringChainProps) {
+  const { t } = useTranslation();
   return (
     <View testID={testID}>
       <View className="flex-row items-center justify-between mb-2">
         <View className="flex-row items-center gap-2">
           <View className="w-1.5 h-1.5 rounded-full bg-rose-500" />
           <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
-            Cadeia de Masterização
+            {t("mastering.chainLabel", "Mastering Chain")}
           </Text>
         </View>
         <Pressable
           onPress={onReset}
           className="px-2.5 py-1 rounded-lg bg-dark-surface border border-dark-border active:opacity-70"
         >
-          <Text className="text-gray-400 text-[10px] font-medium">Reset</Text>
+          <Text className="text-gray-400 text-[10px] font-medium">{t("mastering.reset", "Reset")}</Text>
         </Pressable>
       </View>
       <View className="relative">
@@ -80,7 +82,7 @@ export function MasteringChain({
                   <Text
                     className={`text-[9px] font-bold ${plugin.enabled ? "text-rose-400" : "text-gray-600"}`}
                   >
-                    {plugin.enabled ? "ON" : "OFF"}
+                    {plugin.enabled ? t("mastering.on", "ON") : t("mastering.off", "OFF")}
                   </Text>
                 </Pressable>
                 <Text className="text-gray-500 text-xs ml-1">▸</Text>

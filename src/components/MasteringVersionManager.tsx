@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { View, Text, Pressable, ScrollView, TextInput } from "react-native";
+import { useTranslation } from "react-i18next";
 import type { MasteringVersion } from "../lib/masteringSuite";
 
 interface MasteringVersionManagerProps {
@@ -23,6 +24,7 @@ export function MasteringVersionManager({
   onToggleBypass,
   testID,
 }: MasteringVersionManagerProps) {
+  const { t } = useTranslation();
   const [showSave, setShowSave] = useState(false);
   const [newName, setNewName] = useState("");
   const [newNotes, setNewNotes] = useState("");
@@ -43,7 +45,7 @@ export function MasteringVersionManager({
         <View className="flex-row items-center gap-2">
           <View className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
           <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
-            Versões
+            {t("mastering.versions", "Versions")}
           </Text>
         </View>
         <View className="flex-row gap-2">
@@ -54,7 +56,7 @@ export function MasteringVersionManager({
             <Text
               className={`text-[10px] font-bold ${bypassed ? "text-yellow-400" : "text-gray-400"}`}
             >
-              {bypassed ? "BYPASS" : "A/B"}
+              {bypassed ? t("mastering.bypass", "BYPASS") : t("mastering.ab", "A/B")}
             </Text>
           </Pressable>
           <Pressable
@@ -62,7 +64,7 @@ export function MasteringVersionManager({
             className="px-2.5 py-1 rounded-lg bg-brand-accent/20 border border-brand-accent/30 active:opacity-70"
           >
             <Text className="text-brand-accent text-[10px] font-bold">
-              + Salvar
+              {t("mastering.saveVersion", "+ Save")}
             </Text>
           </Pressable>
         </View>
@@ -73,14 +75,14 @@ export function MasteringVersionManager({
           <TextInput
             value={newName}
             onChangeText={setNewName}
-            placeholder="Nome da versão (ex: Master V1)"
+            placeholder={t("mastering.versionNamePlaceholder", "Version name (e.g. Master V1)")}
             placeholderTextColor="#666"
             className="input-field px-3 py-2 mb-2 text-xs"
           />
           <TextInput
             value={newNotes}
             onChangeText={setNewNotes}
-            placeholder="Notas de recall (o que mudou?)"
+            placeholder={t("mastering.versionNotesPlaceholder", "Recall notes (what changed?)")}
             placeholderTextColor="#666"
             multiline
             numberOfLines={2}
@@ -93,14 +95,14 @@ export function MasteringVersionManager({
               className="flex-1 py-2 rounded-lg bg-dark-muted items-center active:opacity-70"
             >
               <Text className="text-gray-400 text-xs font-medium">
-                Cancelar
+                {t("mastering.cancel", "Cancel")}
               </Text>
             </Pressable>
             <Pressable
               onPress={handleSave}
               className="flex-1 py-2 rounded-lg bg-brand-accent items-center active:opacity-70"
             >
-              <Text className="text-white text-xs font-bold">Salvar</Text>
+              <Text className="text-white text-xs font-bold">{t("mastering.save", "Save")}</Text>
             </Pressable>
           </View>
         </View>
@@ -108,9 +110,9 @@ export function MasteringVersionManager({
 
       {versions.length === 0 ? (
         <View className="bg-dark-surface/50 rounded-xl border border-dark-border/50 p-4 items-center">
-          <Text className="text-gray-600 text-xs">Nenhuma versão salva</Text>
+          <Text className="text-gray-600 text-xs">{t("mastering.noVersions", "No saved versions")}</Text>
           <Text className="text-gray-700 text-[10px] mt-1">
-            Ajuste os plugins e salve sua primeira versão
+            {t("mastering.noVersionsHint", "Adjust the plugins and save your first version")}
           </Text>
         </View>
       ) : (
@@ -145,7 +147,7 @@ export function MasteringVersionManager({
                     className="mt-1 self-start"
                   >
                     <Text className="text-red-400 text-[8px] font-medium">
-                      Excluir
+                      {t("mastering.deleteVersion", "Delete")}
                     </Text>
                   </Pressable>
                 </Pressable>
@@ -158,7 +160,7 @@ export function MasteringVersionManager({
       {activeVersion?.notes && !showSave && (
         <View className="mt-2 bg-dark-surface/50 rounded-lg border border-dark-border/30 p-2">
           <Text className="text-gray-500 text-[9px] font-medium uppercase">
-            Recall Notes
+            {t("mastering.recallNotes", "Recall Notes")}
           </Text>
           <Text className="text-gray-300 text-[11px] mt-0.5">
             {activeVersion.notes}

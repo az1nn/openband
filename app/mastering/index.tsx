@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { View, Text, Pressable } from "react-native";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { MasteringSuite } from "../../src/components/MasteringSuite";
 import { Sidebar } from "../../src/components/Sidebar";
 import { MobileDrawer } from "../../src/components/MobileDrawer";
@@ -11,6 +12,7 @@ import { getMasteringInput } from "../../src/lib/masteringBridge";
 
 export default function MasteringScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const resp = useResponsive();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const hasMasteringInput = useState(() => !!getMasteringInput())[0];
@@ -49,7 +51,7 @@ export default function MasteringScreen() {
               <Text className="text-gray-300 text-lg">☰</Text>
             </Pressable>
             <View className="flex-1 items-center">
-              <Text className="text-white font-bold text-sm tracking-wide">Masterização</Text>
+              {t("mastering.title")}
             </View>
             <View className="w-9" />
           </View>
@@ -58,16 +60,16 @@ export default function MasteringScreen() {
           <View className="px-4 pt-4">
             <EmptyState
               icon="🎚"
-              title="Nenhum áudio para masterizar"
-              subtitle="Envie um áudio pelo extrator ou faça upload direto na suíte abaixo."
+              title={t("mastering.noInputTitle")}
+              subtitle={t("mastering.noInputSubtitle")}
               action={
                 <View className="flex-row gap-2 mt-1">
                   <Button
-                    title="Ir para o Extrator"
+                    title={t("mastering.goExtractor", "Ir para o Extrator")}
                     variant="primary"
                     onPress={() => router.push("/extractor" as Parameters<typeof router.push>[0])}
                   />
-                  <Button title="Voltar" variant="ghost" onPress={() => router.back()} />
+                  <Button title={t("mastering.back", "Voltar")} variant="ghost" onPress={() => router.back()} />
                 </View>
               }
             />

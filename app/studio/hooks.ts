@@ -1,4 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useRef, useState, useReducer } from "react";
 import type { Dispatch, SetStateAction, MutableRefObject } from "react";
 import { Alert } from "react-native";
@@ -207,6 +208,7 @@ export function useStudioPersistence(params: {
   handleManualSave: () => void;
 } {
   const { id, snapshot, hydrate } = params;
+  const { t } = useTranslation();
   const [lastSavedLabel, setLastSavedLabel] = useState<string | null>(null);
   const labelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -237,8 +239,8 @@ export function useStudioPersistence(params: {
 
   const handleManualSave = useCallback(() => {
     save();
-    flashLabel("Salvo ✓");
-  }, [save, flashLabel]);
+    flashLabel(t("studio.savedToast", "Saved ✓"));
+  }, [save, flashLabel, t]);
 
   // Hydrate from storage on mount / id change.
   useEffect(() => {
@@ -250,10 +252,10 @@ export function useStudioPersistence(params: {
   useEffect(() => {
     const timer = setTimeout(() => {
       save();
-      flashLabel("Salvo");
+      flashLabel(t("studio.saved", "Saved"));
     }, 2000);
     return () => clearTimeout(timer);
-  }, [snapshot, id, save, flashLabel]);
+  }, [snapshot, id, save, flashLabel, t]);
 
   useEffect(
     () => () => {
@@ -282,6 +284,8 @@ export function useMixSnapshots(params: {
     activeMixId,
     setActiveMixId,
   } = params;
+
+  const { t } = useTranslation();
 
   const handleSaveMix = useCallback(
     (name: string) => {
@@ -357,11 +361,18 @@ export function useMixSnapshots(params: {
         })
         .join("\n");
       Alert.alert(
-        `A/B — ${snapA.name} vs ${snapB.name}`,
-        `${msg || "Nenhuma diferença"} (vol/mute/pan/send)`,
+        t("studio.compareAb", "A/B — {{a}} vs {{b}}", {
+          a: snapA.name,
+          b: snapB.name,
+        }),
+        t(
+          "studio.compareSummary",
+          "{{diff}} (vol/mute/pan/send)",
+          { diff: msg || t("studio.noDifference", "No difference") },
+        ),
       );
     },
-    [tracks, mixSnapshots],
+    [tracks, mixSnapshots, t],
   );
 
   return { handleSaveMix, handleLoadMix, handleDeleteMix, handleCompareMix };
@@ -543,6 +554,8 @@ export function useStudioTransport(params: {
     durationRef,
   } = params;
 
+  const { t } = useTranslation();
+
   const currentUrlRef = useRef<string | null>(null);
   const engineRef = useRef<PlaybackEngine | null>(null);
   const [engineActive, setEngineActive] = useState(false);
@@ -560,8 +573,8 @@ export function useStudioTransport(params: {
           await AudioModule.requestRecordingPermissionsAsync();
         if (!granted) {
           Alert.alert(
-            "Permissão",
-            "Permissão para usar o microfone foi negada.",
+            t("studio.permissionTitle", "Permission"),
+            t("studio.permissionBody", "Permission to use the microphone was denied."),
           );
         }
         await setAudioModeAsync({

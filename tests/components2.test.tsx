@@ -1,7 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { PromptSampler, MasteringSuite, MasteringUpload } from "../src/components";
 import type { MasteringInput } from "../src/lib/masteringSuite";
+import i18n from "../src/lib/i18n";
+
+beforeAll(async () => {
+  await i18n.changeLanguage("pt-BR");
+});
 
 vi.mock("expo-audio", () => ({
   useAudioPlayer: vi.fn(() => ({
@@ -236,7 +241,7 @@ describe("PromptSampler", () => {
 describe("MasteringSuite", () => {
   it("renders Mastering Suite title", () => {
     render(<MasteringSuite />);
-    expect(screen.getByText("Mastering Suite")).toBeTruthy();
+    expect(screen.getByText("Masterização")).toBeTruthy();
   });
 
   it("renders Export button in header", () => {
@@ -286,7 +291,7 @@ describe("MasteringSuite", () => {
 
   it("shows upload area with no input file", () => {
     render(<MasteringSuite />);
-    expect(screen.getByText("Upload .wav Mix")).toBeTruthy();
+    expect(screen.getByText("Enviar Mix .wav")).toBeTruthy();
   });
 
   it("renders testID when provided", () => {

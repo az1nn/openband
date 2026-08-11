@@ -44,10 +44,10 @@ The three files `src/locales/en.json`, `pt.json`, and `es.json` MUST contain ide
 | `newProject` | `src/components/NewProject.tsx` | SHIPPED |
 | `moments` | `app/tabs/moments.tsx` (tabs, credits, free packs) | SHIPPED |
 | `extractor` | `app/extractor.tsx` (status texts, alerts, stem labels, result actions) | SHIPPED |
-| `studio` | `app/studio/[id].tsx` | **NOT IMPLEMENTED** |
-| `mastering` | `app/mastering/index.tsx` | **NOT IMPLEMENTED** |
-| `explorer` | `app/tabs/explorer.tsx` | **NOT IMPLEMENTED** |
-| `mixer` | `app/mixing-console.tsx` | **NOT IMPLEMENTED** |
+| `studio` | `app/studio/[id].tsx` (+ hooks/parts/StudioModals) | SHIPPED |
+| `mastering` | `app/mastering/index.tsx` + Mastering* components | SHIPPED |
+| `explorer` | `app/explorer.tsx` | SHIPPED |
+| `mixer` | `app/mixing-console.tsx` | SHIPPED |
 
 Interpolation uses i18next `{{var}}` syntax (e.g. `extractor.doneSummary` with `count`/`source`). Code/identifier strings (command ids, MIDI tokens, canvas glyphs, transport unicode) stay out of the dictionaries — they are not user-visible.
 
@@ -64,42 +64,42 @@ Interpolation uses i18next `{{var}}` syntax (e.g. `extractor.doneSummary` with `
 - **When** the user switches to `es` in Settings
 - **Then** all migrated screens re-render Spanish strings with no untranslated literals
 
-### Requirement: Studio Namespace — NOT IMPLEMENTED
-The `studio` namespace MUST exist in all three dictionaries and cover every user-visible string in `app/studio/[id].tsx`: permission alerts, record/generate/MIDI-import errors, command-palette labels (Play, Record, Undo, Redo, Delete, Add Track), the track menu, the "Salvo ✓" toast, and compare/mix labels. The screen currently hardcodes Portuguese strings (e.g. `Alert.alert("Capa", "Capa não salva: armazenamento cheio")` at `app/studio/[id].tsx:329`).
+### Requirement: Studio Namespace — SHIPPED
+The `studio` namespace exists in all three dictionaries and covers every user-visible string in `app/studio/[id].tsx` and its helper modules (`app/studio/hooks.ts`, `app/studio/parts.tsx`, `app/studio/StudioModals.tsx`): permission alerts, record/generate/MIDI-import errors, command-palette labels (Play, Record, Undo, Redo, Delete, Add Track), the track menu, the "Saved ✓" toast, compare/mix labels, the a11y labels, and the tools menu (`toolBranches` … `toolSamples`).
 
-- **Status:** NOT IMPLEMENTED (deferred)
+- **Status:** SHIPPED
 
 #### Scenario: Studio screen localized
-- **Given** the deferred `studio` namespace exists
+- **Given** the `studio` namespace exists
 - **When** `app/studio/[id].tsx` renders its alerts and menus
 - **Then** all strings resolve through `t("studio.*")` and reflect the active language
 
-### Requirement: Mastering Namespace — NOT IMPLEMENTED
-The `mastering` namespace MUST exist in all three dictionaries and cover every user-visible string in `app/mastering/index.tsx` (chain labels, export strings, LUFS labels).
+### Requirement: Mastering Namespace — SHIPPED
+The `mastering` namespace exists in all three dictionaries and covers every user-visible string in `app/mastering/index.tsx` and the mastering suite components (`MasteringSuite`, `MasteringChain`, `MasteringVersionManager`, `MasteringUpload`, `LufsMeter`): chain labels, export strings, LUFS labels, version/recall placeholders.
 
-- **Status:** NOT IMPLEMENTED (deferred)
+- **Status:** SHIPPED
 
-### Requirement: Explorer Namespace + Screen Migration — NOT IMPLEMENTED
-The `explorer` namespace MUST exist in all three dictionaries and `app/tabs/explorer.tsx` MUST be migrated to use `t("explorer.*")` with English fallbacks. The screen currently has no `useTranslation` usage.
+### Requirement: Explorer Namespace + Screen Migration — SHIPPED
+The `explorer` namespace exists in all three dictionaries and `app/explorer.tsx` is migrated to use `t("explorer.*")` with English fallbacks. The embedded `MISSION_HTML` iframe takes the translated title instead of a hardcoded `MISSÃO`.
 
-- **Status:** NOT IMPLEMENTED (deferred)
+- **Status:** SHIPPED
 
-### Requirement: Mixer Namespace — NOT IMPLEMENTED
-The `mixer` namespace MUST exist in all three dictionaries and cover user-visible text labels in `app/mixing-console.tsx` (unicode transport glyphs stay as-is).
+### Requirement: Mixer Namespace — SHIPPED
+The `mixer` namespace exists in all three dictionaries and covers user-visible text labels in `app/mixing-console.tsx` (unicode transport glyphs stay as-is).
 
-- **Status:** NOT IMPLEMENTED (deferred)
+- **Status:** SHIPPED
 
-### Requirement: i18n Coverage Test — NOT IMPLEMENTED
-A `tests/i18n-coverage.test.ts` file MUST exist and assert:
+### Requirement: i18n Coverage Test — SHIPPED
+A `tests/i18n-coverage.test.ts` file exists and asserts:
 - Deep key parity across `en.json`, `pt.json`, `es.json`.
 - Per-namespace key counts grow beyond the pre-change ~14-key baseline.
-- No leftover user-visible hardcoded string literals in the migrated batch (`app/tabs/*`, `src/components/NewProject.tsx`, `app/extractor.tsx`) outside `t(...)` calls.
+- No leftover user-visible hardcoded string literals in the migrated batch (`app/studio/*`, `app/mastering/index.tsx`, `src/components/Mastering*`, `src/components/LufsMeter.tsx`, `app/mixing-console.tsx`, `app/explorer.tsx`) outside `t(...)` calls.
 
-- **Status:** NOT IMPLEMENTED (deferred)
+- **Status:** SHIPPED
 
 ## Test Requirements (Vitest)
-- [ ] Locale dictionaries (`en`/`pt`/`es`) share identical nested key sets
-- [ ] `useT()` returns a working translation function bound to the active language
-- [ ] Switching language via `changeLanguage` persists to `localStorage["openband_language"]`
-- [ ] Migrated screens contain no user-visible hardcoded string literals outside `t(...)`
+- [x] Locale dictionaries (`en`/`pt`/`es`) share identical nested key sets
+- [x] `useT()` returns a working translation function bound to the active language
+- [x] Switching language via `changeLanguage` persists to `localStorage["openband_language"]`
+- [x] Migrated screens contain no user-visible hardcoded string literals outside `t(...)`
 - [ ] Default language resolves to `pt-BR` with `pt` → `pt-BR` normalization and `en` fallback

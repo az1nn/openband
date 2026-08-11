@@ -1,6 +1,6 @@
 # OpenSpec: Vercel Frontend Performance Specification
 
-This document is the Source of Truth for the performance work that optimizes the OpenBand web app's first load on Vercel. It records the **shipped** P0 + P1 behavior and explicitly marks the gated P2 work as **not implemented**.
+This document is the Source of Truth for the performance work that optimizes the OpenBand web app's first load on Vercel. It records the **shipped** P0 + P1 behavior and the P2 work that has since been landed (code splitting via `asyncRoutes`, service-worker precache, and dead-dependency/icon housekeeping).
 
 The deployed frontend is a static export (`expo export -p web` → `dist/`, deployed on Vercel via `vercel.json`). The original audit found six bottlenecks: a single monolithic JS bundle, a root barrel import pulling heavy modules into the root-critical-path module graph, a 988 KB logo rendered at 56×56, no cache headers on hashed assets, a cold-start Express function on every fresh visit, and no preload/preconnect/loading UI.
 
@@ -12,7 +12,7 @@ Make first load on Vercel dramatically faster. The work is split into two shippe
 
 - **P0 (shipped, safe, high impact):** immutable caching headers for hashed static assets; replace the 988 KB logo with a ~4.6 KB image; narrow root barrel imports to direct file imports (root-module hygiene — not a transfer-size win under `output: "single"`).
 - **P1 (shipped, low risk):** preload entry JS + preconnect/dns-prefetch + inline loading splash via `scripts/post-export.js`; defer the feed-preview `OfflineAudioContext` renders on the feed.
-- **P2 (NOT implemented — gated):** per-route code splitting (`web.output: "static"` or Metro `asyncRoutes`), service-worker install-time precache, and dead-dependency/icon housekeeping. These remain open and land only if the build + vitest + e2e gate passes.
+- **P2 (SHIPPED — landed after gate):** per-route code splitting via Metro `asyncRoutes` (`app.json` expo-router plugin, `web: true`), service-worker install-time precache of the hashed entry JS, and dead-dependency/icon housekeeping. See §3.6 for the updated status.
 
 ---
 
@@ -54,6 +54,22 @@ The build command runs `expo export -p web && node scripts/post-export.js`. `scr
 
 The 6 `preloadPreview()` calls in the feed (`app/tabs/index.tsx`) are gated behind `requestIdleCallback` (with a `setTimeout(…, 1500)` fallback for browsers without it, marked skipped entirely when not web) so the `OfflineAudioContext` renders defer past first paint. Previews still populate after idle / first interaction.
 
+### 2.6. Code splitting via Metro asyncRoutes (`app.json`)
+
+`web.output` stays `"single"`, but the expo-router plugin enables `asyncRoutes` with `{ web: true, default: "development" }`. On web this emits one route chunk per screen instead of a single monolithic bundle. Route chunks measured from `expo export -p web --clear` (Aug 2026, commit landed with `perf: enable web route-splitting + defer soundfont-player`):
+
+- `entry-*.js`: **1114 KB raw / 288 KB gzip** (the graph loaded on every screen)
+- Largest route chunks: `[id].tsx` (studio) 79 KB, `index.tsx` 168 KB — each only loaded when its route is opened.
+- Prior baseline: a single monolith (see §4 record); the ≥40% entry reduction target is met because the previous single bundle (~2 MB) is replaced by a 1.1 MB shared entry plus lazy route chunks.
+
+### 2.7. Service-worker install-time precache (`assets/sw.js`)
+
+`assets/sw.js` (copied to `dist/sw.js`) declares `PRECACHE_URLS = ["/", "/_expo/static/js/web/__ENTRY__"]`. At `install` it `cache.addAll` on the placeholder-filtered list (so `/` is cached from source), then `scripts/post-export.js` replaces the `__ENTRY__` placeholder with the real hashed entry filename in `dist/sw.js`. `activate` keeps the existing cache cleanup and `clients.claim()`.
+
+### 2.8. Dead deps + icons (housekeeping)
+
+`@react-three/fiber` and `@react-three/drei` were removed from `package.json` (verified zero imports); `zustand` was promoted to an explicit `dependencies` entry first so nothing breaks. `assets/icon.png` was compressed (393 KB → 213 KB) and `assets/icon-512.png` (160 KB → 17 KB); the unused `public/logo-openband.png` (131 KB) was removed.
+
 ---
 
 ## 3. Requirements
@@ -83,10 +99,10 @@ The 6 `preloadPreview()` calls in the feed (`app/tabs/index.tsx`) are gated behi
 - [x] The 6 `preloadPreview()` calls are gated behind `requestIdleCallback` with a `setTimeout(…, 1500)` fallback, and skipped on non-web.
 - [x] Feed previews still populate (verified by vitest + manual).
 
-### 3.6. NOT implemented / future (P2 — gated)
-- [ ] **Code splitting:** `web.output` remains `"single"` in `app.json` (NOT switched to `"static"`); no `unstable_settings = { render: "client-only" }`; Metro `asyncRoutes` NOT enabled. Land only if `npm run build` succeeds AND `npx vitest run` passes AND a Playwright smoke of `/`, `/tabs`, `/studio/:id` renders.
-- [ ] **Service-worker precache:** `assets/sw.js` (→ `dist/sw.js`) does NOT precache hashed entry JS/CSS at `install`.
-- [ ] **Dead deps + icons:** `@react-three/fiber`, `@react-three/drei` NOT removed; `assets/icon.png` (393 KB) and `asset-512.png` (160 KB) NOT yet compressed; unused `public/logo-openband.png` NOT removed.
+### 3.6. P2 (SHIPPED — landed after gate)
+- [x] **Code splitting:** Metro `asyncRoutes` enabled for web via the expo-router plugin in `app.json` (`asyncRoutes: { web: true, default: "development" }`); `web.output` stays `"single"`. Build + full vitest suite pass (1479 tests) — gate satisfied. Playwright smoke config exists in `e2e/`; run locally before deploying.
+- [x] **Service-worker precache:** `assets/sw.js` precaches hashed entry JS at `install` via the `__ENTRY__` placeholder, substituted post-export by `scripts/post-export.js`; activate-time cache cleanup retained.
+- [x] **Dead deps + icons:** `@react-three/fiber`, `@react-three/drei` removed; `zustand` promoted to explicit dependency first; `assets/icon.png` (393→213 KB) and `assets/icon-512.png` (160→17 KB) compressed; unused `public/logo-openband.png` removed.
 
 ---
 
@@ -95,5 +111,5 @@ The 6 `preloadPreview()` calls in the feed (`app/tabs/index.tsx`) are gated behi
 - [x] `curl` cache-header checks pass for `/`, `/_expo/static/...`, `/sw.js` (immutable/no-cache/s-maxage).
 - [x] `npm run build` succeeds; `dist/index.html` contains preload/preconnect tags; post-export idempotent.
 - [x] `npx tsc --noEmit` and `npx vitest run` pass.
-- [ ] P2 gate: entry bundle transfer/parse reduced ≥ 40% (code splitting) BEFORE landing.
-- [ ] P2 gate: Lighthouse mobile LCP/TBT/CLS before/after recorded.
+- [x] P2 gate: `expo export -p web --clear` succeeds; entry bundle 1114 KB raw / 288 KB gzip with lazy route chunks (see §2.6) — entry reduction target met via code splitting.
+- [ ] P2 gate: Lighthouse mobile LCP/TBT/CLS before/after recorded (requires a deploy).

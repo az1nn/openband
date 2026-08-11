@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { View, Text } from "react-native";
 import * as reactNative from "react-native";
@@ -58,6 +58,11 @@ import type {
 import type { MomentData } from "../src/components/MomentCard";
 import type { MIDINote } from "../src/components/PianoRoll";
 import type { AutomationPoint } from "../src/lib/types";
+import i18n from "../src/lib/i18n";
+
+beforeAll(async () => {
+  await i18n.changeLanguage("pt-BR");
+});
 
 vi.mock("expo-audio", () => ({
   useAudioPlayer: vi.fn(() => ({
@@ -1676,7 +1681,7 @@ describe("MasteringUpload", () => {
         onClear={() => {}}
       />,
     );
-    expect(screen.getByText("Upload .wav Mix")).toBeTruthy();
+    expect(screen.getByText("Enviar Mix .wav")).toBeTruthy();
   });
 
   it("shows stems mode text", () => {
@@ -1689,7 +1694,7 @@ describe("MasteringUpload", () => {
         onClear={() => {}}
       />,
     );
-    expect(screen.getByText("Upload Stems")).toBeTruthy();
+    expect(screen.getByText("Enviar Stems")).toBeTruthy();
   });
 
   it("shows filename when input provided", () => {

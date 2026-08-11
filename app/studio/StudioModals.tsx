@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import { useTranslation } from "react-i18next";
 import {
   RecordOptions,
   PluginEditor,
@@ -91,6 +92,7 @@ interface StudioModalsProps {
 
 /** All overlay/modal surfaces rendered by the Studio screen. */
 export function StudioModals(props: StudioModalsProps) {
+  const { t } = useTranslation();
   const {
     recordSettings,
     setRecordSettings,
@@ -300,10 +302,10 @@ export function StudioModals(props: StudioModalsProps) {
       />
       <LoadingModal
         visible={autoplayBlocked}
-        title="Reprodução bloqueada"
-        message="Toque em Play novamente para ativar o áudio"
+        title={t("studio.autoplayTitle", "Playback blocked")}
+        message={t("studio.autoplayBody", "Tap Play again to activate audio")}
         onCancel={() => setAutoplayBlocked(false)}
-        cancelLabel="Fechar"
+        cancelLabel={t("studio.close", "Close")}
       />
     </>
   );

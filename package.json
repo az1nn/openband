@@ -4,8 +4,6 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/cli": "^57.0.6",
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.6.1",
     "@supabase/supabase-js": "^2.50.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",

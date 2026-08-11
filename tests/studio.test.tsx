@@ -1,6 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { useReducer, useCallback } from "react";
+import i18n from "../src/lib/i18n";
+
+beforeAll(async () => {
+  await i18n.changeLanguage("pt-BR");
+});
 
 interface RealHistoryState<T> {
   present: T;

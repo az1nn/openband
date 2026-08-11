@@ -4,14 +4,8 @@ This file lists only genuinely open work, reconciled against the current repo st
 
 ---
 
-## 1. i18n completeness (`openspec/changes/i18n-completeness`) — MEDIUM
-Deferred remainder of the i18n batch. Shipped dictionaries (`settings`/`feed`/`library`/`account`/`newProject`/`moments`/`extractor`) and migrated screens are out of scope here (see `openspec/specs/i18n/spec.md`).
-- [ ] Add `studio` namespace to `src/locales/{en,pt,es}.json` and migrate `app/studio/[id].tsx` to `t("studio.*", ...)` (currently hardcodes pt strings).
-- [ ] Add `mastering` namespace and migrate `app/mastering/index.tsx` to `t("mastering.*", ...)`.
-- [ ] Add `explorer` namespace and migrate `app/tabs/explorer.tsx` to `t("explorer.*", ...)` (currently no `useTranslation` usage).
-- [ ] Add `mixer` namespace and migrate `app/mixing-console.tsx` text labels to `t("mixer.*", ...)` (keep unicode transport glyphs).
-- [ ] Migrate `app/tabs/feed.tsx` (separate feed screen not yet migrated).
-- [ ] Create `tests/i18n-coverage.test.ts` (deep key parity across the 3 locale files, per-namespace growth, hardcoded-string leak scan).
+## 1. i18n completeness (`openspec/changes/i18n-completeness`) — DONE
+Shipped: `studio`, `mastering`, `explorer`, `mixer` namespaces added to `src/locales/{en,pt,es}.json`; migrated `app/studio/[id].tsx` (+ hooks/parts/StudioModals), `app/mastering/index.tsx` + `Mastering{Suite,Chain,VersionManager,Upload}` + `LufsMeter`, `app/explorer.tsx`, `app/mixing-console.tsx`; `app/tabs/feed.tsx` re-exports the migrated `index.tsx`; `tests/i18n-coverage.test.ts` added (deep key parity, per-namespace growth, hardcoded-string leak scan). See `openspec/specs/i18n/spec.md`.
 
 ## 2. Native builds (`openspec/changes/native-builds`) — MEDIUM
 Implementation pass (scaffolding, signing fallback, bridge chain, smoke tests, `BUILD.md`) is shipped; only the document runs and real-device verification remain open.

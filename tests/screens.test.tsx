@@ -1,10 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import Extractor from "../app/extractor";
 import Settings from "../app/tabs/settings";
 import Account from "../app/tabs/account";
 import MasteringScreen from "../app/mastering/index";
 import FeedRoute from "../app/tabs/feed";
+import i18n from "../src/lib/i18n";
+
+beforeAll(async () => {
+  await i18n.changeLanguage("pt-BR");
+});
 
 const {
   mockResponsiveFn,
@@ -414,7 +419,7 @@ describe("Feed Route Alias", () => {
 describe("Mastering Screen", () => {
   it("renders Mastering Suite component", () => {
     render(<MasteringScreen />);
-    expect(screen.getByText("Mastering Suite")).toBeTruthy();
+    expect(screen.getAllByText("Masterização").length).toBeGreaterThan(0);
   });
 
   it("renders mastering chain plugins", () => {

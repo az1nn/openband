@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { View, Text, Pressable } from "react-native";
+import { useTranslation } from "react-i18next";
 import { measureLUFS } from "../lib/lufs";
 
 interface LufsMeterProps {
@@ -9,10 +10,10 @@ interface LufsMeterProps {
 }
 
 const LUFS_TARGETS = [
-  { name: "Streaming", integrated: -14, shortTerm: -18, label: "-14 LUFS" },
-  { name: "Broadcast", integrated: -16, shortTerm: -20, label: "-16 LUFS" },
-  { name: "EBU R128", integrated: -23, shortTerm: -27, label: "-23 LUFS" },
-  { name: "Custom", integrated: -12, shortTerm: -16, label: "-12 LUFS" },
+  { key: "lufsStreaming", label: "Streaming", integrated: -14, shortTerm: -18, targetLabel: "-14 LUFS" },
+  { key: "lufsBroadcast", label: "Broadcast", integrated: -16, shortTerm: -20, targetLabel: "-16 LUFS" },
+  { key: "lufsEbuR128", label: "EBU R128", integrated: -23, shortTerm: -27, targetLabel: "-23 LUFS" },
+  { key: "lufsCustom", label: "Custom", integrated: -12, shortTerm: -16, targetLabel: "-12 LUFS" },
 ];
 
 const MIN_LUFS = -36;
@@ -34,6 +35,7 @@ function simulateLoudness(
 }
 
 export function LufsMeter({ isPlaying, testID, analyser }: LufsMeterProps) {
+  const { t } = useTranslation();
   const [targetIdx, setTargetIdx] = useState(0);
   const target = LUFS_TARGETS[targetIdx];
   const targetRef = useRef(target);
@@ -173,16 +175,16 @@ export function LufsMeter({ isPlaying, testID, analyser }: LufsMeterProps) {
           <Text className="label text-rose-400/70 uppercase">LUFS Meter</Text>
         </View>
         <View className="flex-row gap-1">
-          {LUFS_TARGETS.map((t, i) => (
+          {LUFS_TARGETS.map((target, i) => (
             <Pressable
-              key={t.name}
+              key={target.key}
               onPress={() => setTargetIdx(i)}
               className={`px-2 py-0.5 rounded-md border ${i === targetIdx ? "bg-rose-500/20 border-rose-500/50" : "bg-dark-surface border-dark-border"}`}
             >
               <Text
                 className={`text-[8px] font-bold ${i === targetIdx ? "text-rose-400" : "text-gray-500"}`}
               >
-                {t.name}
+                {t("mastering." + target.key, target.label)}
               </Text>
             </Pressable>
           ))}
@@ -235,7 +237,7 @@ export function LufsMeter({ isPlaying, testID, analyser }: LufsMeterProps) {
 
           <View className="absolute -top-1 -right-1 bg-rose-500/20 rounded-lg px-1.5 py-0.5 border border-rose-500/30">
             <Text className="text-rose-400 font-mono text-[8px] font-bold">
-              {target.label}
+              {target.targetLabel}
             </Text>
           </View>
         </View>
@@ -249,30 +251,32 @@ export function LufsMeter({ isPlaying, testID, analyser }: LufsMeterProps) {
 
         <View className="flex-row gap-3">
           {[
-            { label: "Integrated", value: integrated, color: "text-white" },
-            { label: "Short-Term", value: shortTerm, color: "text-cyan-400" },
+            { key: "metricIntegrated", label: "Integrated", value: integrated, color: "text-white" },
+            { key: "metricShortTerm", label: "Short-Term", value: shortTerm, color: "text-cyan-400" },
             {
+              key: "metricTruePeak",
               label: "True Peak",
               value: truePeak,
               color: "text-rose-400",
-              unit: "dBTP",
+              unitKey: "unitDbtp",
+              unitLabel: "dBTP",
             },
-            { label: "LRA", value: lra, color: "text-yellow-400", unit: "LU" },
+            { key: "metricLra", label: "LRA", value: lra, color: "text-yellow-400", unitKey: "unitLu", unitLabel: "LU" },
           ].map((m) => {
             const display =
               m.value <= -40
                 ? "-∞"
                 : `${m.value >= 0 ? "+" : ""}${m.value.toFixed(1)}`;
             return (
-              <View key={m.label} className="flex-1 items-center">
+              <View key={m.key} className="flex-1 items-center">
                 <Text className="text-gray-600 text-[8px] font-medium">
-                  {m.label}
+                  {t("mastering." + m.key, m.label)}
                 </Text>
                 <Text className={`${m.color} font-mono text-sm font-bold`}>
                   {display}
                 </Text>
                 <Text className="text-gray-600 text-[7px]">
-                  {m.unit || "LUFS"}
+                  {t("mastering." + (m.unitKey || "unitLufs"), m.unitLabel || "LUFS")}
                 </Text>
               </View>
             );

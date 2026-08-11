@@ -1,4 +1,5 @@
 import { View, Text, Pressable, ScrollView } from "react-native";
+import { useTranslation } from "react-i18next";
 import type { PresenceCursor } from "../../src/lib/presence";
 import type { ProjectData } from "../../src/lib/projectStore";
 import type { Mood } from "../../src/lib/projectTemplates";
@@ -136,23 +137,23 @@ export function StudioOnboardingCoachmark({
 }: {
   onDismiss: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View
       testID="onboarding-coachmarks"
       className="absolute inset-0 z-[60] bg-black/70 justify-end"
     >
       <View className="mx-4 mb-28 p-4 rounded-2xl bg-dark-elevated border border-brand-primary/40">
-        <Text className="text-white font-bold text-base mb-1">Transporte</Text>
+        <Text className="text-white font-bold text-base mb-1">{t("studio.coachmarkTitle", "Transport")}</Text>
         <Text className="text-gray-300 text-xs leading-5 mb-3">
-          Use o botão ▶ para tocar sua música e o botão ● vermelho para gravar um
-          áudio com o microfone.
+          {t("studio.coachmarkBody", "Use the ▶ button to play your music and the red ● button to record audio with the microphone.")}
         </Text>
         <Pressable
           testID="onboarding-coachmark-dismiss"
           onPress={onDismiss}
           className="bg-brand-primary rounded-xl py-3 items-center active:opacity-80"
         >
-          <Text className="text-white font-bold text-sm">Começar a produzir</Text>
+          <Text className="text-white font-bold text-sm">{t("studio.coachmarkCta", "Start producing")}</Text>
         </Pressable>
       </View>
     </View>

@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeAll } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import i18n from "../src/lib/i18n";
 import {
   MixManager,
   VisualEQ,
@@ -20,6 +21,10 @@ import type {
   MixSnapshot,
   AutomationPoint,
 } from "../src/lib/types";
+
+beforeAll(async () => {
+  await i18n.changeLanguage("pt-BR");
+});
 
 vi.mock("expo-audio", () => ({
   useAudioPlayer: vi.fn(() => ({
@@ -185,8 +190,8 @@ describe("LufsMeter deep", () => {
 
   it("shows 4 metric labels", () => {
     render(<LufsMeter isPlaying={true} />);
-    expect(screen.getByText("Integrated")).toBeTruthy();
-    expect(screen.getByText("Short-Term")).toBeTruthy();
+    expect(screen.getByText("Integrado")).toBeTruthy();
+    expect(screen.getByText("Curto prazo")).toBeTruthy();
     expect(screen.getByText("True Peak")).toBeTruthy();
     expect(screen.getByText("LRA")).toBeTruthy();
   });

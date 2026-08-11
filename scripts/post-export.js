@@ -79,6 +79,16 @@ if (fs.existsSync(htmlPath)) {
 
     fs.writeFileSync(htmlPath, html);
     console.log('Injected preload/preconnect/splash into dist/index.html (entry: ' + entryFile + ')');
+
+    const swPath = path.join('dist', 'sw.js');
+    if (fs.existsSync(swPath)) {
+      let sw = fs.readFileSync(swPath, 'utf8');
+      if (sw.includes('__ENTRY__')) {
+        sw = sw.replace('__ENTRY__', entryFile);
+        fs.writeFileSync(swPath, sw);
+        console.log('Injected entry precache into dist/sw.js (entry: ' + entryFile + ')');
+      }
+    }
   } else {
     console.log('No entry JS found in ' + entryDir + '; skipping HTML injection');
   }
