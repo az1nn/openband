@@ -61,11 +61,8 @@ export function renderTracksCached(
     t: tracks.map((t) => ({
       id: t.id,
       r: t.regions,
-      v: t.volume,
-      p: t.pan,
+      mn: t.midiNotes,
       pl: t.plugins,
-      m: t.muted,
-      s: t.solo,
     })),
     bpm,
     mood,
