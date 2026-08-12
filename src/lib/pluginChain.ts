@@ -287,8 +287,8 @@ async function applySinglePlugin(
     return applyAutoPitch(buffer, plugin, sampleRate, plugin.params);
   }
 
-  const len = buffer.length;
-  const numCh = buffer.numberOfChannels;
+  const len = Math.max(1, buffer.length);
+  const numCh = Math.max(1, buffer.numberOfChannels);
   const ctx = new OfflineAudioContext(numCh, len, sampleRate);
   const source = ctx.createBufferSource();
   source.buffer = buffer;
@@ -714,9 +714,9 @@ async function applyAutoPitch(
   const shifted = await pitchShift(buffer, correctionSemitones);
   void formant;
   const mixRatio = mix / 100;
-  const numCh = buffer.numberOfChannels;
-  const len = buffer.length;
-  const sampleRate = buffer.sampleRate;
+  const numCh = Math.max(1, buffer.numberOfChannels);
+  const len = Math.max(1, buffer.length);
+  const sampleRate = buffer.sampleRate > 0 ? buffer.sampleRate : 44100;
   const ctx2 = new OfflineAudioContext(numCh, len, sampleRate);
   const srcDry = ctx2.createBufferSource();
   srcDry.buffer = buffer;

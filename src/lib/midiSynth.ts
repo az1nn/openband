@@ -785,7 +785,7 @@ export async function renderTracksToUrl(
   if (totalBeats === 0 && !hasRegions) return null;
   const duration = Math.max(totalBeats * beatDuration, regionMaxEnd) + 2;
   const sampleRate = 44100;
-  const numSamples = Math.ceil(sampleRate * duration);
+  const numSamples = Math.max(1, Math.ceil(sampleRate * duration));
   const anySolo = tracks.some((t) => t.solo);
 
   const moodPreset = mood ? MOODS.find((m) => m.id === mood) : undefined;
@@ -1065,7 +1065,7 @@ export async function renderTrackStem(
   if (typeof OfflineAudioContext === "undefined") return null;
 
   try {
-    const ctx = new OfflineAudioContext(2, numSamples, sampleRate);
+    const ctx = new OfflineAudioContext(2, Math.max(1, numSamples), sampleRate);
 
     const trackGain = ctx.createGain();
     trackGain.gain.value = (track.volume ?? 100) / 100;
@@ -1236,7 +1236,7 @@ async function renderTrackBuffer(
   numSamples: number,
   decodedRegions: { buffer: AudioBuffer; start: number; duration: number }[],
 ): Promise<AudioBuffer> {
-  const ctx2 = new OfflineAudioContext(2, numSamples, sampleRate);
+  const ctx2 = new OfflineAudioContext(2, Math.max(1, numSamples), sampleRate);
 
   const isDrumTrack =
     track.name.toLowerCase().includes("bateria") ||

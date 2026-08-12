@@ -264,8 +264,8 @@ async function applyEq(
   p: Record<string, number>,
   sampleRate: number,
 ): Promise<AudioBuffer> {
-  const numCh = buffer.numberOfChannels;
-  const len = buffer.length;
+  const numCh = Math.max(1, buffer.numberOfChannels);
+  const len = Math.max(1, buffer.length);
   const ctx = new OfflineAudioContext(numCh, len, sampleRate);
   const source = ctx.createBufferSource();
   source.buffer = buffer;
@@ -295,8 +295,8 @@ async function applyCompressor(
   p: Record<string, number>,
   sampleRate: number,
 ): Promise<AudioBuffer> {
-  const numCh = buffer.numberOfChannels;
-  const len = buffer.length;
+  const numCh = Math.max(1, buffer.numberOfChannels);
+  const len = Math.max(1, buffer.length);
   const ctx = new OfflineAudioContext(numCh, len, sampleRate);
   const source = ctx.createBufferSource();
   source.buffer = buffer;
@@ -320,8 +320,8 @@ async function applyLimiter(
   p: Record<string, number>,
   sampleRate: number,
 ): Promise<AudioBuffer> {
-  const numCh = buffer.numberOfChannels;
-  const len = buffer.length;
+  const numCh = Math.max(1, buffer.numberOfChannels);
+  const len = Math.max(1, buffer.length);
   const ctx = new OfflineAudioContext(numCh, len, sampleRate);
   const source = ctx.createBufferSource();
   source.buffer = buffer;
@@ -347,22 +347,24 @@ async function applyTruePeakLimiter(
 ): Promise<AudioBuffer> {
   const oversample = Math.pow(2, (p.oversample ?? 2) as number);
   const osr = sampleRate * oversample;
-  const olen = buffer.length * oversample;
-  const osCtx = new OfflineAudioContext(buffer.numberOfChannels, olen, osr);
+  const numCh = Math.max(1, buffer.numberOfChannels);
+  const bufLen = Math.max(1, buffer.length);
+  const olen = bufLen * oversample;
+  const osCtx = new OfflineAudioContext(numCh, olen, osr);
   const osBuf = osCtx.createBuffer(
-    buffer.numberOfChannels,
+    numCh,
     olen,
     osr,
   );
-  for (let c = 0; c < buffer.numberOfChannels; c++) {
-    const src = buffer.getChannelData(c);
+  for (let c = 0; c < numCh; c++) {
+    const src = buffer.numberOfChannels > c ? buffer.getChannelData(c) : new Float32Array(olen);
     const dst = osBuf.getChannelData(c);
     for (let i = 0; i < olen; i++) {
       const idx = i / oversample;
       const i0 = Math.floor(idx);
       const frac = idx - i0;
       const i1 = Math.min(src.length - 1, i0 + 1);
-      dst[i] = src[i0] * (1 - frac) + src[i1] * frac;
+      dst[i] = src.length > 0 ? (src[i0] * (1 - frac) + src[i1] * frac) : 0;
     }
   }
   const src = osCtx.createBufferSource();
@@ -381,12 +383,12 @@ async function applyTruePeakLimiter(
   src.start(0);
   const rendered = await osCtx.startRendering();
   const factor = oversample;
-  const outCtx = new OfflineAudioContext(buffer.numberOfChannels, buffer.length, sampleRate);
-  const out = outCtx.createBuffer(buffer.numberOfChannels, buffer.length, sampleRate);
-  for (let c = 0; c < buffer.numberOfChannels; c++) {
+  const outCtx = new OfflineAudioContext(numCh, bufLen, sampleRate);
+  const out = outCtx.createBuffer(numCh, bufLen, sampleRate);
+  for (let c = 0; c < numCh; c++) {
     const r = rendered.getChannelData(c);
     const d = out.getChannelData(c);
-    for (let i = 0; i < buffer.length; i++) {
+    for (let i = 0; i < bufLen; i++) {
       d[i] = r[Math.min(r.length - 1, Math.floor(i * factor))];
     }
   }
@@ -398,8 +400,8 @@ async function applyMultiband(
   p: Record<string, number>,
   sampleRate: number,
 ): Promise<AudioBuffer> {
-  const numCh = buffer.numberOfChannels;
-  const len = buffer.length;
+  const numCh = Math.max(1, buffer.numberOfChannels);
+  const len = Math.max(1, buffer.length);
   const crosses = [
     (p.b0_cross ?? 200) as number,
     (p.b1_cross ?? 2000) as number,
@@ -463,8 +465,8 @@ async function applyStereoImager(
   p: Record<string, number>,
   sampleRate: number,
 ): Promise<AudioBuffer> {
-  const numCh = buffer.numberOfChannels;
-  const len = buffer.length;
+  const numCh = Math.max(1, buffer.numberOfChannels);
+  const len = Math.max(1, buffer.length);
   const ctx = new OfflineAudioContext(numCh, len, sampleRate);
   const source = ctx.createBufferSource();
   source.buffer = buffer;
@@ -535,8 +537,8 @@ async function applyTapeSaturator(
   p: Record<string, number>,
   sampleRate: number,
 ): Promise<AudioBuffer> {
-  const numCh = buffer.numberOfChannels;
-  const len = buffer.length;
+  const numCh = Math.max(1, buffer.numberOfChannels);
+  const len = Math.max(1, buffer.length);
   const ctx = new OfflineAudioContext(numCh, len, sampleRate);
   const source = ctx.createBufferSource();
   source.buffer = buffer;
@@ -601,8 +603,8 @@ async function applyDeesser(
   p: Record<string, number>,
   sampleRate: number,
 ): Promise<AudioBuffer> {
-  const numCh = buffer.numberOfChannels;
-  const len = buffer.length;
+  const numCh = Math.max(1, buffer.numberOfChannels);
+  const len = Math.max(1, buffer.length);
   const ctx = new OfflineAudioContext(numCh, len, sampleRate);
   const source = ctx.createBufferSource();
   source.buffer = buffer;

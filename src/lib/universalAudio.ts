@@ -332,7 +332,9 @@ class UniversalAudioSystem {
     sampleRate: number,
     onProgress?: (pct: number) => void,
   ): Promise<Blob> {
-    const ctx = new OfflineAudioContext(2, Math.ceil(sampleRate * duration), sampleRate);
+    const safeDuration = duration > 0 ? duration : 1;
+    const numSamples = Math.max(1, Math.ceil(sampleRate * safeDuration));
+    const ctx = new OfflineAudioContext(2, numSamples, sampleRate);
     const anySolo = tracks.some((t) => t.solo);
     const audible = tracks.filter((t) => {
       if (anySolo) return t.solo && !t.muted;
@@ -340,6 +342,11 @@ class UniversalAudioSystem {
     });
 
     const total = audible.reduce((s, t) => s + t.regions.length, 0);
+    if (total === 0 || duration <= 0) {
+      onProgress?.(100);
+      const rendered = await ctx.startRendering();
+      return this.audioBufferToWavBlob(rendered, 24);
+    }
     let processed = 0;
 
     for (const track of audible) {
@@ -667,7 +674,9 @@ class UniversalAudioSystem {
     if (Platform.OS !== "web") {
       return new Blob([new ArrayBuffer(44)], { type: "audio/wav" });
     }
-    const ctx = new OfflineAudioContext(1, Math.ceil(sampleRate * duration), sampleRate);
+    const safeDuration = duration > 0 ? duration : 1;
+    const numSamples = Math.max(1, Math.ceil(sampleRate * safeDuration));
+    const ctx = new OfflineAudioContext(1, numSamples, sampleRate);
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "sine";
