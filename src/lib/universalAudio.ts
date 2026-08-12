@@ -424,18 +424,34 @@ class UniversalAudioSystem {
         try {
           const resp = await fetch(await resolveAssetUrl(region.url), { credentials: "omit" });
           const ab = await resp.arrayBuffer();
-          const decoded = await this.decodeAudioPureJS(ab, sampleRate);
+          const decodedChannels = await this.decodeAudioPureJS(ab, sampleRate);
           const startSample = Math.floor(region.start * sampleRate);
+          const channelLength = decodedChannels[0]?.length || 0;
           const regionSamples = Math.min(
             Math.floor(region.duration * sampleRate),
-            decoded.length,
+            channelLength,
             totalSamples - startSample,
           );
 
-          for (let i = 0; i < regionSamples; i++) {
-            const src = decoded[i] || 0;
-            left[startSample + i] += src * leftGain;
-            right[startSample + i] += src * rightGain;
+          if (decodedChannels.length === 1) {
+            const ch0 = decodedChannels[0];
+            for (let i = 0; i < regionSamples; i++) {
+              const src = ch0[i] || 0;
+              left[startSample + i] += src * leftGain;
+              right[startSample + i] += src * rightGain;
+            }
+          } else {
+            const ch0 = decodedChannels[0];
+            const ch1 = decodedChannels[1] || decodedChannels[0];
+            const srcL_gain = trackGain * (pan > 0 ? 1 - pan : 1);
+            const srcR_gain = trackGain * (pan < 0 ? 1 + pan : 1);
+
+            for (let i = 0; i < regionSamples; i++) {
+              const srcL = ch0[i] || 0;
+              const srcR = ch1[i] || 0;
+              left[startSample + i] += srcL * srcL_gain;
+              right[startSample + i] += srcR * srcR_gain;
+            }
           }
         } catch (e) {
           console.warn("Failed to process region on native:", e);
@@ -452,14 +468,14 @@ class UniversalAudioSystem {
   }
 
   /** Decode audio without AudioContext (pure JS WAV/MP3 decoder fallback for native). */
-  private async decodeAudioPureJS(arrayBuffer: ArrayBuffer, targetSampleRate: number): Promise<Float32Array> {
+  private async decodeAudioPureJS(arrayBuffer: ArrayBuffer, targetSampleRate: number): Promise<Float32Array[]> {
     const view = new DataView(arrayBuffer);
     if (arrayBuffer.byteLength < 12) {
       const fallback = new Float32Array(Math.ceil(targetSampleRate * 0.5));
       for (let i = 0; i < fallback.length; i++) {
         fallback[i] = Math.sin((i / targetSampleRate) * 220 * 2 * Math.PI) * 0.05;
       }
-      return fallback;
+      return [fallback, fallback];
     }
 
     const header = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3));
@@ -505,10 +521,12 @@ class UniversalAudioSystem {
           const bytesPerSample = bitsPerSample / 8;
           const blockAlign = numChannels * bytesPerSample;
           const numSamples = Math.floor(dataLength / blockAlign);
-          const samples = new Float32Array(numSamples);
+          const channels: Float32Array[] = [];
+          for (let ch = 0; ch < numChannels; ch++) {
+            channels.push(new Float32Array(numSamples));
+          }
 
           for (let i = 0; i < numSamples; i++) {
-            let sum = 0;
             for (let ch = 0; ch < numChannels; ch++) {
               const pos = dataOffset + (i * numChannels + ch) * bytesPerSample;
               if (pos + bytesPerSample > arrayBuffer.byteLength) break;
@@ -537,11 +555,10 @@ class UniversalAudioSystem {
               } else {
                 val = view.getInt16(pos, true) / 32768;
               }
-              sum += val;
+              channels[ch][i] = val;
             }
-            samples[i] = sum / numChannels;
           }
-          return samples;
+          return channels;
         }
       }
     }
@@ -549,18 +566,18 @@ class UniversalAudioSystem {
     if (header === "ID3" || (view.getUint8(0) === 0xFF && (view.getUint8(1) & 0xE0) === 0xE0)) {
       const estimatedSeconds = Math.min(10, Math.max(1, arrayBuffer.byteLength / 16000));
       const numSamples = Math.ceil(targetSampleRate * estimatedSeconds);
-      const samples = new Float32Array(numSamples);
+      const fallback = new Float32Array(numSamples);
       for (let i = 0; i < numSamples; i++) {
-        samples[i] = Math.sin((i / targetSampleRate) * 440 * 2 * Math.PI) * 0.1;
+        fallback[i] = Math.sin((i / targetSampleRate) * 440 * 2 * Math.PI) * 0.1;
       }
-      return samples;
+      return [fallback, fallback];
     }
 
     const fallback = new Float32Array(Math.ceil(targetSampleRate * 0.5));
     for (let i = 0; i < fallback.length; i++) {
       fallback[i] = Math.sin((i / targetSampleRate) * 220 * 2 * Math.PI) * 0.05;
     }
-    return fallback;
+    return [fallback, fallback];
   }
 
   private float32ToWavBlob(left: Float32Array, right: Float32Array, sampleRate: number, bitDepth: number): Blob {
