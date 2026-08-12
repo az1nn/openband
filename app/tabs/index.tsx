@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from "react";
 import {
   FlatList,
   View,
@@ -18,8 +18,12 @@ import { Button } from "../../src/components/Button";
 import { QuickActions } from "../../src/components/QuickActions";
 import { setMiniPlayerState } from "../../src/components/MiniPlayer";
 import { QuickTools } from "../../src/components/QuickTools";
-import { NewProject } from "../../src/components/NewProject";
-import { OnboardingFlow } from "../../src/components/OnboardingFlow";
+const NewProject = lazy(() =>
+  import("../../src/components/NewProject").then((m) => ({ default: m.NewProject })),
+);
+const OnboardingFlow = lazy(() =>
+  import("../../src/components/OnboardingFlow").then((m) => ({ default: m.OnboardingFlow })),
+);
 import { FeedPostCard } from "../../src/components/FeedPostCard";
 import { Loading } from "../../src/components/Loading";
 import { FeedSkeletonCard } from "../../src/components/Skeleton";
@@ -130,7 +134,8 @@ export default function Feed() {
 
   useEffect(() => {
     if (!isWeb) return;
-    const page = posts.slice(0, FEED_PAGE_SIZE);
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+    const page = posts.slice(0, 3);
     const runPreloads = () => {
       for (const p of page) {
         if (!getCachedPreview(p.id)) {
@@ -409,18 +414,22 @@ export default function Feed() {
         onClose={() => setShowQuickTools(false)}
         onNewProject={handleOpenNewProject}
       />
-      <NewProject
-        visible={showNewProject}
-        onClose={() => setShowNewProject(false)}
-        onCreate={handleCreateProject}
-      />
-      <OnboardingFlow
-        visible={showOnboarding}
-        onClose={() => setShowOnboarding(false)}
-        onCreate={handleOnboardingCreate}
-        onStartFromScratch={handleOpenNewProject}
-        onDontShowAgain={completeOnboarding}
-      />
+      <Suspense fallback={null}>
+        <NewProject
+          visible={showNewProject}
+          onClose={() => setShowNewProject(false)}
+          onCreate={handleCreateProject}
+        />
+      </Suspense>
+      <Suspense fallback={null}>
+        <OnboardingFlow
+          visible={showOnboarding}
+          onClose={() => setShowOnboarding(false)}
+          onCreate={handleOnboardingCreate}
+          onStartFromScratch={handleOpenNewProject}
+          onDontShowAgain={completeOnboarding}
+        />
+      </Suspense>
       <View style={maxWidthStyle}>
         <View className="pt-4 tablet:pt-12 px-4 tablet:px-6 flex-row items-start justify-between">
           <View className="flex-1">

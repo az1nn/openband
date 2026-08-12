@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import { View, Text, FlatList, Pressable, Alert } from "react-native"
 import { useRouter } from "expo-router"
 import { EmptyState } from "../../src/components/EmptyState"
@@ -75,35 +75,45 @@ export default function Library() {
 
   const projectIndex = useMemo(() => listProjectIndex(), [refreshKey])
 
-  const metadataCache = useRef<Map<string, ProjectData>>(new Map())
-
-  useEffect(() => {
-    metadataCache.current.clear()
-  }, [refreshKey])
-
   const projects = useMemo(() => {
     return Object.entries(projectIndex)
-      .map(([id, meta]) => {
-        let full = metadataCache.current.get(id)
-        if (!full) {
-          const loaded = loadProject(id)
-          if (loaded) {
-            full = loaded
-            metadataCache.current.set(id, full)
-          }
-        }
-        return {
-          id,
-          title: meta.title,
-          lastSaved: meta.lastSaved,
-          genre: full?.genre,
-          key: full?.key,
-          bpm: full?.bpm,
-          metadata: full,
-        }
-      })
+      .map(([id, meta]) => ({
+        id,
+        title: meta.title,
+        lastSaved: meta.lastSaved,
+        genre: meta.genre,
+        key: meta.key,
+        bpm: meta.bpm,
+        coverUrl: meta.coverUrl,
+        metadata: null as ProjectData | null,
+      }))
       .sort((a, b) => b.lastSaved - a.lastSaved)
   }, [projectIndex])
+
+  const [collabItems, setCollabItems] = useState<
+    { id: string; title: string; lastSaved: number; metadata: ProjectData | null }[]
+  >([])
+
+  useEffect(() => {
+    if (filterTab !== "collabs") {
+      setCollabItems([])
+      return
+    }
+    const items = Object.entries(projectIndex)
+      .map(([id]) => loadProject(id))
+      .filter((p): p is ProjectData => !!p && !!p.parentProjectId)
+      .map((p) => ({
+        id: p.id,
+        title: p.title,
+        lastSaved: p.lastSaved,
+        genre: p.genre,
+        key: p.key,
+        bpm: p.bpm,
+        coverUrl: p.coverUrl,
+        metadata: p,
+      }))
+    setCollabItems(items)
+  }, [filterTab, projectIndex, refreshKey])
 
   const handleToggleFavorite = useCallback((projectId: string) => {
     toggleProjectFavorite(projectId)
@@ -128,13 +138,13 @@ export default function Library() {
       return projects.filter(p => favoriteSet.has(p.id));
     }
     if (filterTab === "collabs") {
-      return projects.filter(p => p.metadata?.parentProjectId);
+      return collabItems
     }
     if (filterTab === "trash") {
       return []
     }
     return projects
-  }, [projects, filterTab, cloudProjects, favoriteSet])
+  }, [projects, filterTab, cloudProjects, favoriteSet, collabItems])
 
   const handleTabChange = useCallback(async (tab: FilterTab) => {
     setFilterTab(tab)
@@ -272,7 +282,7 @@ export default function Library() {
               isFavorite={isFavorite}
               onToggleFavorite={() => handleToggleFavorite(item.id)}
               onOpen={(id) => {
-                if (filterTab === "cloud") {
+                if (filterTab === "cloud" && item.metadata) {
                   saveProject(id, item.metadata)
                 }
                 router.push(`/studio/${id}`)

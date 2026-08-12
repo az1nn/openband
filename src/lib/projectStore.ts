@@ -134,7 +134,14 @@ export function saveProject(
     try {
       storage.setItem(STORAGE_PREFIX + id, JSON.stringify(project));
       const index = listProjectIndex();
-      index[id] = { title: data.title, lastSaved: project.lastSaved };
+      index[id] = {
+        title: data.title,
+        lastSaved: project.lastSaved,
+        genre: data.genre,
+        key: data.key,
+        bpm: data.bpm,
+        coverUrl: data.coverUrl,
+      };
       storage.setItem(INDEX_KEY, JSON.stringify(index));
       onProjectSaved?.(id, project);
     } catch (e) {
@@ -304,7 +311,14 @@ export function createProjectSnapshot(
 
 export function listProjectIndex(): Record<
   string,
-  { title: string; lastSaved: number }
+  {
+    title: string;
+    lastSaved: number;
+    genre?: string;
+    key?: string;
+    bpm?: number;
+    coverUrl?: string;
+  }
 > {
   const storage = getStorage();
   if (!storage) return {};

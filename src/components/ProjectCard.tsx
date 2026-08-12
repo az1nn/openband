@@ -11,6 +11,7 @@ export interface ProjectDisplayData {
   genre?: string;
   key?: string;
   bpm?: number;
+  coverUrl?: string;
   metadata?: ProjectData | null;
 }
 
@@ -31,10 +32,9 @@ export function ProjectCard({
   onRefresh,
   flex = 1,
 }: ProjectCardProps) {
+  const rawCover = project.coverUrl ?? project.metadata?.coverUrl;
   const coverUrl =
-    project.metadata?.coverUrl?.startsWith("data:image/")
-      ? project.metadata.coverUrl
-      : undefined;
+    rawCover?.startsWith("data:image/") ? rawCover : undefined;
 
   return (
     <View className="card-premium mb-2.5" style={{ flex }}>
