@@ -23,6 +23,7 @@ import { audioSystem, markBlobActive, revokeTrackedBlob } from "../../src/lib/un
 import { saveAsset, resolveAssetUrl, revokeAssetCache, deleteAssetUrl } from "../../src/lib/assetStore";
 import { API_BASE_URL } from "../../src/lib/apiUrl";
 import { assignTrackToBus } from "../../src/lib/busRouter";
+import { setMasteringInput } from "../../src/lib/masteringBridge";
 import { buildAutomationSchedule, interpolateAutomationValue, type ScheduledAutomationPoint } from "../../src/lib/automationEngine";
 import {
   Metronome,
@@ -1735,6 +1736,31 @@ export default function Studio() {
               {syncState.error ? ` · ${syncState.error}` : ""}
             </Text>
           )}
+          <Pressable
+            onPress={async () => {
+              try {
+                const url = await renderTracksCached(tracks, metronome.bpm, projectMood, buses, masterPlugins);
+                if (url) {
+                  setMasteringInput({
+                    url,
+                    filename: projectTitle || "studio_mix",
+                    bpm: metronome.bpm,
+                    key: projectKey || "C",
+                    timeSignature: projectTimeSig,
+                  });
+                  router.push("/mastering");
+                } else {
+                  Alert.alert(t("studio.error", "Erro"), t("studio.mixdownError", "Falha ao renderizar mixdown para mastering."));
+                }
+              } catch (err) {
+                console.warn("Mastering mixdown render error:", err);
+                Alert.alert(t("studio.error", "Erro"), t("studio.mixdownError", "Falha ao renderizar mixdown para mastering."));
+              }
+            }}
+            className="bg-dark-muted px-4 py-2 rounded-xl border border-dark-border active:opacity-80 flex-row items-center gap-1.5"
+          >
+            <Text className="text-white font-bold text-sm">🎚 {t("studio.masterize", "Masterizar")}</Text>
+          </Pressable>
           <Pressable
             onPress={handleManualSave}
             className="bg-brand-primary px-5 py-2 rounded-xl active:opacity-80 shadow-sm shadow-brand-primary/20"
