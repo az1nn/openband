@@ -426,7 +426,8 @@ export default function Studio() {
 
   const pxPerSec = 2.4 * zoom;
   const secondsPerMarker = 20;
-  const timelineWidth = Math.max(TIMELINE_WIDTH, duration * pxPerSec);
+  const minTimelineWidth = resp.isMobile ? Math.max(600, duration * pxPerSec) : TIMELINE_WIDTH;
+  const timelineWidth = Math.max(minTimelineWidth, duration * pxPerSec);
   const currentTimeRef = useRef(currentTime);
   currentTimeRef.current = currentTime;
   const isPlayingRef = useRef(isPlaying);
@@ -1779,21 +1780,21 @@ export default function Studio() {
           <Pressable
             accessibilityLabel={t("studio.a11yZoomOut", "Zoom out")}
             onPress={() => setZoom((z) => Math.max(0.5, +(z / 1.5).toFixed(2)))}
-            className="w-7 h-7 rounded items-center justify-center bg-dark-muted/40 border border-dark-border text-gray-300 active:opacity-70"
+            className="w-8 h-8 rounded items-center justify-center bg-dark-muted/40 border border-dark-border text-gray-300 active:opacity-70"
           >
-            <Text className="text-gray-300 text-sm font-bold">−</Text>
+            <Text className="text-gray-300 text-base font-bold">−</Text>
           </Pressable>
           <Pressable
             accessibilityLabel={t("studio.a11yZoomIn", "Zoom in")}
             onPress={() => setZoom((z) => Math.min(3, +(z * 1.5).toFixed(2)))}
-            className="w-7 h-7 rounded items-center justify-center bg-dark-muted/40 border border-dark-border text-gray-300 active:opacity-70"
+            className="w-8 h-8 rounded items-center justify-center bg-dark-muted/40 border border-dark-border text-gray-300 active:opacity-70"
           >
-            <Text className="text-gray-300 text-sm font-bold">+</Text>
+            <Text className="text-gray-300 text-base font-bold">+</Text>
           </Pressable>
           <Pressable
             accessibilityLabel={t("studio.a11yResetZoom", "Reset zoom")}
             onPress={() => setZoom(1)}
-            className="w-7 h-7 rounded items-center justify-center bg-dark-muted/40 border border-dark-border text-gray-400 active:opacity-70"
+            className="w-8 h-8 rounded items-center justify-center bg-dark-muted/40 border border-dark-border text-gray-400 active:opacity-70"
           >
             <Text className="text-[10px] text-gray-400 font-bold">
               {Math.round(zoom * 100)}%
