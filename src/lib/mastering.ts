@@ -199,6 +199,7 @@ async function applyMasteringPlugin(
     case "deesser":
       return applyDeesser(buffer, p, sampleRate);
     default:
+      console.warn(`[OpenBand] Unknown mastering plugin type: "${plugin.type}". Passing audio through.`);
       return buffer;
   }
 }

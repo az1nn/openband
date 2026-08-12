@@ -673,6 +673,7 @@ async function applySinglePlugin(
       break;
     }
     default:
+      console.warn(`[OpenBand] Unknown plugin type: "${plugin.type}". Passing audio through.`);
       source.connect(ctx.destination);
   }
 

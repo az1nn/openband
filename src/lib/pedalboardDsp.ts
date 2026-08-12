@@ -163,6 +163,7 @@ function pedalFactoryForType(
         return g;
       };
     default:
+      console.warn(`[OpenBand] Unknown pedal type: "${type}". Bypassing.`);
       return null;
   }
 }
