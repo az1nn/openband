@@ -367,8 +367,6 @@ async function applyTruePeakLimiter(
   }
   const src = osCtx.createBufferSource();
   src.buffer = osBuf;
-  const inGain = osCtx.createGain();
-  inGain.gain.value = Math.pow(10, (Math.abs((p.threshold ?? -3) as number)) / 20);
   const comp = osCtx.createDynamicsCompressor();
   comp.threshold.value = (p.threshold ?? -3) as number;
   comp.knee.value = 0;
@@ -377,8 +375,7 @@ async function applyTruePeakLimiter(
   comp.release.value = ((p.release ?? 50) as number) / 1000;
   const waveShaper = osCtx.createWaveShaper();
   waveShaper.curve = makeLimiterCurve(4096, (p.ceiling ?? -0.5) as number);
-  src.connect(inGain);
-  inGain.connect(comp);
+  src.connect(comp);
   comp.connect(waveShaper);
   waveShaper.connect(osCtx.destination);
   src.start(0);

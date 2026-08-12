@@ -130,6 +130,38 @@ function gatedLoudness(blocks: number[]): number {
   return loudnessFromEnergy(finalMean);
 }
 
+function oversample4x(x: Float32Array): Float32Array {
+  const factor = 4;
+  const halfLen = 16;
+  const wc = Math.PI / 4;
+  const kernelLen = 2 * halfLen + 1;
+  const kernel = new Float32Array(kernelLen);
+  let sum = 0;
+  for (let n = -halfLen; n <= halfLen; n++) {
+    const idx = n + halfLen;
+    let sinc = n === 0 ? wc / Math.PI : Math.sin(wc * n) / (Math.PI * n);
+    const window = 0.54 + 0.46 * Math.cos((Math.PI * n) / halfLen);
+    kernel[idx] = sinc * window;
+    sum += kernel[idx];
+  }
+  for (let i = 0; i < kernelLen; i++) kernel[i] /= sum;
+
+  const upLen = x.length * factor;
+  const up = new Float32Array(upLen);
+  for (let i = 0; i < upLen; i++) up[i] = i % factor === 0 ? x[i / factor] : 0;
+
+  const out = new Float32Array(upLen);
+  for (let i = 0; i < upLen; i++) {
+    let acc = 0;
+    for (let n = -halfLen; n <= halfLen; n++) {
+      const src = i - n;
+      if (src >= 0 && src < upLen) acc += up[src] * kernel[n + halfLen];
+    }
+    out[i] = acc;
+  }
+  return out;
+}
+
 export function truePeak(samples: Float32Array, _sampleRate: number): number {
   const n = samples.length;
   if (n === 0) return -Infinity;
@@ -140,15 +172,9 @@ export function truePeak(samples: Float32Array, _sampleRate: number): number {
     if (a > maxAbs) maxAbs = a;
   }
 
-  const factor = 4;
-  const upLen = (n - 1) * factor;
-  for (let i = 0; i < upLen; i++) {
-    const pos = i / factor;
-    const i0 = Math.floor(pos);
-    const i1 = Math.min(n - 1, i0 + 1);
-    const frac = pos - i0;
-    const val = samples[i0] * (1 - frac) + samples[i1] * frac;
-    const a = Math.abs(val);
+  const os = oversample4x(samples);
+  for (let i = 0; i < os.length; i++) {
+    const a = Math.abs(os[i]);
     if (a > maxAbs) maxAbs = a;
   }
 
