@@ -315,22 +315,24 @@ class UniversalAudioSystem {
   }
 
   async renderMixdown(
-    tracks: { volume: number; pan: number; muted: boolean; solo: boolean; regions: { start: number; duration: number; url?: string }[]; plugins?: Plugin[] }[],
+    tracks: { id?: string; name?: string; volume: number; pan: number; muted: boolean; solo: boolean; outputId?: string; sends?: Record<string, number>; regions: { start: number; duration: number; url?: string }[]; plugins?: Plugin[] }[],
     duration: number,
     sampleRate: number,
     onProgress?: (pct: number) => void,
+    buses?: any[],
   ): Promise<Blob> {
     if (Platform.OS === "web") {
-      return this.renderMixdownWeb(tracks, duration, sampleRate, onProgress);
+      return this.renderMixdownWeb(tracks, duration, sampleRate, onProgress, buses);
     }
-    return this.renderMixdownNative(tracks, duration, sampleRate, onProgress);
+    return this.renderMixdownNative(tracks, duration, sampleRate, onProgress, buses);
   }
 
   private async renderMixdownWeb(
-    tracks: { volume: number; pan: number; muted: boolean; solo: boolean; regions: { start: number; duration: number; url?: string }[]; plugins?: Plugin[] }[],
+    tracks: { id?: string; name?: string; volume: number; pan: number; muted: boolean; solo: boolean; outputId?: string; sends?: Record<string, number>; regions: { start: number; duration: number; url?: string }[]; plugins?: Plugin[] }[],
     duration: number,
     sampleRate: number,
     onProgress?: (pct: number) => void,
+    buses?: any[],
   ): Promise<Blob> {
     const safeDuration = duration > 0 ? duration : 1;
     const numSamples = Math.max(1, Math.ceil(sampleRate * safeDuration));
@@ -341,15 +343,29 @@ class UniversalAudioSystem {
       return !t.muted;
     });
 
+    const masterGain = ctx.createGain();
+    masterGain.gain.value = 1;
+    masterGain.connect(ctx.destination);
+
+    const { buildBusRouteGraph, createDefaultBuses } = await import("../lib/busRouter");
+    const { trackOutputs, cleanup } = buildBusRouteGraph(
+      ctx,
+      audible as any,
+      buses ?? createDefaultBuses(),
+      masterGain,
+    );
+
     const total = audible.reduce((s, t) => s + t.regions.length, 0);
     if (total === 0 || duration <= 0) {
       onProgress?.(100);
       const rendered = await ctx.startRendering();
+      cleanup();
       return this.audioBufferToWavBlob(rendered, 24);
     }
     let processed = 0;
 
     for (const track of audible) {
+      const trackOutputNode = trackOutputs.get(track.id || "");
       for (const region of track.regions) {
         if (region.url) {
           try {
@@ -366,13 +382,17 @@ class UniversalAudioSystem {
             }
             const src = ctx.createBufferSource();
             src.buffer = buf;
-            const gain = ctx.createGain();
-            gain.gain.value = track.volume / 100;
-            const pan = ctx.createStereoPanner();
-            pan.pan.value = track.pan / 100;
-            src.connect(gain);
-            gain.connect(pan);
-            pan.connect(ctx.destination);
+            if (trackOutputNode) {
+              src.connect(trackOutputNode);
+            } else {
+              const gain = ctx.createGain();
+              gain.gain.value = track.volume / 100;
+              const pan = ctx.createStereoPanner();
+              pan.pan.value = track.pan / 100;
+              src.connect(gain);
+              gain.connect(pan);
+              pan.connect(masterGain);
+            }
             src.start(region.start, 0, Math.min(region.duration, Math.max(0, duration - region.start)));
           } catch (e) {
             console.warn("Failed to process region:", e);
@@ -385,16 +405,19 @@ class UniversalAudioSystem {
 
     onProgress?.(65);
     const rendered = await ctx.startRendering();
+    cleanup();
     onProgress?.(70);
     return this.audioBufferToWavBlob(rendered, 24);
   }
 
   private async renderMixdownNative(
-    tracks: { volume: number; pan: number; muted: boolean; solo: boolean; regions: { start: number; duration: number; url?: string }[]; plugins?: Plugin[] }[],
+    tracks: { id?: string; name?: string; volume: number; pan: number; muted: boolean; solo: boolean; outputId?: string; sends?: Record<string, number>; regions: { start: number; duration: number; url?: string }[]; plugins?: Plugin[] }[],
     duration: number,
     sampleRate: number,
     onProgress?: (pct: number) => void,
+    _buses?: any[],
   ): Promise<Blob> {
+    void _buses;
     onProgress?.(10);
 
     const anySolo = tracks.some((t) => t.solo);
