@@ -141,6 +141,7 @@ export function saveProject(
         key: data.key,
         bpm: data.bpm,
         coverUrl: data.coverUrl,
+        parentProjectId: data.parentProjectId,
       };
       storage.setItem(INDEX_KEY, JSON.stringify(index));
       onProjectSaved?.(id, project);
@@ -318,6 +319,7 @@ export function listProjectIndex(): Record<
     key?: string;
     bpm?: number;
     coverUrl?: string;
+    parentProjectId?: string;
   }
 > {
   const storage = getStorage();

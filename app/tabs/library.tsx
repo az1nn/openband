@@ -9,7 +9,7 @@ import { ProjectCard } from "../../src/components/ProjectCard"
 import { Loading } from "../../src/components/Loading"
 import type { ProjectStarterResult } from "../../src/lib/projectStarter"
 import { useResponsive, LAYOUT_MAX_WIDTHS } from "../../src/lib/responsive"
-import { listProjectIndex, importProject, loadProject, getFavoriteProjects, toggleProjectFavorite, saveProject, type ProjectData } from "../../src/lib/projectStore"
+import { listProjectIndex, importProject, getFavoriteProjects, toggleProjectFavorite, saveProject, type ProjectData } from "../../src/lib/projectStore"
 import { SCREEN_BOTTOM_PADDING } from "../../src/lib/constants"
 import { OpenBandNative } from "../../src/bridge"
 import { fetchCloudProjects } from "../../src/lib/cloudSync"
@@ -91,7 +91,7 @@ export default function Library() {
   }, [projectIndex])
 
   const [collabItems, setCollabItems] = useState<
-    { id: string; title: string; lastSaved: number; metadata: ProjectData | null }[]
+    { id: string; title: string; lastSaved: number; genre?: string; key?: string; bpm?: number; coverUrl?: string; metadata: ProjectData | null }[]
   >([])
 
   useEffect(() => {
@@ -100,17 +100,16 @@ export default function Library() {
       return
     }
     const items = Object.entries(projectIndex)
-      .map(([id]) => loadProject(id))
-      .filter((p): p is ProjectData => !!p && !!p.parentProjectId)
-      .map((p) => ({
-        id: p.id,
-        title: p.title,
-        lastSaved: p.lastSaved,
-        genre: p.genre,
-        key: p.key,
-        bpm: p.bpm,
-        coverUrl: p.coverUrl,
-        metadata: p,
+      .filter(([, meta]) => !!meta.parentProjectId)
+      .map(([id, meta]) => ({
+        id,
+        title: meta.title,
+        lastSaved: meta.lastSaved,
+        genre: meta.genre,
+        key: meta.key,
+        bpm: meta.bpm,
+        coverUrl: meta.coverUrl,
+        metadata: null,
       }))
     setCollabItems(items)
   }, [filterTab, projectIndex, refreshKey])
