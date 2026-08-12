@@ -1,6 +1,6 @@
 # OpenBand Roadmap
 
-**Last updated:** August 6, 2026
+**Last updated:** August 11, 2026
 
 ---
 

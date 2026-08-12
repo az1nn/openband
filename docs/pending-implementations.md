@@ -1,6 +1,6 @@
 # Pending Implementations (from OpenSpec specs)
 
-Reconciled against current code on 2026-08-06. Items marked `[x]` are
+Reconciled against current code on 2026-08-11. Items marked `[x]` are
 implemented + verified; `[ ]` are genuinely outstanding.
 
 ## Auth (`auth/spec.md`) — DONE

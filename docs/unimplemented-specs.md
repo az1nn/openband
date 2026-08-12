@@ -1,6 +1,6 @@
 # Unimplemented / Outstanding Items
 
-This file lists only genuinely open work, reconciled against the current repo state on **2026-08-06**. `docs/pending-implementations.md` is the **authoritative** tracker for implemented items; cross-check any "unimplemented" claim here against code and that file before acting. Legend: `[ ]` = open.
+This file lists only genuinely open work, reconciled against the current repo state on **2026-08-11**. `docs/pending-implementations.md` is the **authoritative** tracker for implemented items; cross-check any "unimplemented" claim here against code and that file before acting. Legend: `[ ]` = open.
 
 ---
 
