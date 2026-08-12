@@ -681,7 +681,10 @@ export function useStudioTransport(params: {
         const durSec = getProjectDurationSeconds(tracks, initialBpm);
         const beatsPerMeasure = projectTimeSig.split("/").map(Number)[0];
         await engine.prepare(tracks, initialBpm, durSec, beatsPerMeasure);
-        engine.onEnded = () => setEngineActive(false);
+        engine.onEnded = () => {
+          setEngineActive(false);
+          currentSeekRef.current = 0;
+        };
         await engine.play(currentSeekRef.current);
         setEngineActive(true);
         return;
