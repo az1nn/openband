@@ -199,7 +199,7 @@ All 3D scenes are **web-only** (native renders `Screen3DFallback`). See `docs/3d
 
 ### Audio System
 
-- Uses `expo-audio` (SDK 56), NOT `expo-av`
+- Uses `expo-audio` (SDK 57), NOT `expo-av`
 - `useAudioPlayer(source)` — returns `AudioPlayer`
 - `useAudioPlayerStatus(player)` — returns `{ playing, currentTime, duration, isLoaded }`
 - `player.play()`, `player.pause()`, `player.replace(source)`, `player.seekTo(seconds)`
@@ -397,7 +397,7 @@ tests/
   specs-group1..specs-group6  — spec/canonical test groups
   plugins/ (dsp, presetSerial)  — plugin sub-suite
   presets.test.ts, types.test.ts  — Legacy node:test suite (supporting ok-reporter.ts, setup.ts)
-  Full suite totals: 1456 vitest tests + 24 legacy node:test tests across 80 test files (78 at tests/ root + 2 in tests/plugins/)
+   Full suite totals: 1479 vitest tests + 24 legacy node:test tests across 80 test files (78 at tests/ root + 2 in tests/plugins/)
 
 stories/                      — Storybook for all 70 components (50 stories)
   *.stories.tsx       — Run: `npx storybook dev -p 6006`

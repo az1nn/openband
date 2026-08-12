@@ -8,17 +8,17 @@ Built with **Expo Router**, **TypeScript**, **NativeWind v4 (Tailwind CSS v3)**,
 
 | Layer            | Technology                                                                                             |
 | ---------------- | ------------------------------------------------------------------------------------------------------ |
-| Framework        | [Expo SDK 56](https://docs.expo.dev/versions/v56.0.0/) + [Expo Router](https://expo.github.io/router/) |
+| Framework        | [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/) + [Expo Router](https://expo.github.io/router/) |
 | Styling          | [NativeWind v4](https://www.nativewind.dev/) + Tailwind CSS v3                                         |
 | Language         | TypeScript ~6.0                                                                                        |
 | Auth / DB (dev)  | [SQLite](https://sqlite.org/) via `better-sqlite3` — zero-config local database                       |
 | Auth / DB (prod) | [Supabase](https://supabase.com/) (PostgreSQL + Auth)                                                  |
-| Audio            | [`expo-audio`](https://docs.expo.dev/versions/v56.0.0/sdk/audio/) (SDK 56) + HTML5 Audio (web)         |
+| Audio            | [`expo-audio`](https://docs.expo.dev/versions/v57.0.0/sdk/audio/) (SDK 57) + HTML5 Audio (web)         |
 | Audio Processing | [Demucs](https://github.com/facebookresearch/demucs) (HTDEMUCS model) via Python subprocess            |
 | Desktop          | [Electron 35](https://www.electronjs.org/) with swappable bridge (`src/bridge/`)                       |
 | 3D / WebGL       | [Three.js](https://threejs.org/) — Virtual Studio (Habbo-style)                                        |
-| Backend          | FastAPI + Redis + Celery (Docker microservices, optional)                                              |
-| Testing          | [Vitest](https://vitest.dev/) (505 tests with interactive dashboard) + [Playwright](https://playwright.dev/) (E2E) + legacy `node:test` (24 tests) |
+| Backend          | [Express](https://expressjs.com/) (`backend/src/index.ts`, port 3001) — stems, mastering, auth; optional `openband-backend/` Docker microservices (Redis) |
+| Testing          | [Vitest](https://vitest.dev/) (1479 tests) + [Playwright](https://playwright.dev/) (E2E) + legacy `node:test` (24 tests) |
 
 ## Getting Started
 
