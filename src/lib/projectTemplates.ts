@@ -348,7 +348,11 @@ export function generateTracksForGenre(
   const genre = GENRES.find((g) => g.id === genreId);
   const suggested = genre?.suggestedTracks;
   if (!suggested || suggested.length === 0) {
-    return getFallbackTracks(numBars);
+    const baseBpm = bpm ?? genre?.defaultBpm ?? 120;
+    const bpmVal = mood
+      ? baseBpm + (MOODS.find((m) => m.id === mood)?.bpmOffset ?? 0)
+      : baseBpm;
+    return getFallbackTracks(numBars, bpmVal, key ?? genre?.defaultKey ?? "C", mood);
   }
 
   const baseBpm = bpm ?? genre?.defaultBpm ?? 120;
@@ -763,10 +767,29 @@ function generateMidiForTrack(
       }
       break
     }
-    case 'vocal':
-    case 'fx':
+    case 'vocal': {
       result = []
+      for (let bar = 0; bar < bars; bar++) {
+        const chordIdx = bar % resolvedChords.length
+        const cNotes = resolvedChords[chordIdx]
+        for (let beat = 0; beat < beatsPerBar; beat++) {
+          const absBeat = bar * beatsPerBar + beat
+          if (beat % 2 === 1) {
+            const pitch = cNotes[0] + 12
+            result.push({ pitch, start: absBeat * secPerBeat, duration: secPerBeat * 0.8, velocity: 80 })
+          }
+        }
+      }
       break
+    }
+    case 'fx': {
+      result = []
+      for (let bar = 0; bar < bars; bar += 2) {
+        const absBeat = bar * beatsPerBar
+        result.push({ pitch: rootNote + 24, start: absBeat * secPerBeat, duration: secPerBeat * 0.5, velocity: 70 })
+      }
+      break
+    }
     case 'other':
     default: {
       result = []
@@ -781,42 +804,64 @@ function generateMidiForTrack(
       break
     }
   }
+
+  if (result.length === 0) {
+    for (let bar = 0; bar < bars; bar++) {
+      const chordIdx = bar % resolvedChords.length
+      const cNotes = resolvedChords[chordIdx]
+      result.push({ pitch: cNotes[0] ?? rootNote, start: bar * beatsPerBar * secPerBeat, duration: secPerBeat * 2.0, velocity: 85 })
+    }
+  }
   if (moodPreset && result.length > 0) {
-    let filtered = result
+    let processed = result.map((n) => ({ ...n }));
     if (moodPreset.density < 1.0) {
-      filtered = result.filter(() => Math.random() < moodPreset.density)
+      processed = processed.filter(() => Math.random() < moodPreset.density);
     } else if (moodPreset.density > 1.0) {
-      const extra = result.length * (moodPreset.density - 1.0)
+      const extra = processed.length * (moodPreset.density - 1.0);
       for (let i = 0; i < Math.round(extra); i++) {
-        const ref = result[Math.floor(Math.random() * result.length)]
-        filtered.push({
+        const ref = processed[Math.floor(Math.random() * processed.length)];
+        processed.push({
           pitch: ref.pitch,
           start: ref.start + (Math.random() - 0.5) * secPerBeat,
           duration: ref.duration,
           velocity: ref.velocity,
-        })
+        });
       }
     }
-    for (const n of filtered) {
-      n.velocity = Math.max(1, Math.min(127, n.velocity + moodPreset.velocity))
+    for (const n of processed) {
+      n.velocity = Math.max(1, Math.min(127, n.velocity + moodPreset.velocity));
       if (!isDrumOrPerc && moodPreset.octaveShift !== 0) {
-        n.pitch = Math.max(0, Math.min(127, n.pitch + moodPreset.octaveShift * 12))
+        n.pitch = Math.max(0, Math.min(127, n.pitch + moodPreset.octaveShift * 12));
+      } else {
+        n.pitch = Math.max(0, Math.min(127, n.pitch));
       }
     }
-    return filtered
+    return processed;
   }
 
-  return result
+  return result.map((n) => ({
+    ...n,
+    pitch: Math.max(0, Math.min(127, n.pitch)),
+  }));
 }
 
-function getFallbackTracks(numBars: number = 8): TrackDef[] {
+function getFallbackTracks(
+  numBars: number = 8,
+  bpm: number = 120,
+  key: string = "C",
+  mood?: Mood,
+): TrackDef[] {
   const now = Date.now();
-  const baseDuration = (numBars * 4 * 60) / 120;
-  return [
-    {
-      id: `track-${now}-0`,
-      name: "Vocal",
-      color: "bg-red-500",
+  const baseDuration = (numBars * 4 * 60) / bpm;
+  const rootNote = keyToRootNote(key);
+  const trackNames = ["Vocal", "Instrumento", "Bateria", "Baixo"];
+  const colors = ["bg-red-500", "bg-blue-500", "bg-green-500", "bg-purple-500"];
+  return trackNames.map((name, i) => {
+    const midiNotes = generateMidiForTrack(name, "pop", rootNote, bpm, mood, numBars);
+    return {
+      id: `track-${now}-${i}`,
+      name,
+      color: colors[i],
       muted: false,
       solo: false,
       volume: 80,
@@ -826,48 +871,7 @@ function getFallbackTracks(numBars: number = 8): TrackDef[] {
       regions: [{ id: nextRegionId(), start: 0, duration: Math.round(baseDuration) }],
       plugins: [],
       automation: {},
-    },
-    {
-      id: `track-${now}-1`,
-      name: "Instrumento",
-      color: "bg-blue-500",
-      muted: false,
-      solo: false,
-      volume: 75,
-      pan: 0,
-      sends: {},
-      sidechainSource: null,
-      regions: [{ id: nextRegionId(), start: 0, duration: Math.round(baseDuration) }],
-      plugins: [],
-      automation: {},
-    },
-    {
-      id: `track-${now}-2`,
-      name: "Bateria",
-      color: "bg-green-500",
-      muted: false,
-      solo: false,
-      volume: 85,
-      pan: 0,
-      sends: {},
-      sidechainSource: null,
-      regions: [{ id: nextRegionId(), start: 0, duration: Math.round(baseDuration) }],
-      plugins: [],
-      automation: {},
-    },
-    {
-      id: `track-${now}-3`,
-      name: "Baixo",
-      color: "bg-purple-500",
-      muted: false,
-      solo: false,
-      volume: 80,
-      pan: 0,
-      sends: {},
-      sidechainSource: null,
-      regions: [{ id: nextRegionId(), start: 0, duration: Math.round(baseDuration) }],
-      plugins: [],
-      automation: {},
-    },
-  ];
+      ...(midiNotes.length > 0 ? { midiNotes } : {}),
+    };
+  });
 }
