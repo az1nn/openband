@@ -474,4 +474,17 @@ function autoMix(tracks: TrackDef[], genre: string): TrackDef[] {
 - **Eager routes de-barrelled**: Tabs, auth, extractor, settings-ai, mastering, and 3D screens now import directly from their source files instead of the `src/components` barrel, letting the bundler tree-shake per module
 - **Studio retains barrel by design**: `app/studio/[id].tsx` and `app/studio/StudioModals.tsx` intentionally keep the `src/components` barrel import — they live in a lazy route chunk, not the entry bundle, so they don't affect startup
 - **Dead provider removed**: `AudioEngineProvider` dropped from `app/_layout.tsx` and `src/context/AudioEngine.tsx` deleted (zero consumers)
-- **Heavy deps deferred (all platforms)**: `lamejs` (Mp3Encoder), `pluginChain`, and `soundfont-player` load via dynamic `import()` only when used; native keeps a single bundle but defers module evaluation until first use
+- **Heavy deps deferred (all platforms)**: `lamejs` (Mp3Encoder), `@supabase/supabase-js`, `i18next`, `pluginChain`, and `soundfont-player` load via dynamic `import()` only when used; native keeps a single bundle but defers module evaluation until first use
+- **Lightweight Project Index**: `listProjectIndex()` persists `genre`, `key`, `bpm`, `coverUrl`, and `parentProjectId` in the index JSON; Library tabs ("All", "Favorites", "Colaborações") render directly from metadata without calling `loadProject()`
+- **Feed Tab Optimization**: `NewProject` and `OnboardingFlow` load lazily via `React.lazy()` + `<Suspense>`; preview preloads are capped at 3 posts and gated on `document.visibilityState === "visible"`
+
+## Studio Audio & DSP Correctness (Latest)
+
+- **Mastering True-Peak & Limiter**: Replaced linear 4× oversampling in `truePeak()` with a band-limited windowed-sinc low-pass FIR (Hamming window, 33-tap, cutoff π/4, EBU R128 compliant) to eliminate inter-sample under-reporting; removed undocumented `inGain` pre-gain boost in `applyTruePeakLimiter`
+- **Live Modulation Matrix**: Connected `startModulationEngine` to transport clock and live audio node registry so active LFO/envelope/macro routes dynamically modulate `volume` and `pan` AudioParams during live playback
+- **Transport Seek Reset**: `currentSeekRef` resets to `0` upon natural playback end (`onEnded`), ensuring subsequent Play restarts from the beginning while preserving explicit pause positions
+- **Studio Render Cache**: Excluded live controls (`volume`, `pan`, `muted`, `solo`) from `renderTracksCached` cache keys so parameter tweaks update live nodes directly without triggering synchronous main-thread `OfflineAudioContext` re-renders
+- **Native Audio Decoding**: Enhanced `decodeAudioPureJS` with dynamic RIFF `fmt`/`data` chunk scanning and multi-bit-depth PCM WAV support (8, 16, 24, 32-bit int & IEEE float); native mixdown preserves multi-channel stereo separation instead of collapsing to mono
+- **Offline Mixdown Buses & Sends**: Integrated `buildBusRouteGraph` into `renderMixdownWeb` so track output bus assignments, aux sends, and sub-mix gain/mute levels are respected in exported audio
+- **Offline Render Guards**: Added `Math.max(1, ...)` and buffer length guards across `mastering.ts`, `midiSynth.ts`, `pluginChain.ts`, and `universalAudio.ts` to prevent `OfflineAudioContext(len=0)` crashes on empty or 0-duration projects
+- **Plugin Type Validation**: Added explicit `console.warn` logging for unhandled plugin and pedal processor types in `pluginChain`, `mastering`, and `pedalboardDsp` instead of silent pass-through

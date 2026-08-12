@@ -141,3 +141,15 @@ implemented + verified; `[ ]` are genuinely outstanding.
 - [x] `polish-core-specs`: `getChainLatency`/`latencySamples` + `serializePlugin`/`deserializePlugin` in `src/lib/pluginChain.ts`.
 - [x] `accessibility-pass`: `.focus-ring` (`global.css`), OneKnob `accessibilityRole="adjustable"`, transport labels, `tests/accessibility.test.tsx`.
 - [x] `native-builds` (partial): `BUILD.md`, Android signing fallback, Electron build scripts, bridge smoke tests done; release APK + device-path recording NOT done (see `unimplemented-specs.md`).
+- [x] `app-load-perf`: `listProjectIndex()` lightweight index, Library tabs render without full `loadProject()`, Feed lazy components and preview preload caps.
+- [x] `app-entry-defer-deps`: `@supabase/supabase-js` and `i18next` lazy-loaded via dynamic `import()`.
+- [x] `mastering-correctness`: EBU R128 true-peak 4× windowed-sinc FIR oversampling in `src/lib/lufs.ts` + removed limiter pre-gain in `src/lib/mastering.ts`.
+- [x] `live-modulation-apply`: Live LFO/macro/env modulation connected to transport clock and `PlaybackEngine` AudioParams in `src/lib/modulationMatrix.ts`.
+- [x] `transport-replay-reset`: Reset `currentSeekRef` to 0 on natural end in `app/studio/hooks.ts`.
+- [x] `collabs-no-full-decode`: `parentProjectId` persisted in `listProjectIndex()`, Library collabs tab derived from metadata without `loadProject()`.
+- [x] `studio-edit-freeze-fix`: Excluded `volume`/`pan`/`muted`/`solo` from `renderTracksCached` key in `app/studio/hooks.ts`.
+- [x] `native-audio-decode-fix`: Dynamic RIFF chunk scanning and 8/16/24/32-bit PCM WAV support in `src/lib/universalAudio.ts`.
+- [x] `zero-length-export-fix`: `Math.max(1, ...)` buffer length guards in `mastering.ts`, `midiSynth.ts`, `pluginChain.ts`, `universalAudio.ts`.
+- [x] `native-stereo-mixdown-fix`: Preserved multi-channel stereo Float32Array buffers in `decodeAudioPureJS` and `renderMixdownNative`.
+- [x] `offline-mixdown-buses-fix`: `buildBusRouteGraph` integrated into `renderMixdownWeb` for offline bus and aux send export.
+- [x] `unknown-plugin-type-fix`: Explicit `console.warn` for unhandled plugin/pedal types in `pluginChain`, `mastering`, `pedalboardDsp`.
