@@ -1,5 +1,12 @@
 import { audioSystem } from "./universalAudio";
 import { renderTrackStem } from "./midiSynth";
+import {
+  applyLiveModulation,
+  clearLiveModParams,
+  registerLiveModParam,
+  startModulationEngine,
+  stopModulationEngine,
+} from "./modulationMatrix";
 import type { TrackDef } from "./types";
 
 const MAX_STEMS = 32;
@@ -161,6 +168,26 @@ export class PlaybackEngine {
     gain.connect(panner);
     panner.connect(master);
     source.onended = () => this.handleEnded(t.id);
+
+    registerLiveModParam(
+      `vol:${t.id}`,
+      gain.gain,
+      "volume",
+      0,
+      1,
+      () => (this.isAudible(t) ? this.liveGainValue(t) : null),
+      ctx,
+    );
+    registerLiveModParam(
+      `pan:${t.id}`,
+      panner.pan,
+      "pan.position",
+      -1,
+      1,
+      () => (this.hasPanAuto(t) ? null : this.livePanValue(t)),
+      ctx,
+    );
+
     return { source, gain, panner };
   }
 
@@ -207,6 +234,11 @@ export class PlaybackEngine {
         remaining * 1000 + 60,
       );
     }
+
+    startModulationEngine(
+      (time) => applyLiveModulation(time),
+      () => this.getCurrentTime(),
+    );
   }
 
   pause(): void {
@@ -214,12 +246,14 @@ export class PlaybackEngine {
     this.pausedAt = this.getCurrentTime();
     this.stopSources();
     this.isPlaying = false;
+    stopModulationEngine();
   }
 
   stop(): void {
     this.stopSources();
     this.isPlaying = false;
     this.pausedAt = 0;
+    stopModulationEngine();
   }
 
   seek(sec: number): void {
@@ -390,6 +424,7 @@ export class PlaybackEngine {
       clearTimeout(this.endTimer);
       this.endTimer = null;
     }
+    clearLiveModParams();
     for (const [, node] of this.nodes) {
       try {
         node.source.onended = null;
@@ -410,6 +445,7 @@ export class PlaybackEngine {
 
   dispose(): void {
     this.stopSources();
+    stopModulationEngine();
     if (this.master) {
       try {
         this.master.disconnect();

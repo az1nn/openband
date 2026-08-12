@@ -333,12 +333,100 @@ export function computeModulation(
   return Math.max(-1, Math.min(1, total));
 }
 
-export function startModulationEngine(): void {
+/**
+ * A retained live AudioParam that the modulation engine writes to each frame.
+ * `getBase` returns the current unmodulated value, or `null` to skip writing this
+ * frame (e.g. when the node is muted, or its value is already baked into an
+ * offline-rendered stem via automation).
+ */
+export interface LiveModParam {
+  param: AudioParam;
+  target: ModTarget;
+  min: number;
+  max: number;
+  getBase: () => number | null;
+  ctx?: BaseAudioContext;
+}
+
+const liveParams = new Map<string, LiveModParam>();
+
+export function registerLiveModParam(
+  key: string,
+  param: AudioParam,
+  target: ModTarget,
+  min: number,
+  max: number,
+  getBase: () => number | null,
+  ctx?: BaseAudioContext,
+): void {
+  liveParams.set(key, { param, target, min, max, getBase, ctx });
+}
+
+export function clearLiveModParams(): void {
+  liveParams.clear();
+}
+
+function writeLiveParam(entry: LiveModParam, value: number): void {
+  const { param, ctx } = entry;
+  if (ctx && typeof ctx.currentTime === "number") {
+    try {
+      param.setTargetAtTime(value, ctx.currentTime, 0.008);
+      return;
+    } catch {
+      /* fall through to direct assignment */
+    }
+  }
+  try {
+    param.value = value;
+  } catch {
+    /* param is not writable in this context */
+  }
+}
+
+/**
+ * Pushes the current modulated value of every active route onto its retained
+ * live AudioParam. Called once per animation frame by `startModulationEngine`.
+ * Routes with no retained node (e.g. plugin filter cutoff, baked into offline
+ * stems) are simply absent from the registry and therefore not affected here.
+ */
+export function applyLiveModulation(time: number): void {
+  if (liveParams.size === 0) return;
+  const routes = modulationState.routes;
+  for (const entry of liveParams.values()) {
+    let active = false;
+    for (const r of routes) {
+      if (r.enabled && r.target === entry.target) {
+        active = true;
+        break;
+      }
+    }
+    if (!active) continue;
+    const base = entry.getBase();
+    if (base === null) continue;
+    writeLiveParam(
+      entry,
+      applyModulation(entry.target, base, entry.min, entry.max, { time }),
+    );
+  }
+}
+
+let frameCallback: ((time: number) => void) | null = null;
+let timeSource: (() => number) | null = null;
+
+export function startModulationEngine(
+  onFrame?: (time: number) => void,
+  getTime?: () => number,
+): void {
   if (Platform.OS !== "web") return;
+  frameCallback = onFrame ?? null;
+  timeSource = getTime ?? null;
+  if (frameId !== null) return;
   lfoTime = 0;
 
   function tick(): void {
     lfoTime += 1 / 60;
+    const time = timeSource ? timeSource() : lfoTime;
+    if (frameCallback) frameCallback(time);
     frameId = requestAnimationFrame(tick);
   }
   frameId = requestAnimationFrame(tick);
@@ -350,6 +438,8 @@ export function stopModulationEngine(): void {
     frameId = null;
   }
   lfoTime = 0;
+  frameCallback = null;
+  timeSource = null;
 }
 
 export function disposeModulationMatrix(): void {
