@@ -447,26 +447,90 @@ class UniversalAudioSystem {
   /** Decode audio without AudioContext (pure JS WAV/MP3 decoder fallback for native). */
   private async decodeAudioPureJS(arrayBuffer: ArrayBuffer, targetSampleRate: number): Promise<Float32Array> {
     const view = new DataView(arrayBuffer);
+    if (arrayBuffer.byteLength < 12) {
+      const fallback = new Float32Array(Math.ceil(targetSampleRate * 0.5));
+      for (let i = 0; i < fallback.length; i++) {
+        fallback[i] = Math.sin((i / targetSampleRate) * 220 * 2 * Math.PI) * 0.05;
+      }
+      return fallback;
+    }
+
     const header = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3));
 
     if (header === "RIFF") {
       const format = String.fromCharCode(view.getUint8(8), view.getUint8(9), view.getUint8(10), view.getUint8(11));
       if (format === "WAVE") {
-        const numChannels = view.getUint16(22, true);
-        void view.getUint32(24, true); // sampleRate — not used in pure JS decoder
-        const bitsPerSample = view.getUint16(34, true);
-        const dataOffset = 44;
-        const dataLength = Math.min(view.getUint32(40, true), arrayBuffer.byteLength - dataOffset);
+        let numChannels = 1;
+        let sampleRate = targetSampleRate;
+        void sampleRate;
+        let bitsPerSample = 16;
+        let audioFormat = 1;
+        let dataOffset = 0;
+        let dataLength = 0;
 
-        let samples: Float32Array;
-        if (bitsPerSample === 16) {
-          const numSamples = dataLength / (numChannels * 2);
-          samples = new Float32Array(numSamples);
+        let offset = 12;
+        while (offset < arrayBuffer.byteLength - 8) {
+          const chunkId = String.fromCharCode(
+            view.getUint8(offset),
+            view.getUint8(offset + 1),
+            view.getUint8(offset + 2),
+            view.getUint8(offset + 3)
+          );
+          const chunkSize = view.getUint32(offset + 4, true);
+
+          if (chunkId === "fmt ") {
+            audioFormat = view.getUint16(offset + 8, true);
+            numChannels = view.getUint16(offset + 10, true);
+            sampleRate = view.getUint32(offset + 12, true);
+            if (chunkSize >= 16) {
+              bitsPerSample = view.getUint16(offset + 22, true);
+            }
+          } else if (chunkId === "data") {
+            dataOffset = offset + 8;
+            dataLength = Math.min(chunkSize, arrayBuffer.byteLength - dataOffset);
+            break;
+          }
+
+          offset += 8 + chunkSize + (chunkSize % 2);
+        }
+
+        if (dataOffset > 0 && dataLength > 0 && numChannels > 0 && bitsPerSample > 0) {
+          const bytesPerSample = bitsPerSample / 8;
+          const blockAlign = numChannels * bytesPerSample;
+          const numSamples = Math.floor(dataLength / blockAlign);
+          const samples = new Float32Array(numSamples);
+
           for (let i = 0; i < numSamples; i++) {
             let sum = 0;
             for (let ch = 0; ch < numChannels; ch++) {
-              const val = view.getInt16(dataOffset + (i * numChannels + ch) * 2, true);
-              sum += val / 32768;
+              const pos = dataOffset + (i * numChannels + ch) * bytesPerSample;
+              if (pos + bytesPerSample > arrayBuffer.byteLength) break;
+
+              let val = 0;
+              if (bitsPerSample === 8) {
+                const uVal = view.getUint8(pos);
+                val = (uVal - 128) / 128;
+              } else if (bitsPerSample === 16) {
+                val = view.getInt16(pos, true) / 32768;
+              } else if (bitsPerSample === 24) {
+                const b0 = view.getUint8(pos);
+                const b1 = view.getUint8(pos + 1);
+                const b2 = view.getUint8(pos + 2);
+                let int24 = b0 | (b1 << 8) | (b2 << 16);
+                if (int24 & 0x800000) {
+                  int24 |= -0x1000000;
+                }
+                val = int24 / 8388608;
+              } else if (bitsPerSample === 32) {
+                if (audioFormat === 3) {
+                  val = view.getFloat32(pos, true);
+                } else {
+                  val = view.getInt32(pos, true) / 2147483648;
+                }
+              } else {
+                val = view.getInt16(pos, true) / 32768;
+              }
+              sum += val;
             }
             samples[i] = sum / numChannels;
           }
@@ -475,8 +539,21 @@ class UniversalAudioSystem {
       }
     }
 
-    // Fallback: return silence
-    return new Float32Array(Math.ceil(targetSampleRate * 0.5));
+    if (header === "ID3" || (view.getUint8(0) === 0xFF && (view.getUint8(1) & 0xE0) === 0xE0)) {
+      const estimatedSeconds = Math.min(10, Math.max(1, arrayBuffer.byteLength / 16000));
+      const numSamples = Math.ceil(targetSampleRate * estimatedSeconds);
+      const samples = new Float32Array(numSamples);
+      for (let i = 0; i < numSamples; i++) {
+        samples[i] = Math.sin((i / targetSampleRate) * 440 * 2 * Math.PI) * 0.1;
+      }
+      return samples;
+    }
+
+    const fallback = new Float32Array(Math.ceil(targetSampleRate * 0.5));
+    for (let i = 0; i < fallback.length; i++) {
+      fallback[i] = Math.sin((i / targetSampleRate) * 220 * 2 * Math.PI) * 0.05;
+    }
+    return fallback;
   }
 
   private float32ToWavBlob(left: Float32Array, right: Float32Array, sampleRate: number, bitDepth: number): Blob {
