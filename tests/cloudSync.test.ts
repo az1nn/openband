@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { saveProjectToCloud, fetchCloudProjects } from "../src/lib/cloudSync";
-import { supabase } from "../src/lib/supabase";
+import { getSupabase } from "../src/lib/supabase";
 import type { ProjectData } from "../src/lib/projectStore";
 
 describe("Cloud Sync", () => {
@@ -27,6 +27,7 @@ describe("Cloud Sync", () => {
 
   beforeEach(async () => {
     // Clear mock session by signing out, then sign in as dev
+    const supabase = await getSupabase();
     await supabase.auth.signOut();
     await supabase.auth.signInWithPassword({ email: "dev@openband.app", password: "password" });
   });

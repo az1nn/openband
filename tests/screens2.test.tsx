@@ -36,14 +36,15 @@ const {
   mockGeneratePreviewUrl: vi.fn(() => Promise.resolve("blob:test")),
 }));
 
-vi.mock("../src/lib/supabase", () => ({
-  supabase: {
+vi.mock("../src/lib/supabase", () => {
+  const supabase = {
     auth: {
       signUp: mockSignUp,
       signInWithPassword: mockSignInWithPassword,
     },
-  },
-}));
+  };
+  return { supabase, getSupabase: async () => supabase };
+});
 
 vi.mock("../src/context/AuthContext", () => ({
   useAuth: () => ({

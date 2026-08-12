@@ -7,15 +7,16 @@ vi.mock("../src/context/AuthContext", async (importOriginal) => {
   return await importOriginal();
 });
 
-vi.mock("../src/lib/supabase", () => ({
-  supabase: {
+vi.mock("../src/lib/supabase", () => {
+  const supabase = {
     auth: {
       getSession: vi.fn(() => Promise.resolve({ data: { session: null } })),
       onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
       signOut: vi.fn(),
     },
-  },
-}));
+  };
+  return { supabase, getSupabase: async () => supabase };
+});
 
 function TierProbe() {
   const { tier, tierLimits } = useAuth();

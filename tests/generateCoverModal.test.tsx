@@ -8,13 +8,14 @@ import { useSettingsAIStore } from "../src/lib/settingsStore";
 
 const mockSession = { data: { session: { access_token: "tok-123" } } };
 
-vi.mock("../src/lib/supabase", () => ({
-  supabase: {
+vi.mock("../src/lib/supabase", () => {
+  const supabase = {
     auth: {
       getSession: async () => mockSession,
     },
-  },
-}));
+  };
+  return { supabase, getSupabase: async () => supabase };
+});
 
 vi.mock("../src/lib/apiUrl", () => ({
   API_BASE_URL: "http://localhost:3001",

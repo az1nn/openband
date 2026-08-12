@@ -23,7 +23,7 @@ import {
   type RefinerProvider,
 } from "../lib/settingsStore";
 import { API_BASE_URL } from "../lib/apiUrl";
-import { supabase } from "../lib/supabase";
+import { getSupabase } from "../lib/supabase";
 import { OpenBandNative } from "../bridge";
 
 interface GenerateCoverModalProps {
@@ -76,6 +76,7 @@ function dataURLToArrayBuffer(dataUrl: string): ArrayBuffer {
 
 async function getToken(): Promise<string | null> {
   try {
+    const supabase = await getSupabase();
     const { data } = await supabase.auth.getSession();
     return data.session?.access_token ?? null;
   } catch {

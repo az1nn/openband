@@ -1,6 +1,6 @@
 import "react-native-url-polyfill/auto";
 import * as SecureStore from "expo-secure-store";
-import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient, Session } from "@supabase/supabase-js";
 import { Platform } from "react-native";
 
 const ExpoSecureStoreAdapter = {
@@ -151,14 +151,24 @@ function createMockClient(): SupabaseClient<any, any, any, any, any> {
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabase =
-  supabaseUrl && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          storage: ExpoSecureStoreAdapter,
-          autoRefreshToken: true,
-          persistSession: true,
-          detectSessionInUrl: false,
-        },
-      })
-    : createMockClient();
+let clientPromise: Promise<SupabaseClient> | null = null;
+
+export async function getSupabase(): Promise<SupabaseClient> {
+  if (!clientPromise) {
+    clientPromise = (async () => {
+      if (supabaseUrl && supabaseAnonKey) {
+        const { createClient } = await import("@supabase/supabase-js");
+        return createClient(supabaseUrl, supabaseAnonKey, {
+          auth: {
+            storage: ExpoSecureStoreAdapter,
+            autoRefreshToken: true,
+            persistSession: true,
+            detectSessionInUrl: false,
+          },
+        });
+      }
+      return createMockClient();
+    })();
+  }
+  return clientPromise;
+}

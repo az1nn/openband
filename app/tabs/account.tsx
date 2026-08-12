@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { View, Text, ScrollView, Alert, Platform, Pressable } from "react-native";
 import { useAuth } from "../../src/context/AuthContext";
-import { supabase } from "../../src/lib/supabase";
+import { getSupabase } from "../../src/lib/supabase";
 import { PageHeader } from "../../src/components/PageHeader";
 import { Avatar } from "../../src/components/Avatar";
 import { Button } from "../../src/components/Button";
@@ -54,6 +54,7 @@ export default function Account() {
   const [saved, setSaved] = useState(false);
 
   const handleSaveName = async () => {
+    const supabase = await getSupabase();
     if (!name.trim() || name.trim() === currentName) return;
     setSaving(true);
     setSaved(false);
@@ -113,6 +114,7 @@ export default function Account() {
   };
 
   const storeAvatar = async (dataUrl: string) => {
+    const supabase = await getSupabase();
     setSavingAvatar(true);
     try {
       const { error } = await supabase.auth.updateUser({

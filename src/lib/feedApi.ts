@@ -1,4 +1,4 @@
-import { supabase } from "./supabase"
+import { getSupabase } from "./supabase"
 import { API_BASE_URL } from "./apiUrl"
 
 export interface FeedPage {
@@ -18,6 +18,7 @@ export interface RemixResult {
 
 async function getToken(): Promise<string | null> {
   try {
+    const supabase = await getSupabase()
     const { data } = await supabase.auth.getSession()
     return data.session?.access_token ?? null
   } catch {

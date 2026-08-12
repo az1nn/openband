@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./apiUrl";
-import { supabase } from "./supabase";
+import { getSupabase } from "./supabase";
 
 export interface PresignedUpload {
   url: string;
@@ -77,6 +77,7 @@ export class MockStorageBackend implements ObjectStorageClient {
 
 async function authHeaders(): Promise<Record<string, string>> {
   try {
+    const supabase = await getSupabase();
     const { data } = await supabase.auth.getSession();
     if (data.session?.access_token) {
       return { Authorization: `Bearer ${data.session.access_token}` };

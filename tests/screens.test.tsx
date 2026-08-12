@@ -103,9 +103,10 @@ vi.mock("../src/context/AuthContext", () => ({
   useAuth: mockAuthFn,
 }));
 
-vi.mock("../src/lib/supabase", () => ({
-  supabase: { auth: { updateUser: mockUpdateUser } },
-}));
+vi.mock("../src/lib/supabase", () => {
+  const supabase = { auth: { updateUser: mockUpdateUser } };
+  return { supabase, getSupabase: async () => supabase };
+});
 
 vi.mock("../src/bridge", () => ({
   OpenBandNative: {

@@ -17,12 +17,13 @@ import {
   type ImageProvider,
 } from "../src/lib/settingsStore";
 import { API_BASE_URL } from "../src/lib/apiUrl";
-import { supabase } from "../src/lib/supabase";
+import { getSupabase } from "../src/lib/supabase";
 
 async function testKey(
   provider: AIProvider,
   apiKey: string,
 ): Promise<{ ok: boolean; message: string }> {
+  const supabase = await getSupabase();
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token ?? null;
   const res = await fetch(`${API_BASE_URL}/api/ai/test-key`, {

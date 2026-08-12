@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "./supabase";
+import { getSupabase } from "./supabase";
 import { loadProject, ProjectData, setOnProjectSaved } from "./projectStore";
 import { getObjectStorage } from "./objectStorage";
 import { getAssetRefs } from "./stateAssetSeparation";
@@ -26,6 +26,7 @@ async function uploadProjectToStorage(
   projectId: string,
   project: ProjectData,
 ): Promise<void> {
+  const supabase = await getSupabase();
   const { error } = await supabase.storage
     .from(STORAGE_BUCKET)
     .upload(`${projectId}.json`, JSON.stringify(project, null, 2), {
@@ -215,6 +216,7 @@ export function useCloudSync(projectId: string): CloudSyncState {
 
 export async function saveProjectToCloud(project: ProjectData): Promise<{ success: boolean; error?: string }> {
   try {
+    const supabase = await getSupabase();
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !sessionData?.session) {
       return { success: false, error: "Usuário não autenticado." };
@@ -242,6 +244,7 @@ export async function saveProjectToCloud(project: ProjectData): Promise<{ succes
 
 export async function fetchCloudProjects(): Promise<{ data: ProjectData[] | null; error?: string }> {
   try {
+    const supabase = await getSupabase();
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !sessionData?.session) {
       return { data: null, error: "Usuário não autenticado." };

@@ -6,8 +6,8 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { Session, User } from "@supabase/supabase-js";
-import { supabase } from "../lib/supabase";
+import type { Session, User } from "@supabase/supabase-js";
+import { getSupabase } from "../lib/supabase";
 import { getOnboardingState, setOnboardingCompleted } from "../lib/projectStore";
 import {
   FREE_TIER_LIMITS,
@@ -150,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    let subscription: { unsubscribe: () => void } | null = null;
 
     const stored = loadVisitorSession();
     if (stored) {
@@ -165,37 +166,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
+    (async () => {
+      try {
+        const sb = await getSupabase();
+        if (cancelled) return;
+        const { data: { session } } = await sb.auth.getSession();
         if (cancelled) return;
         setSession(session);
         setUser(session?.user ?? null);
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        console.warn("Auth getSession failed:", e);
-        setSession(null);
-        setUser(null);
-      })
-      .finally(() => {
+        setLoading(false);
+        fetchTier();
+        const { data: { subscription: sub } } = await sb.auth.onAuthStateChange(
+          (_event, newSession) => {
+            if (cancelled) return;
+            setSession(newSession);
+            setUser(newSession?.user ?? null);
+            setLoading(false);
+            fetchTier();
+          },
+        );
+        subscription = sub;
+        if (cancelled) {
+          sub.unsubscribe();
+          subscription = null;
+        }
+      } catch (e) {
+        console.warn("Auth init failed:", e);
         if (!cancelled) setLoading(false);
-        if (!cancelled) fetchTier();
-      });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (cancelled) return;
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      fetchTier();
-    });
+      }
+    })();
 
     return () => {
       cancelled = true;
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, [fetchTier]);
 
@@ -208,6 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       return;
     }
+    const supabase = await getSupabase();
     await supabase.auth.signOut();
   }, [isVisitor]);
 

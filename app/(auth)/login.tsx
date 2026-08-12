@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Button } from "../../src/components/Button";
 import { TextInput } from "../../src/components/TextInput";
-import { supabase } from "../../src/lib/supabase";
+import { getSupabase } from "../../src/lib/supabase";
 import { LAYOUT_MAX_WIDTHS } from "../../src/lib/responsive";
 import { useAuth } from "../../src/context/AuthContext";
 
@@ -83,6 +83,7 @@ export default function Login() {
     setLoading(true);
     setError(null);
     setSignupSuccess(null);
+    const supabase = await getSupabase();
     try {
       if (isSignUp) {
         const { data, error } = await supabase.auth.signUp({
@@ -124,6 +125,7 @@ export default function Login() {
       setError("Digite um e-mail válido.");
       return;
     }
+    const supabase = await getSupabase();
     try {
       if (typeof supabase.auth.resetPasswordForEmail === "function") {
         const { error } = await supabase.auth.resetPasswordForEmail(
