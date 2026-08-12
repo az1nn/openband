@@ -125,12 +125,20 @@ export class PlaybackEngine {
         existing.lastUsed = Date.now();
         continue;
       }
-      const buffer = await renderTrackStem(t, bpm, duration, undefined);
+      let buffer: AudioBuffer | null = null;
+      try {
+        buffer = await renderTrackStem(t, bpm, duration, undefined);
+      } catch (err) {
+        console.warn(`Failed to render stem for track ${t.id}:`, err);
+      }
       if (!buffer) {
         this.stems.delete(t.id);
         continue;
       }
       this.stems.set(t.id, { buffer, hash, lastUsed: Date.now() });
+    }
+    if (this.stems.size === 0) {
+      throw new Error("PlaybackEngine: No valid track stems rendered");
     }
     this.evictLRU();
   }
@@ -315,12 +323,20 @@ export class PlaybackEngine {
         existing.lastUsed = Date.now();
         continue;
       }
-      const buffer = await renderTrackStem(t, bpm, duration, undefined);
+      let buffer: AudioBuffer | null = null;
+      try {
+        buffer = await renderTrackStem(t, bpm, duration, undefined);
+      } catch (err) {
+        console.warn(`Failed to render stem for track ${t.id} during sync:`, err);
+      }
       if (!buffer) {
         this.stems.delete(t.id);
         continue;
       }
       this.stems.set(t.id, { buffer, hash, lastUsed: Date.now() });
+    }
+    if (this.stems.size === 0) {
+      console.warn("PlaybackEngine: No valid track stems during sync");
     }
     this.evictLRU();
 
