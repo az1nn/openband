@@ -283,6 +283,29 @@ describe("audioGraphValidation", () => {
     expect(result.valid).toBe(false);
     expect(result.errorMessage).toContain("not in the graph");
   });
+
+  it("wouldCreateCycle handles routing to a missing target node", () => {
+    const tracks = [{ id: "t1", name: "Vocal", type: "audio", color: "bg-blue-500", volume: 75, pan: 0, muted: false, solo: false, outputId: null, sends: {}, regions: [], sidechainSource: null, automation: {}, plugins: [] }];
+    const graph = buildAudioGraph(tracks, []);
+    const result = wouldCreateCycle(graph, "t1", "missing-bus");
+    // Routing to missing target adds target to node outputs, but validateGraph ignores missing neighbors
+    expect(result).toBeDefined();
+  });
+
+  it("wouldCreateCycle returns invalid when both fromId and toId are missing", () => {
+    const graph = buildAudioGraph([], []);
+    const result = wouldCreateCycle(graph, "missing-source", "missing-target");
+    expect(result.valid).toBe(false);
+    expect(result.errorMessage).toContain("not in the graph");
+  });
+
+  it("wouldCreateCycle prevents self-routing", () => {
+    const tracks = [{ id: "t1", name: "Vocal", type: "audio", color: "bg-blue-500", volume: 75, pan: 0, muted: false, solo: false, outputId: null, sends: {}, regions: [], sidechainSource: null, automation: {}, plugins: [] }];
+    const graph = buildAudioGraph(tracks, []);
+    const result = wouldCreateCycle(graph, "t1", "t1");
+    expect(result.valid).toBe(false);
+    expect(result.errorMessage).toContain("Cannot route a node to itself");
+  });
 });
 
 describe("previewEngine", () => {

@@ -48,4 +48,19 @@ describe("Cloud Sync", () => {
     expect(fetchedProj).toBeDefined();
     expect(fetchedProj?.title).toBe("Test Project");
   });
+
+  it("listProjectIndex persists and returns parentProjectId for collaborative filtering without full-decode", async () => {
+    const { saveProject, listProjectIndex } = await import("../src/lib/projectStore");
+    const childProject: ProjectData = {
+      ...mockProject,
+      id: "proj-child-collab",
+      title: "Collab Remix",
+      parentProjectId: "proj-parent-1",
+    };
+    saveProject("proj-child-collab", childProject);
+    const index = listProjectIndex();
+    expect(index["proj-child-collab"]).toBeDefined();
+    expect(index["proj-child-collab"].parentProjectId).toBe("proj-parent-1");
+    expect(index["proj-child-collab"].title).toBe("Collab Remix");
+  });
 });

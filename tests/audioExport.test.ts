@@ -29,6 +29,16 @@ class MockOfflineAudioContext {
     };
   }
 
+  createBufferSource() {
+    return {
+      buffer: null,
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+    };
+  }
+
   createBuffer(channels: number, length: number, sampleRate: number): AudioBuffer {
     const data = Array.from({ length: channels }, () => new Float32Array(length));
     return {
@@ -140,6 +150,7 @@ describe("Audio Export & Native Decode Robustness (Round 2)", () => {
 
     (Platform as any).OS = origOS;
     vi.unstubAllGlobals();
+    vi.stubGlobal("OfflineAudioContext", MockOfflineAudioContext as any);
   });
 
   it("decodes pure-JS WAV across 8-bit, 16-bit, 24-bit, and 32-bit float PCM formats", async () => {
@@ -202,6 +213,7 @@ describe("Audio Export & Native Decode Robustness (Round 2)", () => {
 
     (Platform as any).OS = origOS;
     vi.unstubAllGlobals();
+    vi.stubGlobal("OfflineAudioContext", MockOfflineAudioContext as any);
   });
 
   it("renderMixdownWeb integrates buildBusRouteGraph with track output bus assignments and aux sends", async () => {
@@ -258,6 +270,7 @@ describe("Audio Export & Native Decode Robustness (Round 2)", () => {
 
     (Platform as any).OS = origOS;
     vi.unstubAllGlobals();
+    vi.stubGlobal("OfflineAudioContext", MockOfflineAudioContext as any);
   });
 
   it("native mixdown decodes multi-channel WAV (3-channel) and handles stereo routing", async () => {
@@ -313,6 +326,7 @@ describe("Audio Export & Native Decode Robustness (Round 2)", () => {
 
     (Platform as any).OS = origOS;
     vi.unstubAllGlobals();
+    vi.stubGlobal("OfflineAudioContext", MockOfflineAudioContext as any);
   });
 });
 
