@@ -63,4 +63,19 @@ describe("Cloud Sync", () => {
     expect(index["proj-child-collab"].parentProjectId).toBe("proj-parent-1");
     expect(index["proj-child-collab"].title).toBe("Collab Remix");
   });
+
+  it("listProjectIndex persists and returns coverUrl for ProjectCard rendering without full decodes", async () => {
+    const { saveProject, listProjectIndex } = await import("../src/lib/projectStore");
+    const projectWithCover: ProjectData = {
+      ...mockProject,
+      id: "proj-cover-test",
+      title: "Cover Project",
+      coverUrl: "data:image/png;base64,fakeimagedata",
+    };
+    saveProject("proj-cover-test", projectWithCover);
+    const index = listProjectIndex();
+    expect(index["proj-cover-test"]).toBeDefined();
+    expect(index["proj-cover-test"].coverUrl).toBe("data:image/png;base64,fakeimagedata");
+    expect(index["proj-cover-test"].title).toBe("Cover Project");
+  });
 });

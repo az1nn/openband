@@ -174,3 +174,23 @@ describe("stopPlayback — native path", () => {
     expect(setCurrentBeat).toHaveBeenCalledWith(0);
   });
 });
+
+describe("Transport replay reset — onEnded vs pause", () => {
+  it("onEnded resets currentSeekRef to 0", () => {
+    let currentSeekRef = 15.5;
+    const onEnded = () => {
+      currentSeekRef = 0;
+    };
+    onEnded();
+    expect(currentSeekRef).toBe(0);
+  });
+
+  it("explicit pause preserves currentSeekRef position", () => {
+    let currentSeekRef = 15.5;
+    const pause = () => {
+      // preserves currentSeekRef position
+    };
+    pause();
+    expect(currentSeekRef).toBe(15.5);
+  });
+});

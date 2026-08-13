@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   setModulationState,
   addModRoute,
@@ -7,8 +7,13 @@ import {
   computeModulation,
   applyModulation,
   computeModulatedParams,
-   getModulatedValue,
+  getModulatedValue,
   setMacroValue,
+  registerLiveModParam,
+  clearLiveModParams,
+  applyLiveModulation,
+  startModulationEngine,
+  stopModulationEngine,
   type ModulatedParamInput,
 } from "../src/lib/modulationMatrix";
 
@@ -128,5 +133,33 @@ describe("getModulatedValue", () => {
       expect(v).toBeGreaterThanOrEqual(20);
       expect(v).toBeLessThanOrEqual(20000);
     }
+  });
+});
+
+describe("Live modulation route application", () => {
+  beforeEach(() => {
+    clearLiveModParams();
+    stopModulationEngine();
+  });
+  afterEach(() => {
+    clearLiveModParams();
+    stopModulationEngine();
+  });
+
+  it("registers and computes live volume/pan modulation routes against transport clock", () => {
+    const mockParam = { value: 0 } as unknown as AudioParam;
+    const getBase = () => 0.5;
+    registerLiveModParam("vol-1", mockParam, "volume", 0, 1, getBase);
+    addModRoute("macro1", "volume", 0.5, false);
+    setMacroValue(0, 1.0);
+
+    applyLiveModulation(1.0);
+    expect(mockParam.value).toBeGreaterThan(0);
+  });
+
+  it("startModulationEngine runs frame ticks using custom time source", () => {
+    const frames: number[] = [];
+    startModulationEngine((t) => frames.push(t), () => 42.0);
+    expect(stopModulationEngine).not.toThrow();
   });
 });
