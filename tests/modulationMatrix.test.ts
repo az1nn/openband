@@ -7,7 +7,8 @@ import {
   computeModulation,
   applyModulation,
   computeModulatedParams,
-  getModulatedValue,
+   getModulatedValue,
+  setMacroValue,
   type ModulatedParamInput,
 } from "../src/lib/modulationMatrix";
 
@@ -42,6 +43,18 @@ describe("computeModulation clamping", () => {
     expect(value).toBeLessThanOrEqual(1);
   });
 
+  it("maps unipolar sources symmetrically (-amount to +amount)", () => {
+    setMacroValue(0, 0);
+    addModRoute("macro1", "volume", 0.8, false);
+    expect(computeModulation("volume", { time: 0 })).toBe(-0.8);
+
+    setMacroValue(0, 0.5);
+    expect(computeModulation("volume", { time: 0 })).toBe(0);
+
+    setMacroValue(0, 1.0);
+    expect(computeModulation("volume", { time: 0 })).toBe(0.8);
+  });
+
   it("never exceeds [-1, 1] even with many stacked routes", () => {
     for (let i = 0; i < 50; i++) {
       addModRoute("lfo1", "filter.cutoff", 1, false);
@@ -54,6 +67,7 @@ describe("computeModulation clamping", () => {
 
 describe("applyModulation clamping", () => {
   it("offsets a base value into [min, max]", () => {
+    setMacroValue(0, 1);
     addModRoute("macro1", "volume", 1, false);
     const result = applyModulation("volume", 0, -24, 24, { time: 0 });
     expect(result).toBe(24);

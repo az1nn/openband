@@ -326,7 +326,8 @@ export function computeModulation(
     if (route.bipolar) {
       total += sourceValue * route.amount;
     } else {
-      total += (sourceValue * 0.5 + 0.5) * route.amount;
+      const clampedSource = Math.max(0, Math.min(1, sourceValue));
+      total += (clampedSource * 2 - 1) * route.amount;
     }
   }
 
