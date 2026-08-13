@@ -1,39 +1,7 @@
-# Proposal: Modulation Unipolar Symmetric Range
-
-> **Status: PROPOSED.** Low-priority correctness fix.
+# Proposal: Symmetric Unipolar Modulation in Modulation Matrix
 
 ## Context
+In OpenBand's modulation matrix (`src/lib/modulationMatrix.ts`), modulation routes can be configured as bipolar (`bipolar: true`) or non-bipolar/unipolar (`bipolar: false`). Previously, non-bipolar modulation multiplied the source signal by `amount` (effectively mapping `[0, 1]` to `[0, amount]`), preventing unipolar sources (like unipolar LFOs, envelopes, or macros) from driving parameters below their base values.
 
-`src/lib/modulationMatrix.ts` implements an 11×11 modulation matrix (11 sources,
-11 targets). Each `ModRoute` has a `bipolar` boolean flag. The unipolar
-(bipolar=false) path in `computeModulation` maps the raw source value through
-`(sourceValue * 0.5 + 0.5) * route.amount`, which normalizes any source signal
-from [-1,1] to [0,1] before scaling by `amount`.
-
-## Problem Description
-
-A unipolar modulation route can **only increase** a target parameter above its
-base value — never decrease it. For an LFO source (which natively spans [-1,1]),
-the unipolar mapping remaps that to [0, amount], so the modulation offset is
-always non-negative. The parameter therefore moves only in one direction. For
-symmetric modulation behavior the unipolar source should instead map to
-[-amount, +amount] (centered on zero), allowing the parameter to reduce *and*
-increase, then clamp to [min, max].
-
-## Objectives
-
-1. Make the unipolar (bipolar=false) modulation path produce a symmetric
-   [-amount, +amount] contribution so parameters can decrease as well as
-   increase.
-2. Leave the bipolar (bipolar=true) path unchanged.
-3. Keep `getModSources`/`getModTargets` at 11 entries each (no targets removed).
-4. Do NOT touch the live rAF engine `lfo-rate-target` wiring
-   (`applyLiveModulation` / `registerLiveModParam`) — it is an inert target and
-   a known limitation.
-
-## Non-Goals
-
-- Removing or renaming the `bipolar` flag (kept for API/UI compatibility).
-- Changing LFO/envelope/waveform generation math (`generateLfo`,
-  `generateEnvelope`).
-- Adding new modulation sources or targets.
+## Objective
+Update non-bipolar (unipolar) modulation math in `computeModulation` to map source signals from `[0, 1]` to `[-1, 1]` centered (`[-amount, +amount]`). This allows unipolar modulation to symmetrically decrease and increase parameters around their base values, while keeping bipolar behavior and source/target counts unchanged.
