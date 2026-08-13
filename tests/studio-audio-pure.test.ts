@@ -35,6 +35,7 @@ import {
   onClockTick,
   isClockRunning,
 } from "../src/lib/clockManager";
+import { renderTracksCached } from "../app/studio/hooks";
 import {
   buildAutomationSchedule,
   interpolateAutomationValue,
@@ -53,6 +54,7 @@ import {
   createLatencyCompensationNode,
 } from "../src/lib/latencyMonitor";
 import { scheduleCrashSave } from "../src/lib/crashRecovery";
+import type { TrackDef } from "../src/lib/types";
 
 describe("clockManager — subscription API", () => {
   it("isClockRunning is a boolean and starts false", () => {
@@ -280,5 +282,33 @@ describe("crashRecovery — scheduleCrashSave coalescing", () => {
     expect(puts).toHaveLength(1);
     expect(puts[0].projectId).toBe("p1");
     expect(puts[0].state).toEqual({ v: 2 });
+  });
+});
+
+describe("Studio Edit Freeze Fix — renderTracksCached cache key isolation", () => {
+  it("does not invalidate cache or trigger re-render when volume, pan, muted, or solo change", async () => {
+    const track1 = {
+      id: "t1",
+      name: "Guitar",
+      volume: 100,
+      pan: 0,
+      muted: false,
+      solo: false,
+      regions: [{ id: "r1", start: 0, duration: 1, url: "blob:test" }],
+      midiNotes: [],
+      plugins: [],
+    } as unknown as TrackDef;
+    const track2 = {
+      ...track1,
+      volume: 40,
+      pan: 50,
+      muted: true,
+      solo: true,
+    } as unknown as TrackDef;
+
+    const url1 = await renderTracksCached([track1], 120, undefined, []);
+    const url2 = await renderTracksCached([track2], 120, undefined, []);
+
+    expect(url1).toBe(url2);
   });
 });

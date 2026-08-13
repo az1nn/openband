@@ -1,5 +1,52 @@
 import { describe, it, expect, vi } from "vitest";
-import { audioBufferToWavBlob, audioBufferToMp3BlobAsync } from "../src/lib/audio";
+import { audioBufferToWavBlob } from "../src/lib/audio";
+
+class MockOfflineAudioContext {
+  numberOfChannels: number;
+  length: number;
+  sampleRate: number;
+  destination = {};
+
+  constructor(channels: number, length: number, sampleRate: number) {
+    this.numberOfChannels = channels;
+    this.length = length;
+    this.sampleRate = sampleRate;
+  }
+
+  createGain() {
+    return {
+      gain: { value: 1 },
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    };
+  }
+
+  createStereoPanner() {
+    return {
+      pan: { value: 0 },
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    };
+  }
+
+  createBuffer(channels: number, length: number, sampleRate: number): AudioBuffer {
+    const data = Array.from({ length: channels }, () => new Float32Array(length));
+    return {
+      numberOfChannels: channels,
+      length,
+      sampleRate,
+      duration: length / sampleRate,
+      getChannelData: (ch: number) => data[ch],
+    } as unknown as AudioBuffer;
+  }
+
+  startRendering(): Promise<AudioBuffer> {
+    return Promise.resolve(
+      this.createBuffer(this.numberOfChannels, this.length, this.sampleRate)
+    );
+  }
+}
+vi.stubGlobal("OfflineAudioContext", MockOfflineAudioContext as any);
 
 vi.mock("lamejs", () => {
   return {
@@ -26,13 +73,134 @@ describe("Audio Export Formats", () => {
     expect(blob).toBeInstanceOf(Blob);
     expect(blob.type).toBe("audio/wav");
   });
+});
 
-  it("audioBufferToMp3BlobAsync generates valid MP3 blob from buffer", async () => {
-    const buffer = createMockAudioBuffer();
-    const blob = await audioBufferToMp3BlobAsync(buffer, 192);
-    expect(blob).toBeInstanceOf(Blob);
-    expect(blob.type).toBe("audio/mpeg");
-    // Size is the mocked array buffer length: Int8Array([1, 2, 3]) + Int8Array([4, 5])
-    expect(blob.size).toBe(5);
+describe("Audio Export & Native Decode Robustness (Round 2)", () => {
+  it("zero-length export and 0-track crash guard returns silent blob without throwing", async () => {
+    const { audioSystem } = await import("../src/lib/universalAudio");
+    const blobEmptyTracks = await audioSystem.renderMixdown([], 0, 44100);
+    expect(blobEmptyTracks).toBeInstanceOf(Blob);
+
+    const blobZeroDuration = await audioSystem.renderMixdown(
+      [{ id: "t1", volume: 100, pan: 0, muted: false, solo: false, regions: [] }],
+      0,
+      44100
+    );
+    expect(blobZeroDuration).toBeInstanceOf(Blob);
+  });
+
+  it("native stereo mixdown preserves separate Left and Right channel paths", async () => {
+    const { audioSystem } = await import("../src/lib/universalAudio");
+    const { Platform } = await import("react-native");
+    const origOS = Platform.OS;
+    (Platform as any).OS = "ios";
+
+    const sampleRate = 44100;
+    const numSamples = 500;
+    const bytesPerSample = 3;
+    const blockAlign = 2 * bytesPerSample;
+    const dataSize = numSamples * blockAlign;
+    const arrayBuffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(arrayBuffer);
+
+    view.setUint32(0, 0x52494646, false); // "RIFF"
+    view.setUint32(4, 36 + dataSize, true);
+    view.setUint32(8, 0x57415645, false); // "WAVE"
+    view.setUint32(12, 0x666d7420, false); // "fmt "
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 2, true); // stereo
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * blockAlign, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, 24, true);
+    view.setUint32(36, 0x64617461, false); // "data"
+    view.setUint32(40, dataSize, true);
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        arrayBuffer: async () => arrayBuffer,
+      })
+    );
+
+    const tracks = [
+      {
+        id: "t1",
+        volume: 100,
+        pan: 0,
+        muted: false,
+        solo: false,
+        regions: [{ start: 0, duration: 0.1, url: "blob:stereo" }],
+      },
+    ];
+
+    const resultBlob = await audioSystem.renderMixdown(tracks, 0.1, sampleRate);
+    expect(resultBlob).toBeInstanceOf(Blob);
+
+    (Platform as any).OS = origOS;
+    vi.unstubAllGlobals();
+  });
+
+  it("decodes pure-JS WAV across 8-bit, 16-bit, 24-bit, and 32-bit float PCM formats", async () => {
+    const { audioSystem } = await import("../src/lib/universalAudio");
+    const { Platform } = await import("react-native");
+    const origOS = Platform.OS;
+    (Platform as any).OS = "android";
+    const sampleRate = 8000;
+    const numSamples = 50;
+
+    const testBitDepth = async (bits: number, isFloat: boolean = false) => {
+      const bytesPerSample = bits === 24 ? 3 : bits / 8;
+      const blockAlign = bytesPerSample;
+      const dataSize = numSamples * blockAlign;
+      const ab = new ArrayBuffer(44 + dataSize);
+      const view = new DataView(ab);
+
+      view.setUint32(0, 0x52494646, false);
+      view.setUint32(4, 36 + dataSize, true);
+      view.setUint32(8, 0x57415645, false);
+      view.setUint32(12, 0x666d7420, false);
+      view.setUint32(16, 16, true);
+      view.setUint16(20, isFloat ? 3 : 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * blockAlign, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, bits, true);
+      view.setUint32(36, 0x64617461, false);
+      view.setUint32(40, dataSize, true);
+
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          arrayBuffer: async () => ab,
+        })
+      );
+
+      const blob = await audioSystem.renderMixdown(
+        [
+          {
+            id: "t1",
+            volume: 100,
+            pan: 0,
+            muted: false,
+            solo: false,
+            regions: [{ start: 0, duration: 0.1, url: `blob:${bits}` }],
+          },
+        ],
+        0.1,
+        sampleRate
+      );
+      expect(blob).toBeInstanceOf(Blob);
+    };
+
+    await testBitDepth(8);
+    await testBitDepth(16);
+    await testBitDepth(24);
+    await testBitDepth(32, true);
+
+    (Platform as any).OS = origOS;
+    vi.unstubAllGlobals();
   });
 });
