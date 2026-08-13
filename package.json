@@ -73,7 +73,14 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "desktop": "npm run build && cd electron && npm start",
-    "desktop:dev": "concurrently \"expo start --web\" \"sleep 5 && cd electron && npm start\""
+    "desktop:dev": "concurrently \"expo start --web\" \"sleep 5 && cd electron && npm start\"",
+    "graph:build": "node graph/cli.mjs build",
+    "graph:validate": "node graph/cli.mjs validate",
+    "graph:deps": "node graph/cli.mjs deps",
+    "graph:dependents": "node graph/cli.mjs dependents",
+    "graph:path": "node graph/cli.mjs path",
+    "graph:impact": "node graph/cli.mjs impact",
+    "graph:context": "node graph/cli.mjs context"
   },
   "engines": {
     "node": ">=22"

@@ -24,3 +24,7 @@ ios/
 data/*.sqlite
 data/*.sqlite-wal
 data/*.sqlite-shm
+
+# graph engineer build output
+.openband/graph.json
+.openband/
