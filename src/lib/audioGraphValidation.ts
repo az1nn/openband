@@ -145,6 +145,14 @@ export function wouldCreateCycle(
     nodes: new Map(graph.nodes),
   };
 
+  if (!testGraph.nodes.has(fromId)) {
+    return {
+      valid: false,
+      cyclePath: [fromId, toId],
+      errorMessage: `Cannot create route: source node "${fromId}" is not in the graph`,
+    };
+  }
+
   const fromNode = testGraph.nodes.get(fromId);
   if (fromNode) {
     testGraph.nodes.set(fromId, {

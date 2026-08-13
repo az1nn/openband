@@ -37,7 +37,7 @@ function getAudioContext(): AudioContext | null {
 }
 
 export function startClock(intervalMs: number = 25): void {
-  if (isRunning || Platform.OS !== "web") return;
+  if (Platform.OS !== "web") return;
 
   if (workerInstance) {
     workerInstance.terminate();
