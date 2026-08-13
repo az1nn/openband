@@ -5,7 +5,7 @@ import { generatePeakData, getVisibleRange } from "../src/lib/canvasWaveform";
 import { computeModulation, getModSources, getModTargets } from "../src/lib/modulationMatrix";
 import { noteNumberToName, frequencyToNote } from "../src/lib/midiScheduler";
 import { getClientId } from "../src/lib/crdt";
-import { validateGraph, buildAudioGraph } from "../src/lib/audioGraphValidation";
+import { validateGraph, buildAudioGraph, wouldCreateCycle } from "../src/lib/audioGraphValidation";
 
 vi.mock("react-native", () => ({
   Platform: { OS: "web", select: (obj: any) => obj.web ?? obj.default },
@@ -275,6 +275,13 @@ describe("audioGraphValidation", () => {
     const buses = [{ id: "bus-a", name: "Drums", type: "audio", color: "bg-gray-500", volume: 80, pan: 0, muted: false, solo: false, outputId: null, plugins: [] }];
     const graph = buildAudioGraph(tracks, buses);
     expect(validateGraph(graph).valid).toBe(true);
+  });
+
+  it("wouldCreateCycle returns invalid when fromId is missing from graph", () => {
+    const graph = buildAudioGraph([], []);
+    const result = wouldCreateCycle(graph, "missing-node", "master");
+    expect(result.valid).toBe(false);
+    expect(result.errorMessage).toContain("not in the graph");
   });
 });
 

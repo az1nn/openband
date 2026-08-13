@@ -55,6 +55,18 @@ describe("computeModulation clamping", () => {
     expect(computeModulation("volume", { time: 0 })).toBe(0.8);
   });
 
+  it("tests unipolar modulation (bipolar: false) at source values 0, 0.5, and 1.0 for symmetric mapping", () => {
+    setMacroValue(0, 0);
+    addModRoute("macro1", "filter.cutoff", 0.6, false);
+    expect(computeModulation("filter.cutoff", { time: 0 })).toBe(-0.6);
+
+    setMacroValue(0, 0.5);
+    expect(computeModulation("filter.cutoff", { time: 0 })).toBe(0);
+
+    setMacroValue(0, 1.0);
+    expect(computeModulation("filter.cutoff", { time: 0 })).toBe(0.6);
+  });
+
   it("never exceeds [-1, 1] even with many stacked routes", () => {
     for (let i = 0; i < 50; i++) {
       addModRoute("lfo1", "filter.cutoff", 1, false);

@@ -9,8 +9,20 @@ vi.mock("react-native", () => ({
   },
 }));
 
+class MockWorker {
+  onmessage: any = null;
+  onerror: any = null;
+  postMessage() {}
+  terminate() {}
+}
+vi.stubGlobal("Worker", MockWorker as any);
+vi.stubGlobal("URL", {
+  createObjectURL: () => "blob:mock",
+  revokeObjectURL: () => {},
+});
+
 vi.mock("../src/lib/universalAudio", () => ({
-  getSharedAudioContext: vi.fn(() => null),
+  getSharedAudioContext: vi.fn(() => ({ currentTime: 0 })),
 }));
 
 vi.mock("../src/lib/apiUrl", () => ({
@@ -58,6 +70,15 @@ describe("clockManager — subscription API", () => {
   it("startClock is non-throwing on web even without a real Worker", () => {
     expect(() => startClock(25)).not.toThrow();
     stopClock();
+  });
+
+  it("startClock(newInterval) while already running restarts worker safely without leaking", () => {
+    startClock(25);
+    expect(isClockRunning()).toBe(true);
+    expect(() => startClock(50)).not.toThrow();
+    expect(isClockRunning()).toBe(true);
+    stopClock();
+    expect(isClockRunning()).toBe(false);
   });
 });
 

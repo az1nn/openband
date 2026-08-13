@@ -64,6 +64,23 @@ describe("measureLUFS", () => {
     expect(tp).toBeLessThanOrEqual(0.01);
   });
 
+  it("truePeak correctly captures inter-sample peaks without under-reporting", () => {
+    const sr = 48000;
+    const f = 12000;
+    const n = sr;
+    const tone = new Float32Array(n);
+    let samplePeak = 0;
+    for (let i = 0; i < n; i++) {
+      const v = Math.sin(2 * Math.PI * f * (i / sr) + 0.5) * 0.98;
+      tone[i] = v;
+      if (Math.abs(v) > samplePeak) samplePeak = Math.abs(v);
+    }
+    const tp = truePeak(tone, sr);
+    const tpLinear = Math.pow(10, tp / 20);
+    expect(tpLinear).toBeGreaterThanOrEqual(samplePeak - 1e-4);
+    expect(tp).toBeLessThanOrEqual(0.1);
+  });
+
   it("is a pure function: identical input yields identical output", () => {
     const tone = generateTone(440, 2, 0.5);
     const a = measureLUFS(tone, SAMPLE_RATE);
