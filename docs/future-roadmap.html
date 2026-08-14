@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenBand Future Roadmap & Architecture Vision</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 500: '#6366f1', 600: '#4f46e5' }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen antialiased">
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="bg-indigo-600 p-2 rounded-lg font-bold text-white">OBF</div>
+      <div>
+        <h1 class="text-lg font-semibold">Future Roadmap & Architecture Vision</h1>
+        <p class="text-xs text-slate-400">Planned Systems: AI Stem Separation & 3D Virtual Studio LOD</p>
+      </div>
+    </div>
+    <div class="flex space-x-3 text-sm">
+      <a href="./graph-engineer.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-lg font-medium transition">Graph Guide</a>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-10 space-y-12">
+    <section class="space-y-4">
+      <h2 class="text-3xl font-bold tracking-tight">Future Systems Overview</h2>
+      <p class="text-slate-300 leading-relaxed">
+        This document outlines the architecture and planned implementation details for the remaining OpenBand roadmap systems, reserved for upcoming engineering sprints.
+      </p>
+    </section>
+
+    <section class="grid md:grid-cols-2 gap-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-3">
+        <div class="text-indigo-400 font-mono text-xs">System 1</div>
+        <h3 class="text-xl font-semibold">Stem Separation & AI Queue Service</h3>
+        <p class="text-sm text-slate-400">
+          Decoupled background worker architecture using persistent Redis/SQLite job queues, real-time SSE progress streaming for Demucs processing, and S3 asset deduplication via SHA-256 commit hashes.
+        </p>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-3">
+        <div class="text-indigo-400 font-mono text-xs">System 2</div>
+        <h3 class="text-xl font-semibold">Virtual Studio 3D Scene Performance & LOD</h3>
+        <p class="text-sm text-slate-400">
+          Advanced WebGL optimizations for the 12 virtual tool rooms: View frustum culling, dynamic Level of Detail (LOD) for complex furniture meshes, and automatic rAnimationFrame pausing on tab-hidden events.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="max-w-6xl mx-auto px-6 py-12 text-center text-xs text-slate-500 border-t border-slate-900 mt-16">
+    OpenBand Future Roadmap &bull; Designed for Scalability & High Performance.
+  </footer>
+</body>
+</html>

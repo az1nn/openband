@@ -162,3 +162,11 @@ export function createState(): CrdtState {
     pending: [],
   };
 }
+
+export function compactOperations(
+  operations: CrdtOperation[],
+  maxHistory: number = 1000,
+): CrdtOperation[] {
+  if (operations.length <= maxHistory) return operations;
+  return operations.slice(operations.length - maxHistory);
+}
