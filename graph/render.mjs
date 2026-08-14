@@ -7,6 +7,7 @@ const RENDER_EDGE_TYPES = new Set([
   "test",
   "specifies",
   "route",
+  "uses",
 ]);
 
 function nodeLabel(node) {

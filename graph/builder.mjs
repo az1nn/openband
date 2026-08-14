@@ -4,6 +4,7 @@ import { createGraph, serialize, posixRelative } from "./core.mjs";
 import { scanSources } from "./scan.mjs";
 import { scanRoutes } from "./routes.mjs";
 import { scanSpecs, scanTests } from "./specs.mjs";
+import { scanComponents } from "./components.mjs";
 import { hashFile, loadCache, saveCache, computeDirty } from "./cache.mjs";
 
 const TRACKED_ROOTS = [
@@ -79,6 +80,7 @@ export function buildGraph(root = process.cwd()) {
   const graph = createGraph();
   scanSources(root, { graph });
   scanRoutes(root, { graph });
+  scanComponents(root, { graph });
   scanTests(root, { graph });
   scanSpecs(root, { graph });
   return graph;

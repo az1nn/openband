@@ -1,4 +1,5 @@
 node_modules/
+node-v22.16.0-linux-x64/
 .expo/
 dist/
 *.jks
@@ -29,3 +30,5 @@ data/*.sqlite-shm
 .openband/graph.json
 .openband/graph.cache.json
 .openband/
+docs/generated/
+.openband/graph-report.html

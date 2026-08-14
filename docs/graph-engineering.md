@@ -17,15 +17,29 @@ npm run graph:dependents <id>    # direct dependents
 npm run graph:path <from> <to>   # shortest dependency path (BFS)
 npm run graph:impact <id>        # impact analysis + risk score
 npm run graph:context <id>       # compact context bundle for agents/LLMs
+npm run graph:doc        # writes docs/generated/ARCHITECTURE.md (auto doc)
+npm run graph:report     # writes .openband/graph-report.html (interactive report)
 ```
+
+`graph:doc` emits a human-readable `docs/generated/ARCHITECTURE.md` (summary,
+entry points, route list, top-reused components, validation findings) — always
+in sync with the code. `graph:report` emits a self-contained interactive
+`graph-report.html` with search, per-node panels, embedded Mermaid, and the
+validation table. Both are generated artifacts and are git-ignored.
 
 ### Rendering (`graph/render.mjs`)
 
 `node graph/cli.mjs render <id> [--format mermaid|dot] [--depth N] [--json]`
 emits the target node plus every node within `N` hops along `import` /
-`require` / `dynamic-import` / `test` / `specifies` / `route` edges (both
-directions). Default format is `mermaid`, default depth `1`. `--json` emits
-`{ format, mermaid|dot }`.
+`require` / `dynamic-import` / `test` / `specifies` / `route` / `uses` edges
+(both directions). Default format is `mermaid`, default depth `1`. `--json`
+emits `{ format, mermaid|dot }`.
+
+The `uses` edge type (added in V3) records that a source/route file *renders* a
+JSX component it imported (file → rendered component), distinct from the
+`import` edge (file → any imported module). `uses` edges appear in `deps` /
+`dependents` / `impact` / `context` and in subgraph renders, but are excluded
+from cycle detection and from the `OB-GRAPH-004` orphan filter.
 
 ### Incremental cache
 
@@ -52,7 +66,7 @@ to target a different repository root.
 
 ```ts
 type NodeType = 'source' | 'route' | 'test' | 'spec' | 'external';
-type EdgeType = 'import' | 'route' | 'test' | 'specifies' | 'dynamic-import' | 'require';
+type EdgeType = 'import' | 'route' | 'test' | 'specifies' | 'dynamic-import' | 'require' | 'uses';
 
 interface GraphNode { id: string; path: string; type: NodeType; metadata?: Record<string, any>; }
 interface GraphEdge { source: string; target: string; type: EdgeType; spec?: string; }
@@ -110,6 +124,15 @@ that do not resolve to a `route`-typed node are ignored.
 | `OB-GRAPH-005` | Source node has no `test` edge referencing it (test-coverage gap); excludes `*.stories.tsx`, `app/**`, and `src/bridge/*electron*`/`*tauri*` platform stubs. | warning (error under `--strict`) |
 
 `npm run graph:validate` exits non-zero when any `OB-GRAPH-001/002` error is present.
+
+`OB-GRAPH-003` resolution now includes an `api/*` → `backend/src/routes/*`
+alias: OpenSpec citations like `api/health` resolve to
+`backend/src/routes/health.ts` (or `.tsx` / `/index.ts`) instead of warning.
+The `uses` edge type (component-usage) also exists and is documented under
+[Rendering](#rendering-graphrendermjs); it never produces `OB-GRAPH-*` findings
+itself. Generated artifacts `docs/generated/ARCHITECTURE.md` and
+`.openband/graph-report.html` are produced by `graph:doc` / `graph:report` and
+are git-ignored.
 
 ## Versioning
 

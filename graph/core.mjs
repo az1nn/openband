@@ -4,7 +4,7 @@ import { builtinModules } from "node:module";
 export const GRAPH_VERSION = "1.1.0";
 
 export const NODE_TYPES = ["source", "route", "test", "spec", "external"];
-export const EDGE_TYPES = ["import", "route", "test", "specifies", "dynamic-import", "require"];
+export const EDGE_TYPES = ["import", "route", "test", "specifies", "dynamic-import", "require", "uses"];
 
 export const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs"];
 export const INDEX_SUFFIXES = ["/index.ts", "/index.tsx", "/index.js", "/index.jsx", "/index.mjs"];

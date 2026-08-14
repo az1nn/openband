@@ -69,6 +69,18 @@ function resolveTargetNodes(candidate, nodeSet) {
   for (const id of nodeSet) {
     if (id.startsWith(candidate + "/")) targets.push(id);
   }
+  if (targets.length > 0) return targets;
+  if (candidate.startsWith("api/")) {
+    const rest = candidate.slice("api/".length);
+    const apiCandidates = [
+      "backend/src/routes/" + rest + ".ts",
+      "backend/src/routes/" + rest + ".tsx",
+      "backend/src/routes/" + rest + "/index.ts",
+    ];
+    for (const c of apiCandidates) {
+      if (nodeSet.has(c)) return [c];
+    }
+  }
   return targets;
 }
 

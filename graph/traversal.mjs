@@ -1,6 +1,6 @@
 import { createEdge } from "./core.mjs";
 
-export const DEP_EDGE_TYPES = ["import", "require", "dynamic-import", "test", "specifies", "route"];
+export const DEP_EDGE_TYPES = ["import", "require", "dynamic-import", "test", "specifies", "route", "uses"];
 
 export function adjacency(graph, edgeFilter) {
   const fwd = new Map();

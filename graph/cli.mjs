@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildGraph, writeGraph } from "./builder.mjs";
@@ -13,6 +14,8 @@ import {
 } from "./traversal.mjs";
 import { impactAnalysis, buildContextBundle } from "./impact.mjs";
 import { edgeStats } from "./relations.mjs";
+import { generateArchitectureDoc } from "./doc.mjs";
+import { generateHtmlReport } from "./report.mjs";
 
 function parseArgs(argv) {
   const positionals = [];
@@ -61,7 +64,7 @@ export function run(argv = process.argv.slice(2)) {
   const { positionals, flags } = parseArgs(argv);
   const command = positionals.shift();
   if (!command) {
-    fail("Usage: node graph/cli.mjs <build|validate|deps|dependents|path|impact|context|render|ci> [args] [--json]");
+    fail("Usage: node graph/cli.mjs <build|validate|deps|dependents|path|impact|context|render|ci|doc|report> [args] [--json]");
   }
   const root = flags.root ? path.resolve(flags.root) : process.cwd();
 
@@ -210,6 +213,38 @@ export function run(argv = process.argv.slice(2)) {
           process.stdout.write(`  dependedOnBy (${result.dependedOnBy.length}):\n`);
           for (const d of result.dependedOnBy) process.stdout.write(`    - ${d.id} [${d.type}]\n`);
         }
+      }
+      return;
+    }
+    case "doc": {
+      const graph = buildGraph(root);
+      const result = validate(graph);
+      const md = generateArchitectureDoc(graph, result, root);
+      const target = flags.out
+        ? path.resolve(flags.out)
+        : path.join(root, "docs", "generated", "ARCHITECTURE.md");
+      if (flags.json) {
+        process.stdout.write(md);
+      } else {
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.writeFileSync(target, md, "utf8");
+        process.stdout.write(`Wrote architecture doc -> ${target}\n`);
+      }
+      return;
+    }
+    case "report": {
+      const graph = buildGraph(root);
+      const result = validate(graph);
+      const html = generateHtmlReport(graph, result, { root });
+      const target = flags.out
+        ? path.resolve(flags.out)
+        : path.join(root, ".openband", "graph-report.html");
+      if (flags.json) {
+        process.stdout.write(html);
+      } else {
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.writeFileSync(target, html, "utf8");
+        process.stdout.write(`Wrote HTML report -> ${target}\n`);
       }
       return;
     }
