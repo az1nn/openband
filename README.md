@@ -259,7 +259,7 @@ openband/
 │   │   ├── tauri.ts         # Tauri stub for future migration
 │   │   ├── browser.ts       # Browser fallback (localStorage, DOM APIs)
 │   │   └── index.ts         # Auto-detect platform + re-export
-│   └── components/          # Design system (51 components, see table below)
+│   └── components/          # Design system (79 components, see table below)
 ├── electron/
 │   ├── main.js              # Electron main process (BrowserWindow, IPC, native menus)
 │   ├── preload.js           # Context bridge (sandboxed electronAPI)

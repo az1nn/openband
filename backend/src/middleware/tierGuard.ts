@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express"
+import { AuthenticatedRequest } from "./authMiddleware"
 
 export type PlanTier = "FREE" | "TIER1_LIVE" | "TIER2_STUDIO"
 
@@ -32,7 +33,7 @@ const TIER_LIMITS: Record<PlanTier, TierLimits> = {
 }
 
 function getTierFromRequest(req: Request): PlanTier {
-  const tier = (req.headers["x-user-tier"] as string) || "FREE"
+  const tier = ((req as AuthenticatedRequest).userTokenData?.tier as string) || "FREE"
   return (["FREE", "TIER1_LIVE", "TIER2_STUDIO"].includes(tier) ? tier : "FREE") as PlanTier
 }
 

@@ -33,6 +33,7 @@ export const tauriBridge: NativeBridge = {
 
   async writeFile(_path: string, _data: ArrayBuffer | string): Promise<void> {
     warnStub("writeFile");
+    throw new Error("Tauri bridge not implemented");
   },
 
   async getDocumentsPath(): Promise<string> {

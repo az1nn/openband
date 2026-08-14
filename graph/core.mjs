@@ -88,14 +88,6 @@ export function serialize(graph) {
   return JSON.stringify(toSerializable(graph), null, 2) + "\n";
 }
 
-export function createGraphFrom(parsed) {
-  const graph = createGraph(parsed.version || GRAPH_VERSION);
-  graph.nodes = (parsed.nodes || []).map((n) => ({ ...n }));
-  graph.edges = (parsed.edges || []).map((e) => ({ ...e }));
-  graph.unresolved = parsed.unresolved || [];
-  return graph;
-}
-
 export function detectNodeType(relPath) {
   if (relPath.startsWith("openspec/")) return "spec";
   if (relPath.startsWith("tests/")) return "test";

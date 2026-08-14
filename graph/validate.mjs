@@ -81,7 +81,8 @@ export function validate(graph) {
     id === "src/components/index.ts" ||
     id === "src/bridge/index.ts" ||
     id.endsWith(".stories.tsx") ||
-    id.startsWith("stories/");
+    id.startsWith("stories/") ||
+    id.startsWith("scripts/");
 
   for (const node of graph.nodes) {
     if (node.type !== "source") continue;

@@ -386,7 +386,7 @@ src/
   context/
     AuthContext.tsx    — Auth state context (session, user, loading, signOut)
   bridge/            — Desktop bridge (interface, electron, tauri stub, browser fallback, auto-detect)
-  components/         — Design system (70 components, see table above)
+  components/         — Design system (79 components, see table above)
   hooks/
     useUniversalAudio.ts — expo-audio wrapper with AudioContext resume
 
@@ -397,9 +397,9 @@ tests/
   specs-group1..specs-group6  — spec/canonical test groups
   plugins/ (dsp, presetSerial)  — plugin sub-suite
   presets.test.ts, types.test.ts  — Legacy node:test suite (supporting ok-reporter.ts, setup.ts)
-   Full suite totals: 1479 vitest tests + 24 legacy node:test tests across 80 test files (78 at tests/ root + 2 in tests/plugins/)
+   Full suite totals: 1479 vitest tests + 24 legacy node:test tests across 83 test files (81 at tests/ root + 2 in tests/plugins/)
 
-stories/                      — Storybook for all 70 components (50 stories)
+stories/                      — Storybook for all 79 components (50 stories)
   *.stories.tsx       — Run: `npx storybook dev -p 6006`
 
 .storybook/

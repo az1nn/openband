@@ -9,7 +9,7 @@
 - [x] Import `PlanTier` / `TierLimits` / `FREE_TIER_LIMITS` from `../lib/tier` (re-export `PlanTier`/`TierLimits` for API compat).
 - [x] Extend `AuthContextType` with `tier: PlanTier` and `tierLimits: TierLimits`.
 - [x] Add `tier`/`tierLimits` state defaulting to `FREE` (`maxTracks:4, maxProjects:3, maxStemExports:2, canUseTriton:false, canUseJuno:true, canExportVideo:false, canPublishToFeed:false, canCreateRemixes:false`).
-- [x] Add `fetchTier()` that calls `/api/user/tier` and stores `{ tier, limits }`; fail-closed to FREE defaults on error.
+- [x] Add `fetchTier()` that calls `backend/src/routes/tier.ts` and stores `{ tier, limits }`; fail-closed to FREE defaults on error.
 - [x] Call `fetchTier()` in the restored-visitor branch, after `getSession()`, and after `convertVisitorToAccount` succeeds.
 - [x] Include `tier`/`tierLimits` in the `AuthContext.Provider` value.
 
@@ -27,7 +27,7 @@
 
 ## 5. Tests
 - [x] `tests/tier.test.ts` covers `getTierLimits`/`checkTierAccess` (FREE disables `canExportVideo`; TIER1_LIVE enables it).
-- [x] `tests/authTier.test.tsx` covers `AuthProvider` defaults to `FREE` + `canCreateRemixes:false`; `tierLimits` updates after a mocked `/api/user/tier` fetch returns `TIER1_LIVE`.
+- [x] `tests/authTier.test.tsx` covers `AuthProvider` defaults to `FREE` + `canCreateRemixes:false`; `tierLimits` updates after a mocked `backend/src/routes/tier.ts` fetch returns `TIER1_LIVE`.
 
 ## 6. Spec update
 - [ ] Add "Tier Surfacing (UI)" requirement + test requirement to `openspec/specs/auth/spec.md` (forbidden file — skipped per scope constraints; documented here for the orchestrator).

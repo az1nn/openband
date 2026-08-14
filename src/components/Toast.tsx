@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useState } from "react";
-import { View, Text, Animated, StyleSheet } from "react-native";
+import { View, Text, Animated } from "react-native";
 
 type ToastType = "info" | "error" | "success";
 
@@ -57,15 +57,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {toasts.length > 0 && (
         <View
           pointerEvents="none"
-          style={styles.container}
+          className="absolute bottom-6 left-0 right-0 items-center z-[9999]"
           accessibilityRole="alert"
         >
           {toasts.map((t) => (
             <Animated.View
               key={t.id}
-              style={[styles.toast, { opacity: t.opacity, borderLeftColor: ACCENT[t.type] }]}
+              className="bg-[rgb(28_28_34)] border border-[rgb(42_42_50)] border-l-4 rounded-[10px] py-3 px-[18px] mb-2 max-w-[360px]"
+              style={{ opacity: t.opacity, borderLeftColor: ACCENT[t.type] }}
             >
-              <Text style={styles.text}>{t.message}</Text>
+              <Text className="text-white text-sm font-semibold">{t.message}</Text>
             </Animated.View>
           ))}
         </View>
@@ -73,33 +74,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     </ToastContext.Provider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    position: "absolute",
-    bottom: 24,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    zIndex: 9999,
-  },
-  toast: {
-    backgroundColor: "rgb(28 28 34)",
-    borderWidth: 1,
-    borderColor: "rgb(42 42 50)",
-    borderLeftWidth: 4,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    marginBottom: 8,
-    maxWidth: 360,
-  },
-  text: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-});
 
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);

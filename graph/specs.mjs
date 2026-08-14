@@ -14,6 +14,19 @@ import { resolveSpecifier } from "./scan.mjs";
 
 const SPEC_DIRS = ["openspec/specs", "openspec/changes", "openspec/archive"];
 const PATH_RE = /(app|src|backend|api|tests)(?:\/[A-Za-z0-9_.\-]+)+/g;
+const KNOWN_EXT = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".json"];
+const ARTIFACT_ROOT_RE = /^(app\/_expo|tests\/stories\.)/;
+
+function isPlausibleRepoPath(p) {
+  if (ARTIFACT_ROOT_RE.test(p)) return false;
+  const segs = p.split("/");
+  for (let i = 0; i < segs.length - 1; i++) {
+    if (segs[i].includes(".")) return false;
+  }
+  const last = segs[segs.length - 1];
+  if (last.includes(".") && !KNOWN_EXT.some((e) => last.endsWith(e))) return false;
+  return true;
+}
 
 function mdFilesUnder(root, dir) {
   const abs = path.join(root, dir);
@@ -77,6 +90,7 @@ export function scanSpecs(root, options = {}) {
       }
       const candidates = extractRepoPaths(content);
       for (const cand of candidates) {
+        if (!isPlausibleRepoPath(cand)) continue;
         const targets = resolveTargetNodes(cand, nodeSet);
         if (targets.length > 0) {
           for (const t of targets) addEdge(graph, createEdge(rel, t, "specifies", rel));

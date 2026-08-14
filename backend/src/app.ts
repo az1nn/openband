@@ -26,6 +26,7 @@ import aiRoutes from "./routes/ai";
 import { checkDemucsInstalled } from "./services/demucs";
 import { requireFeature } from "./middleware/tierGuard";
 import { checkBlacklist } from "./middleware/sessionBlacklist";
+import { requireAuth } from "./middleware/authMiddleware";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -112,11 +113,16 @@ function rateLimit(maxRequests: number, windowMs: number) {
 
 app.use(express.json({ limit: "1mb" }));
 
+app.use("/api/extract", requireAuth);
+app.use("/api/master/bounce", requireAuth);
+app.use("/api/export", requireAuth);
+app.use("/api/generate-midi", requireAuth);
+
 app.use("/api/export/video", requireFeature("canExportVideo"));
 app.use("/api/export/social-video", requireFeature("canExportVideo"));
 app.use("/api/export/djstem", requireFeature("canExportVideo"));
-app.use("/api/projects/remix", requireFeature("canCreateRemixes"));
-app.use("/api/projects/:id/publish", requireFeature("canPublishToFeed"));
+app.use("/api/projects/remix", requireAuth, requireFeature("canCreateRemixes"));
+app.use("/api/projects/:id/publish", requireAuth, requireFeature("canPublishToFeed"));
 
 let demucsCached: boolean | null = null;
 

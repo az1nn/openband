@@ -1,4 +1,37 @@
+import fs from "fs";
+import path from "path";
+
 type JobStatus = "pending" | "processing" | "completed" | "failed";
+
+const STEMS_DIR = process.env.VERCEL
+  ? "/tmp/stems"
+  : path.resolve(process.cwd(), "stems");
+
+async function writeSilentWav(filePath: string, durationSec: number): Promise<void> {
+  const sampleRate = 44100;
+  const numChannels = 2;
+  const bitsPerSample = 16;
+  const numSamples = sampleRate * durationSec;
+  const dataSize = numSamples * numChannels * (bitsPerSample / 8);
+
+  const buffer = Buffer.alloc(44 + dataSize);
+
+  buffer.write("RIFF", 0);
+  buffer.writeUInt32LE(36 + dataSize, 4);
+  buffer.write("WAVE", 8);
+  buffer.write("fmt ", 12);
+  buffer.writeUInt32LE(16, 16);
+  buffer.writeUInt16LE(1, 20);
+  buffer.writeUInt16LE(numChannels, 22);
+  buffer.writeUInt32LE(sampleRate, 24);
+  buffer.writeUInt32LE(sampleRate * numChannels * (bitsPerSample / 8), 28);
+  buffer.writeUInt16LE(numChannels * (bitsPerSample / 8), 32);
+  buffer.writeUInt16LE(bitsPerSample, 34);
+  buffer.write("data", 36);
+  buffer.writeUInt32LE(dataSize, 40);
+
+  await fs.promises.writeFile(filePath, buffer);
+}
 
 interface Job<T = unknown> {
   id: string;
@@ -46,17 +79,34 @@ async function processJobAsync(id: string): Promise<void> {
 
   job.status = "processing";
 
-  try {
+   try {
     await new Promise<void>((resolve) => setTimeout(resolve, PROCESSING_DELAY_MS));
+
+    if (!fs.existsSync(STEMS_DIR)) fs.mkdirSync(STEMS_DIR, { recursive: true });
+
+    const stems = [
+      { name: "vocals.wav", key: "vocals" },
+      { name: "drums.wav", key: "drums" },
+      { name: "bass.wav", key: "bass" },
+      { name: "other.wav", key: "other" },
+    ];
+
+    const written = await Promise.all(
+      stems.map(async (s) => {
+        const filePath = path.join(STEMS_DIR, `mock_${id}_${s.key}.wav`);
+        await writeSilentWav(filePath, 30);
+        const size = (await fs.promises.stat(filePath)).size;
+        return {
+          name: s.name,
+          url: `/api/stems/mock_${id}_${s.key}.wav`,
+          duration: 30,
+          size,
+        };
+      }),
+    );
+
     job.status = "completed";
-    job.result = {
-      stems: [
-        { name: "vocals.wav", url: `/api/stems/mock_${id}_vocals.wav`, duration: 30 },
-        { name: "drums.wav", url: `/api/stems/mock_${id}_drums.wav`, duration: 30 },
-        { name: "bass.wav", url: `/api/stems/mock_${id}_bass.wav`, duration: 30 },
-        { name: "other.wav", url: `/api/stems/mock_${id}_other.wav`, duration: 30 },
-      ],
-    };
+    job.result = { stems: written };
     job.completedAt = Date.now();
   } catch (e: unknown) {
     job.status = "failed";

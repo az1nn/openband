@@ -3,7 +3,7 @@
 ## Overview
 OpenBand supports binding physical MIDI controllers to plugin/track parameters through a **MIDI Learn** flow, and decoding **Mackie Control Universal (MCU)** protocol messages from a control surface (faders, pan, transport). The learn logic lives in `src/lib/midiLearn.ts` (`MidiMapping` at `:1`, `MidiLearnState` at `:8`, `processMidiCC` at `:22`, `startLearning` at `:73`, `saveMappings`/`loadMappings` at `:100`/`:111`). MIDI timing and note scheduling are handled by `src/lib/midiScheduler.ts` (`createLookaheadScheduler` at `:131`, `noteNumberToName` at `:246`) and raw file parsing by `src/lib/midiParser.ts` (`parseMidi` at `:87`, `MidiData` at `:18`).
 
-Today `MidiLearnState.mappings` are persisted only to `localStorage` (`:14`). This spec extends them to be part of the saved project (`midiMap` on `ProjectData` in `src/lib/projectStore.ts:15`) so bindings survive reloads and export/import. MCU decoding MUST be added as a new module `src/lib/midiMcu.ts` that translates MCU universal sysex / pitch/touch messages into `MidiMapping`-compatible events (fader → volume, vpot → pan, transport buttons → play/stop/record).
+Today `MidiLearnState.mappings` are persisted only to `localStorage` (`:14`). This spec extends them to be part of the saved project (`midiMap` on `ProjectData` in `src/lib/projectStore.ts:15`) so bindings survive reloads and export/import. MCU decoding MUST be added as a new module `src/lib/mcu.ts` that translates MCU universal sysex / pitch/touch messages into `MidiMapping`-compatible events (fader → volume, vpot → pan, transport buttons → play/stop/record).
 
 ## Implementation Notes
 `processMidiCC` already handles two modes: in `learningMode` it binds the incoming `cc` to the `activeTarget` (`src/lib/midiLearn.ts:29`) and persists via `saveMappings`; otherwise it looks up the `cc` and returns `{ pluginId, paramId, trackId, normalizedValue }` (`:59`). The MCU layer reuses the same `MidiMapping` shape but generates transient mappings for surface controls (e.g. fader touch on channel 1 → `trackId` + `volume` target). Project persistence is via `saveProject`/`loadProject` + `sanitizeProjectData` in `src/lib/projectStore.ts` (`exportProject` at `:191`, `importProject` at `:261`), which MUST be extended to round-trip `midiMap`.
@@ -54,7 +54,7 @@ The `midiMap: MidiMapping[]` field MUST be added to `ProjectData` (`src/lib/proj
 - **And** `loadProject` returns the project with that mapping
 
 ### Requirement: MCU Fader / Pan Decode
-A new `src/lib/midiMcu.ts` MUST decode MCU standard messages: pitch-wheel-style fader updates on MIDI channel 0 map to track `volume`, V-Pot rotary messages map to track `pan`, and the result MUST be expressed as `MidiMapping`-compatible events consumable by the existing audio graph.
+A new `src/lib/mcu.ts` MUST decode MCU standard messages: pitch-wheel-style fader updates on MIDI channel 0 map to track `volume`, V-Pot rotary messages map to track `pan`, and the result MUST be expressed as `MidiMapping`-compatible events consumable by the existing audio graph.
 
 #### Scenario: Fader moves map to track volume
 - **Given** an MCU fader touch on channel 1 with value `8192` (center)
@@ -68,7 +68,7 @@ A new `src/lib/midiMcu.ts` MUST decode MCU standard messages: pitch-wheel-style 
 - **Then** it yields `{ trackId, target: "pan", normalizedValue: 0.0 }` (center = 0, range `-1..1` → `0..1`)
 
 ### Requirement: MCU Transport Decode
-`src/lib/midiMcu.ts` MUST decode the MCU global transport buttons (via universal sysex or note-on on the dedicated channel) into `play` / `stop` / `record` actions usable by `createLookaheadScheduler` (`src/lib/midiScheduler.ts:131`).
+`src/lib/mcu.ts` MUST decode the MCU global transport buttons (via universal sysex or note-on on the dedicated channel) into `play` / `stop` / `record` actions usable by `createLookaheadScheduler` (`src/lib/midiScheduler.ts:131`).
 
 #### Scenario: Transport play received
 - **Given** an MCU "Play" button message

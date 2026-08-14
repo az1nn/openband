@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { View, Text, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -15,7 +15,7 @@ export default function MasteringScreen() {
   const { t } = useTranslation();
   const resp = useResponsive();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const hasMasteringInput = useState(() => !!getMasteringInput())[0];
+  const hasMasteringInput = useMemo(() => !!getMasteringInput(), []);
 
   const handleNavigate = useCallback((route: string) => {
     const target = route === "index" ? "/tabs/feed" : `/tabs/${route}`;

@@ -9,6 +9,7 @@ import { View, Platform } from "react-native";
 import { Loading } from "../src/components/Loading";
 import { ToastProvider } from "../src/components/Toast";
 import { audioSystem, disposeAllAudio } from "../src/lib/universalAudio";
+import { isDesktop } from "../src/bridge";
 
 import "../global.css";
 
@@ -63,7 +64,7 @@ export default function RootLayout() {
     if (
       Platform.OS !== "web" ||
       !("serviceWorker" in navigator) ||
-      window.electronAPI
+      isDesktop
     )
       return;
     const register = async () => {

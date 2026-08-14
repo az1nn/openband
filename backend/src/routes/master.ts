@@ -14,6 +14,37 @@ function safeJsonParse(s: unknown): unknown {
   }
 }
 
+function parseAudioHeader(
+  buf: Buffer,
+): { format: string; sampleRate: number | null; bitDepth: number | null } {
+  if (
+    buf.length >= 12 &&
+    buf.toString("ascii", 0, 4) === "RIFF" &&
+    buf.toString("ascii", 8, 12) === "WAVE"
+  ) {
+    const sampleRate = buf.readUInt32LE(24);
+    const bitDepth = buf.readUInt16LE(34);
+    return { format: "wav", sampleRate, bitDepth };
+  }
+  const mp3RateByVersion: Record<number, number[]> = {
+    3: [44100, 48000, 32000],
+    2: [22050, 24000, 16000],
+    0: [11025, 12000, 8000],
+  };
+  for (let i = 0; i + 1 < buf.length; i++) {
+    if (buf[i] === 0xff && (buf[i + 1] & 0xe0) === 0xe0) {
+      const version = (buf[i + 1] >> 3) & 0x03;
+      const srIndex = (buf[i + 2] >> 2) & 0x03;
+      const sampleRate = mp3RateByVersion[version]?.[srIndex] ?? null;
+      return { format: "mp3", sampleRate, bitDepth: null };
+    }
+  }
+  if (buf.length >= 3 && buf.toString("ascii", 0, 3) === "ID3") {
+    return { format: "mp3", sampleRate: null, bitDepth: null };
+  }
+  return { format: "unknown", sampleRate: null, bitDepth: null };
+}
+
 const router = Router();
 
 const MASTER_DIR = process.env.VERCEL
@@ -59,22 +90,19 @@ router.post(
           .json({ error: "Nenhum arquivo de áudio enviado." });
       }
 
-      const { bitDepth, sampleRate, format, pluginStates } = req.body || {};
-
-      const parsedBitDepth = (() => {
-        const v = parseInt(bitDepth, 10);
-        return Number.isNaN(v) ? 24 : v;
-      })();
-      const parsedSampleRate = (() => {
-        const v = parseInt(sampleRate, 10);
-        return Number.isNaN(v) ? 44100 : v;
-      })();
-      const outputFormat = format || "wav";
-
-      const outputFilename = `master_${Date.now()}.${outputFormat === "mp3" ? "mp3" : "wav"}`;
-      const outputPath = path.resolve(MASTER_DIR, outputFilename);
+      const { pluginStates } = req.body || {};
 
       const filePath = req.file.path;
+
+      const headFd = await fs.promises.open(filePath, "r");
+      const headBuf = Buffer.alloc(65536);
+      const { bytesRead } = await headFd.read(headBuf, 0, 65536, 0);
+      await headFd.close();
+      const header = parseAudioHeader(headBuf.subarray(0, bytesRead));
+
+      const outputFormat = header.format === "mp3" ? "mp3" : "wav";
+      const outputFilename = `master_${Date.now()}.${outputFormat}`;
+      const outputPath = path.resolve(MASTER_DIR, outputFilename);
       await new Promise<void>((resolve, reject) => {
         const inputStream = fs.createReadStream(filePath);
         const outputStream = fs.createWriteStream(outputPath);
@@ -108,15 +136,15 @@ router.post(
         jobId: `${Date.now()}`,
         filename: outputFilename,
         url: `/api/master/download/${outputFilename}`,
-        format: outputFormat,
-        bitDepth: parsedBitDepth,
-        sampleRate: parsedSampleRate,
+        format: header.format,
+        bitDepth: header.bitDepth,
+        sampleRate: header.sampleRate,
         size: (await fs.promises.stat(outputPath)).size,
         pluginStates: pluginStates ? safeJsonParse(pluginStates) : undefined,
         jobParams: {
-          bitDepth: parsedBitDepth,
-          sampleRate: parsedSampleRate,
-          format: outputFormat,
+          bitDepth: header.bitDepth,
+          sampleRate: header.sampleRate,
+          format: header.format,
         },
       });
     } catch (e) {

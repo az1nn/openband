@@ -24,7 +24,9 @@ const NAV_ITEMS = [
   { key: "settings", label: "Ajustes", icon: "⚙" },
 ];
 
-const LOGO = require("../../assets/logo-dark.png");
+import logoDark from "../../assets/logo-dark.png";
+
+const LOGO = logoDark;
 
 function buildRoute(route: string) {
   return route.includes(":id") ? route.replace(":id", `proj-${Date.now()}`) : route;

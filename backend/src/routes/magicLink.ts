@@ -23,7 +23,7 @@ function signToken(userId: string, tier: string): string {
 }
 
 async function createSession(userId: string, token: string, req: Request) {
-  const tokenHash = token.substring(0, 16)
+  const tokenHash = token
   const userAgent = req.headers["user-agent"] || null
   const ipAddress = req.ip || req.socket.remoteAddress || null
   const deviceName = userAgent ? userAgent.substring(0, 120) : null

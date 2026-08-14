@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Animated, View, StyleSheet } from "react-native";
+import { Animated, View } from "react-native";
 
 interface SkeletonProps {
   width?: number | string;
@@ -39,9 +39,8 @@ export function Skeleton({
 
   return (
     <Animated.View
-      className={className}
+      className={`bg-[#2a2a2e] ${className ?? ""}`}
       style={[
-        styles.block,
         {
           width: width ?? "100%",
           height: height ?? 16,
@@ -53,12 +52,6 @@ export function Skeleton({
     />
   );
 }
-
-const styles = StyleSheet.create({
-  block: {
-    backgroundColor: "#2a2a2e",
-  },
-});
 
 export function FeedSkeletonCard() {
   return (

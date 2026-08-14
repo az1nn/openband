@@ -3,6 +3,15 @@ import { View, Text, Platform } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Screen3DHeader, Screen3DFallback } from "../src/components/Screen3DFallback";
 
+// NOTE: This screen intentionally does NOT use the shared `loadThree()` CDN
+// loader. The 3D scene is rendered inside a sandboxed iframe (srcDoc) whose
+// module script relies on the `three/addons/` import-map entry for
+// OrbitControls — `loadThree()` only provides the core `three` module, and the
+// iframe boundary means the parent's memoized module instance cannot be shared
+// with the inline module script. A full migration would require rewriting the
+// scene to mount into the parent DOM and self-load its addons; out of scope for
+// this hardening pass.
+
 export default function ExplorerScreen() {
   const { t } = useTranslation();
   const [loaded, setLoaded] = useState(false);

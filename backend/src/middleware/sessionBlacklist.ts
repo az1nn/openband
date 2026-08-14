@@ -1,10 +1,11 @@
+import crypto from "crypto"
 import { Response, NextFunction } from "express"
 import { AuthenticatedRequest } from "./authMiddleware"
 
 const blacklistedTokens = new Set<string>()
 
-export function addToBlacklist(tokenHash: string) {
-  blacklistedTokens.add(tokenHash)
+export function addToBlacklist(token: string) {
+  blacklistedTokens.add(hashToken(token))
 }
 
 export function checkBlacklist(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
@@ -14,7 +15,7 @@ export function checkBlacklist(req: AuthenticatedRequest, res: Response, next: N
   }
 
   const token = authHeader.split(" ")[1]
-  const tokenHash = token.substring(0, 16)
+  const tokenHash = hashToken(token)
 
   if (blacklistedTokens.has(tokenHash)) {
     res.status(401).json({ error: "Sessão revogada." })
@@ -22,4 +23,8 @@ export function checkBlacklist(req: AuthenticatedRequest, res: Response, next: N
   }
 
   next()
+}
+
+function hashToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex")
 }

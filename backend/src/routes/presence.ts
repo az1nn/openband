@@ -13,6 +13,7 @@ interface PresenceData {
   cursorX: number;
   activeTrackId: string | null;
   playheadPosition: number;
+  lastSeen: number;
 }
 
 const MAX_KEY_LENGTH = 128;
@@ -87,7 +88,7 @@ setInterval(() => {
     for (const [, client] of clients) {
       const presence = getUserPresence(projectId);
       const data = presence.get(client.userId);
-      if (data && now - (data as unknown as { lastSeen?: number }).lastSeen! > STALE_TIMEOUT_MS) {
+      if (data && now - data.lastSeen > STALE_TIMEOUT_MS) {
         cleanupClient(projectId, client);
       }
     }
@@ -154,15 +155,27 @@ router.get(
       res.write(`data: ${JSON.stringify(data)}\n\n`);
     }
 
+    existingPresence.set(userId, {
+      userId,
+      userName,
+      cursorX: 0,
+      activeTrackId: null,
+      playheadPosition: 0,
+      lastSeen: Date.now(),
+    });
+
     broadcastToProject(projectId, {
       userId,
       userName,
       joined: true,
     });
 
-    const keepAlive = setInterval(() => {
+      const keepAlive = setInterval(() => {
       try {
         res.write(": keepalive\n\n");
+        const p = getUserPresence(projectId);
+        const d = p.get(userId);
+        if (d) d.lastSeen = Date.now();
       } catch {
         clearInterval(keepAlive);
       }
@@ -216,6 +229,7 @@ router.post(
       cursorX,
       activeTrackId,
       playheadPosition,
+      lastSeen: Date.now(),
     });
 
     broadcastToProject(

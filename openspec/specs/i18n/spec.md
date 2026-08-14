@@ -93,7 +93,7 @@ The `mixer` namespace exists in all three dictionaries and covers user-visible t
 A `tests/i18n-coverage.test.ts` file exists and asserts:
 - Deep key parity across `en.json`, `pt.json`, `es.json`.
 - Per-namespace key counts grow beyond the pre-change ~14-key baseline.
-- No leftover user-visible hardcoded string literals in the migrated batch (`app/studio/*`, `app/mastering/index.tsx`, `src/components/Mastering*`, `src/components/LufsMeter.tsx`, `app/mixing-console.tsx`, `app/explorer.tsx`) outside `t(...)` calls.
+- No leftover user-visible hardcoded string literals in the migrated batch (`app/studio/*`, `app/mastering/index.tsx`, `src/components/MasteringSuite*`, `src/components/LufsMeter.tsx`, `app/mixing-console.tsx`, `app/explorer.tsx`) outside `t(...)` calls.
 
 - **Status:** SHIPPED
 

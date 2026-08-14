@@ -117,8 +117,3 @@ export function writeGraph(root = process.cwd(), outPath, { fresh } = {}) {
 
   return { graph, target, rebuilt };
 }
-
-export function loadGraph(file) {
-  const content = fs.readFileSync(file, "utf8");
-  return JSON.parse(content);
-}

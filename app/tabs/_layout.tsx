@@ -82,7 +82,7 @@ export default function TabLayout() {
       setDrawerOpen(false);
       return;
     }
-    const target = route === "index" ? "/tabs/feed" : `/tabs/${route}`;
+    const target = route === "index" ? "/tabs" : `/tabs/${route}`;
     router.push(target as Href);
     setDrawerOpen(false);
   }, [currentSegment, router]);
@@ -147,7 +147,7 @@ export default function TabLayout() {
                   </View>
                   <ScrollView className="flex-1 px-2 pt-2">
                     {NAV_ITEMS.map((item) => {
-                      const activeKey = item.key === "index" ? "feed" : item.key;
+                       const activeKey = item.key;
                       const isActiveRoute = currentSegment === activeKey;
                       return (
                         <Pressable
@@ -204,7 +204,6 @@ export default function TabLayout() {
               }}
             >
               <Tabs.Screen name="index" />
-              <Tabs.Screen name="feed" />
               <Tabs.Screen name="moments" />
               <Tabs.Screen name="library" />
               <Tabs.Screen name="account" />

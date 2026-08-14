@@ -77,7 +77,8 @@ export async function enumerateAudioDevices(): Promise<{
 }> {
   if (nativeSupports("enumerateAudioDevices")) {
     try {
-      const { inputs, outputs } = await OpenBandNative.enumerateAudioDevices();      patchState = {
+      const { inputs, outputs } = await OpenBandNative.enumerateAudioDevices();
+      patchState = {
         ...patchState,
         inputDevices: inputs as AudioDevice[],
         outputDevices: outputs as AudioDevice[],
@@ -320,7 +321,6 @@ export async function setAudioOutputDevice(deviceId: string): Promise<boolean> {
   if ("setSinkId" in ctx) {
     try {
       await (ctx as AudioContext & { setSinkId: (id: string) => Promise<void> }).setSinkId(deviceId);
-      patchState = { ...patchState, routes: patchState.routes }; // trigger state update
       return true;
     } catch (e) {
       console.warn("Failed to set audio output device:", e);

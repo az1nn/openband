@@ -162,3 +162,37 @@ test("ci: strict promotes OB-GRAPH-005 to failure", () => {
   const strict = evaluateCi(result, { maxWarnings: 100, strict: true });
   assert.equal(strict.failed, true);
 });
+
+test("G1: spec md referencing method chain does not produce OB-GRAPH-003", () => {
+  const root = makeTmp();
+  writeFile(
+    root,
+    "openspec/specs/g1/spec.md",
+    [
+      "See backend/src/lib/musicTheory.resolveProgression for details.",
+      "Also app/_expo/static/js/web/entry-bundle.js and src/lib/a.b.c.method.",
+      "Real file src/lib/real.ts is referenced here.",
+    ].join("\n")
+  );
+  const graph = buildGraph(root);
+  const result = validate(graph);
+  const paths = result.warnings
+    .filter((w) => w.code === "OB-GRAPH-003")
+    .map((w) => w.path);
+  assert.ok(!paths.some((p) => /\.resolveProgression/.test(p)));
+  assert.ok(!paths.some((p) => p.includes("musicTheory.resolveProgression")));
+  assert.ok(!paths.some((p) => p.startsWith("app/_expo")));
+  assert.ok(!paths.some((p) => p.includes("a.b.c.method")));
+  assert.ok(paths.includes("src/lib/real.ts"));
+});
+
+test("G2: scripts/ entry file not flagged as orphaned by OB-GRAPH-004", () => {
+  const root = makeTmp();
+  writeFile(root, "scripts/foo.mjs", "const a = 1;\n");
+  writeFile(root, "src/lib/orphan.ts", "const b = 1;\n");
+  const graph = buildGraph(root);
+  const result = validate(graph);
+  const codes = result.warnings.map((w) => w.code + ":" + w.file);
+  assert.ok(!codes.includes("OB-GRAPH-004:scripts/foo.mjs"));
+  assert.ok(codes.includes("OB-GRAPH-004:src/lib/orphan.ts"));
+});

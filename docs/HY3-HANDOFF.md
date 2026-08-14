@@ -9,7 +9,7 @@
 
 OpenBand is an **open-source, cross-platform DAW** (web-first, also Android/iOS/Electron desktop) built on **Expo Router + React Native Web + NativeWind (Tailwind v3) + TypeScript**, with a **Supabase** (prod) / **SQLite** (dev) backend, an **Express** audio backend (Demucs stem separation + mastering bounce), and a **swappable desktop bridge** (`src/bridge/`) so the same code runs in browser, Electron, or (future) Tauri.
 
-The app already implements a remarkably complete DAW surface: multi-track studio, 19-type plugin DSP, mastering suite, stem extraction, piano roll, sampler, synth, looper, chord track, automation lanes, CRDT collaboration, command palette, project branching, i18n (en/es/pt), and a 56+ component design system. **~1456 Vitest tests + legacy `node:test` suite + Playwright E2E** exist.
+The app already implements a remarkably complete DAW surface: multi-track studio, 19-type plugin DSP, mastering suite, stem extraction, piano roll, sampler, synth, looper, chord track, automation lanes, CRDT collaboration, command palette, project branching, i18n (en/es/pt), and a 79 component design system. **~1479 Vitest tests + legacy `node:test` suite + Playwright E2E** exist.
 
 What is *not* done is the integration/hardening layer: several complete subsystems (modulation matrix, real LUFS meter, native hardware I/O, real plugin DSP, web playback pipeline) are **partially wired or stubbed**, and there are known correctness gaps (silent audio-region playback on web, leaky blob URLs, beat drift, param-id mismatches). The recommended next phase is to **close these gaps and ship the next-product pillars** (Video Export, MIDI Learn+MCU, DAWproject interop, AI Voice Cleaner) already specified in `openspec/changes/next-product-design`.
 
@@ -19,7 +19,7 @@ What is *not* done is the integration/hardening layer: several complete subsyste
 
 | Layer | Technology | Notes / discrepancies |
 | --- | --- | --- |
-| Framework | Expo Router (`expo ^57.0.4`, `expo-router ~57.0.4`) | ⚠️ `AGENTS.md` and `README.md` reference "Expo SDK 56" and the SDK-56 docs URL, but `package.json` is on **Expo 57**. Verify the correct SDK before using Expo API docs. |
+| Framework | Expo Router (`expo ^57.0.4`, `expo-router ~57.0.4`) | Expo **SDK 57** (matches `package.json`). Use the SDK 57 docs URLs. |
 | Styling | NativeWind v4 + Tailwind CSS v3 | Use Tailwind **v3** syntax (`@tailwind` directives in `global.css`). Do NOT switch to v4 `@import`. |
 | Language | TypeScript ~6.0, strict | Path aliases: `@/` → root, `@bridge` → `src/bridge`. Defined in `tsconfig.json`. |
 | UI runtime | `react-native-web` + `react-native` 0.86 + React 19.2 | Components render via RN primitives; design system in `src/components/`. |
@@ -30,7 +30,7 @@ What is *not* done is the integration/hardening layer: several complete subsyste
 | Stem separation | Demucs (HTDEMUCS) via Python subprocess | Mock silent-WAV fallback when Demucs absent. |
 | Desktop | Electron 35 (`electron/`) | Bridge pattern: `OpenBandNative` from `@bridge`. |
 | 3D | Three.js (`three ^0.160`, `@react-three/fiber`, `@react-three/drei`) | Virtual Studio (Habbo-style room). |
-| Testing | Vitest 4 (~1456 tests), Playwright, legacy `node:test` | See §7. |
+| Testing | Vitest 4 (~1479 tests), Playwright, legacy `node:test` | See §7. |
 | i18n | i18next + react-i18next | Locales: `src/locales/{en,es,pt}.json`. |
 
 ### Scripts (`package.json`)
@@ -81,7 +81,7 @@ openband/
 ├── openspec/                # SDD loop: specs/ (43), changes/ (30 in-flight), archive/
 ├── docs/                    # supabase.md, sqlite.md, features-*.md, apk-build.md, ...
 ├── stories/                 # Storybook (49+ stories)
-├── tests/                   # 52 Vitest/test files
+├── tests/                   # 83 Vitest/test files
 ├── wasm/                    # WASM plugin host source
 ├── android/ ios/            # Prebuilt native projects
 ├── AGENTS.md                # ← READ THIS FIRST (workflow rules)
@@ -207,7 +207,7 @@ CSS utility classes in `global.css`: `.card`, `.card-elevated`, `.btn-primary/se
 
 **❌ Dead / inconsistencies to resolve:**
 - `src/lib/yjsCRDT.ts` — dead code, scheduled for deletion.
-- `AGENTS.md`/`README.md` say "Expo SDK 56" but `package.json` is **Expo 57** — verify which is correct before relying on SDK docs.
+- `package.json` is on **Expo 57** — use the SDK 57 docs (older docs referencing SDK 56 are stale).
 - `README.md` lists backend as "FastAPI + Redis + Celery" and "SQLite" while `backend/` is actually **Express + better-sqlite3**. README is partly stale vs. reality.
 - `PluginEditor`/`OneKnob` import `modulationMatrix` but modulation is not yet applied at playback time.
 

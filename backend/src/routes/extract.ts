@@ -14,6 +14,71 @@ const STEMS_DIR = process.env.VERCEL
 
 const isProduction = process.env.NODE_ENV === "production";
 
+const MP3_BITRATES: Record<string, number[]> = {
+  "3": [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],
+  "2": [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
+  "0": [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
+};
+
+const MP3_SAMPLE_RATES: Record<string, number[]> = {
+  "3": [44100, 48000, 32000],
+  "2": [22050, 24000, 16000],
+  "0": [11025, 12000, 8000],
+};
+
+async function getAudioDuration(filePath: string): Promise<number> {
+  try {
+    const stat = await fs.promises.stat(filePath);
+    const fd = await fs.promises.open(filePath, "r");
+    const head = Buffer.alloc(65536);
+    const { bytesRead } = await fd.read(head, 0, 65536, 0);
+    await fd.close();
+    const buf = head.subarray(0, bytesRead);
+
+    if (
+      buf.length >= 12 &&
+      buf.toString("ascii", 0, 4) === "RIFF" &&
+      buf.toString("ascii", 8, 12) === "WAVE"
+    ) {
+      const byteRate = buf.readUInt32LE(28);
+      if (byteRate > 0) return Math.round((stat.size / byteRate) * 100) / 100;
+      const sampleRate = buf.readUInt32LE(24);
+      const channels = buf.readUInt16LE(22);
+      const bits = buf.readUInt16LE(34);
+      if (sampleRate > 0 && channels > 0 && bits > 0) {
+        const dataSize = stat.size - 44;
+        const secs = dataSize / (channels * (bits / 8)) / sampleRate;
+        return Math.round(secs * 100) / 100;
+      }
+    }
+
+    for (let i = 0; i + 3 < buf.length; i++) {
+      if (buf[i] === 0xff && (buf[i + 1] & 0xe0) === 0xe0) {
+        const version = (buf[i + 1] >> 3) & 0x03;
+        const bitrateIndex = (buf[i + 2] >> 4) & 0x0f;
+        const srIndex = (buf[i + 2] >> 2) & 0x03;
+        const padding = (buf[i + 2] >> 1) & 0x01;
+        const bitrate = MP3_BITRATES[String(version)]?.[bitrateIndex] ?? 0;
+        const sampleRate = MP3_SAMPLE_RATES[String(version)]?.[srIndex] ?? 0;
+        if (bitrate > 0 && sampleRate > 0) {
+          const frameSize =
+            Math.floor((144 * bitrate * 1000) / sampleRate) + padding;
+          if (frameSize > 0) {
+            const frames = stat.size / frameSize;
+            const samplesPerFrame = version === 3 ? 1152 : 576;
+            const secs = (frames * samplesPerFrame) / sampleRate;
+            return Math.round(secs * 100) / 100;
+          }
+        }
+      }
+    }
+
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
 function cleanup(filePath: string | undefined): void {
   if (!filePath) return;
   fs.unlink(filePath, (err) => {
@@ -38,6 +103,7 @@ router.post("/extract", (req: Request, res: Response) => {
       }
 
       try {
+        const duration = await getAudioDuration(req.file.path);
         const hasDemucs = await checkDemucsInstalled();
         const stems = hasDemucs
           ? await runDemucs({
@@ -51,7 +117,7 @@ router.post("/extract", (req: Request, res: Response) => {
         const body: ExtractResponse = {
           jobId: `${Date.now()}`,
           stems,
-          duration: 30,
+          duration,
         };
 
         res.json(body);
@@ -61,12 +127,13 @@ router.post("/extract", (req: Request, res: Response) => {
         if (message === "DEMUCS_NOT_FOUND") {
           try {
             if (!req.file) throw new Error("No file uploaded");
+            const duration = await getAudioDuration(req.file.path);
             const stems = await runMock(req.file.path, STEMS_DIR);
             cleanup(req.file.path);
             return res.json({
               jobId: `${Date.now()}`,
               stems,
-              duration: 30,
+              duration,
               warning:
                 "Demucs não instalado. Usando simulação. Para resultados reais: pip install demucs",
             });
