@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenBand Audio Device Bridges & Playback Guide</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 500: '#6366f1', 600: '#4f46e5' }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen antialiased">
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="bg-indigo-600 p-2 rounded-lg font-bold text-white">OBB</div>
+      <div>
+        <h1 class="text-lg font-semibold">Audio Device Bridges & Playback</h1>
+        <p class="text-xs text-slate-400">Cross-Platform Native I/O & Universal Audio Architecture</p>
+      </div>
+    </div>
+    <div class="flex space-x-3 text-sm">
+      <a href="./graph-engineer.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-lg font-medium transition">Graph Guide</a>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-10 space-y-12">
+    <!-- Introduction -->
+    <section class="space-y-4">
+      <h2 class="text-3xl font-bold tracking-tight">The Bridge Motto</h2>
+      <blockquote class="border-l-4 border-indigo-500 pl-4 py-2 text-slate-300 italic bg-indigo-950/20 rounded-r-lg">
+        "The frontend has zero knowledge of whether it's running in Electron, Tauri, or a browser tab. Swap the backend by replacing one file."
+      </blockquote>
+      <p class="text-slate-300 leading-relaxed">
+        OpenBand abstracts all native file system operations, hardware audio device enumeration, and patchbay routing through <code>src/bridge/</code>. Frontend components never import Node.js <code>fs</code> or desktop IPC APIs directly; instead, they consume <code>OpenBandNative</code> from <code>@bridge</code>.
+      </p>
+    </section>
+
+    <!-- Bridge Implementations -->
+    <section class="space-y-6">
+      <h2 class="text-2xl font-bold tracking-tight border-b border-slate-800 pb-3">Bridge Implementations</h2>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-3">
+          <div class="text-indigo-400 font-mono text-xs">electron.ts</div>
+          <h3 class="text-lg font-semibold">Electron Desktop</h3>
+          <p class="text-sm text-slate-400">Delegates natively to <code>window.electronAPI</code> exposed securely via contextBridge preload script.</p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-3">
+          <div class="text-indigo-400 font-mono text-xs">tauri.ts</div>
+          <h3 class="text-lg font-semibold">Tauri Desktop Stub</h3>
+          <p class="text-sm text-slate-400">Provides secure placeholder stubs warning and returning safe defaults for future Tauri migration.</p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-3">
+          <div class="text-indigo-400 font-mono text-xs">browser.ts</div>
+          <h3 class="text-lg font-semibold">Browser Fallback</h3>
+          <p class="text-sm text-slate-400">Uses <code>localStorage</code> for project persistence and Web APIs for file downloads and device enumeration.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Audio Playback & Hardware Routing -->
+    <section class="space-y-6">
+      <h2 class="text-2xl font-bold tracking-tight border-b border-slate-800 pb-3">Audio Playback & Hardware Routing</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-3">
+          <div class="text-indigo-400 font-mono text-xs">universalAudio.ts</div>
+          <h3 class="text-lg font-semibold">Universal Audio System</h3>
+          <p class="text-sm text-slate-400">Singleton AudioContext with lazy initialization, cross-platform mixdown via OfflineAudioContext, and file export support across web and native.</p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-3">
+          <div class="text-indigo-400 font-mono text-xs">hardwareIO.ts</div>
+          <h3 class="text-lg font-semibold">Multi-Channel Patchbay</h3>
+          <p class="text-sm text-slate-400">Enumerates audio input/output devices, sample rates, channel counts, and latency, supporting custom routing matrix connections.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="max-w-6xl mx-auto px-6 py-12 text-center text-xs text-slate-500 border-t border-slate-900 mt-16">
+    OpenBand Audio Device Bridges &bull; Zero external runtime dependencies.
+  </footer>
+</body>
+</html>
