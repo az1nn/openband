@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenBand Graph Engineering Developer Guide</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 500: '#6366f1', 600: '#4f46e5' }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen antialiased">
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="bg-indigo-600 p-2 rounded-lg font-bold text-white">OBG</div>
+      <div>
+        <h1 class="text-lg font-semibold">Graph Engineering Guide</h1>
+        <p class="text-xs text-slate-400">OpenBand Architecture Analysis & Validation Toolchain</p>
+      </div>
+    </div>
+    <div class="flex space-x-3 text-sm">
+      <a href="../.openband/graph-report.html" target="_blank" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition">Open HTML Report</a>
+      <a href="./generated/ARCHITECTURE.md" target="_blank" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-lg font-medium transition">Architecture Markdown</a>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-10 space-y-12">
+    <!-- Introduction -->
+    <section class="space-y-4">
+      <h2 class="text-3xl font-bold tracking-tight">Overview</h2>
+      <p class="text-slate-300 leading-relaxed">
+        The OpenBand Graph Engineer is a zero-dependency (Node.js built-ins only) static analysis and architecture toolchain. It scans source files, route definitions, tests, and OpenSpec documentation to construct a directed graph of the entire repository. It enforces architectural invariants, detects circular dependencies and orphaned code, generates human-readable architecture documentation, and produces self-contained interactive inspection reports.
+      </p>
+    </section>
+
+    <!-- Step by Step Guide -->
+    <section class="space-y-6">
+      <h2 class="text-2xl font-bold tracking-tight border-b border-slate-800 pb-3">Step-by-Step Usage Guide</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-3">
+          <div class="text-indigo-400 font-mono text-xs">1. Build Graph</div>
+          <h3 class="text-lg font-semibold">Scan and Serialize</h3>
+          <p class="text-sm text-slate-400">Scans all tracked roots, computes file content hashes for incremental caching, and outputs <code>.openband/graph.json</code>.</p>
+          <pre class="bg-slate-950 p-3 rounded-lg text-xs font-mono text-indigo-300 overflow-x-auto">node graph/cli.mjs build</pre>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-3">
+          <div class="text-indigo-400 font-mono text-xs">2. Validate Architecture</div>
+          <h3 class="text-lg font-semibold">Run Invariant Checks</h3>
+          <p class="text-sm text-slate-400">Checks for desktop bridge violations (OB-GRAPH-001), dependency cycles (OB-GRAPH-002), and unlinked specs.</p>
+          <pre class="bg-slate-950 p-3 rounded-lg text-xs font-mono text-indigo-300 overflow-x-auto">node graph/cli.mjs validate</pre>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-3">
+          <div class="text-indigo-400 font-mono text-xs">3. Generate Docs</div>
+          <h3 class="text-lg font-semibold">Auto Architecture Markdown</h3>
+          <p class="text-sm text-slate-400">Produces <code>docs/generated/ARCHITECTURE.md</code> containing module summaries, route lists, and component reuse rankings.</p>
+          <pre class="bg-slate-950 p-3 rounded-lg text-xs font-mono text-indigo-300 overflow-x-auto">npm run graph:doc</pre>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-3">
+          <div class="text-indigo-400 font-mono text-xs">4. Interactive Report</div>
+          <h3 class="text-lg font-semibold">Generate HTML Report</h3>
+          <p class="text-sm text-slate-400">Produces <code>.openband/graph-report.html</code> with client-side search, dependency inspection panels, and Mermaid diagrams.</p>
+          <pre class="bg-slate-950 p-3 rounded-lg text-xs font-mono text-indigo-300 overflow-x-auto">npm run graph:report</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Edge Types Reference -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold tracking-tight border-b border-slate-800 pb-3">Edge Types</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400">
+              <th class="py-3 px-4 font-semibold">Edge Type</th>
+              <th class="py-3 px-4 font-semibold">Description</th>
+              <th class="py-3 px-4 font-semibold">Inclusions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/60 text-slate-300">
+            <tr>
+              <td class="py-3 px-4 font-mono text-indigo-400">import</td>
+              <td class="py-3 px-4">Static ES module import/export between internal modules.</td>
+              <td class="py-3 px-4 text-xs text-slate-400">Deps, Dependents, Cycles, Orphans</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-4 font-mono text-indigo-400">require</td>
+              <td class="py-3 px-4">CommonJS <code>require()</code> of an internal module.</td>
+              <td class="py-3 px-4 text-xs text-slate-400">Deps, Dependents, Cycles, Orphans</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-4 font-mono text-indigo-400">dynamic-import</td>
+              <td class="py-3 px-4">Dynamic <code>import()</code> of an internal module.</td>
+              <td class="py-3 px-4 text-xs text-slate-400">Deps, Dependents, Cycles, Orphans</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-4 font-mono text-indigo-400">route</td>
+              <td class="py-3 px-4">Intra-app navigation resolving to an <code>app/**</code> screen.</td>
+              <td class="py-3 px-4 text-xs text-slate-400">Deps, Render</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-4 font-mono text-indigo-400">test</td>
+              <td class="py-3 px-4">Test file referencing a source module.</td>
+              <td class="py-3 px-4 text-xs text-slate-400">Deps, Coverage check</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-4 font-mono text-indigo-400">specifies</td>
+              <td class="py-3 px-4">OpenSpec markdown referencing a repository file.</td>
+              <td class="py-3 px-4 text-xs text-slate-400">Traceability</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-4 font-mono text-indigo-400">uses</td>
+              <td class="py-3 px-4">JSX component usage (file renders an imported component).</td>
+              <td class="py-3 px-4 text-xs text-slate-400">Deps, Impact, Render (excluded from cycles & orphans)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Validation Rules -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold tracking-tight border-b border-slate-800 pb-3">Validation Rules</h2>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="bg-slate-900 border border-red-900/50 rounded-xl p-5 space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="font-mono text-red-400 font-bold">OB-GRAPH-001</span>
+            <span class="bg-red-950 text-red-300 text-xs px-2 py-0.5 rounded">Error</span>
+          </div>
+          <h4 class="font-semibold">Desktop Bridge Violation</h4>
+          <p class="text-sm text-slate-400">Frontend modules (<code>app/</code>, non-bridge <code>src/</code>) must not import Node/Electron/Tauri APIs directly. Use <code>OpenBandNative</code> from `@bridge`.</p>
+        </div>
+
+        <div class="bg-slate-900 border border-red-900/50 rounded-xl p-5 space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="font-mono text-red-400 font-bold">OB-GRAPH-002</span>
+            <span class="bg-red-950 text-red-300 text-xs px-2 py-0.5 rounded">Error</span>
+          </div>
+          <h4 class="font-semibold">Dependency Cycle</h4>
+          <p class="text-sm text-slate-400">Circular dependency across <code>import</code>/<code>require</code>/<code>dynamic-import</code> edges. Extract shared logic into a third module.</p>
+        </div>
+
+        <div class="bg-slate-900 border border-amber-900/50 rounded-xl p-5 space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="font-mono text-amber-400 font-bold">OB-GRAPH-003</span>
+            <span class="bg-amber-950 text-amber-300 text-xs px-2 py-0.5 rounded">Warning</span>
+          </div>
+          <h4 class="font-semibold">Unresolved Spec Citation</h4>
+          <p class="text-sm text-slate-400">OpenSpec markdown references a path with no matching node. Fixed automatically for <code>api/*</code> → <code>backend/src/routes/*</code>.</p>
+        </div>
+
+        <div class="bg-slate-900 border border-amber-900/50 rounded-xl p-5 space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="font-mono text-amber-400 font-bold">OB-GRAPH-004 / 005</span>
+            <span class="bg-amber-950 text-amber-300 text-xs px-2 py-0.5 rounded">Warning / Strict Error</span>
+          </div>
+          <h4 class="font-semibold">Orphaned Code & Test Coverage Gap</h4>
+          <p class="text-sm text-slate-400">Orphaned code (zero inbound imports) or test coverage gaps (no test file referencing the module).</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="max-w-6xl mx-auto px-6 py-12 text-center text-xs text-slate-500 border-t border-slate-900 mt-16">
+    OpenBand Architecture Graph Engineer &bull; Zero external runtime dependencies (Node.js built-ins only).
+  </footer>
+</body>
+</html>

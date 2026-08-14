@@ -319,6 +319,40 @@ Types: `fix`, `feat`, `chore`, `refactor`, `docs`
 
 ---
 
+## Graph Engineering & Architecture Toolchain
+
+OpenBand includes a zero-dependency (Node.js built-ins only) architecture-graph toolchain under `graph/` that continuously analyzes repository structure, invariants, component usage, and documentation traceability.
+
+### Core Commands
+
+| Command | Action | Output |
+| ------- | ------ | ------ |
+| `npm run graph:build` | Scan source tree & serialize graph | `.openband/graph.json` |
+| `npm run graph:validate` | Run validation rules & invariant checks | Terminal error/warning report |
+| `npm run graph:doc` | Generate auto architecture markdown | `docs/generated/ARCHITECTURE.md` |
+| `npm run graph:report` | Generate self-contained interactive report | `.openband/graph-report.html` |
+| `npm run graph:ci` | CI validation gate (fails on errors) | Exit code `0` or `1` |
+
+### Edge Types
+
+- **`import` / `require` / `dynamic-import`**: Module dependency edges (used for dependency analysis, cycles, and orphan checks).
+- **`route`**: Intra-app navigation (`router.push`, `<Link>`) linking screens.
+- **`test`**: Links test files to the modules they test.
+- **`specifies`**: Traces OpenSpec markdown citations to repository paths (with `api/*` → `backend/src/routes/*` auto-alias).
+- **`uses`**: Tracks JSX component usage (source/route file renders an imported component). Included in dependency/impact/render graphs but excluded from cycle detection and orphan filters.
+
+### Validation Rules
+
+1. **`OB-GRAPH-001` (Error)**: Frontend modules (`app/`, non-bridge `src/`) importing Node/Electron/Tauri APIs directly (must use `OpenBandNative` from `@bridge`).
+2. **`OB-GRAPH-002` (Error)**: Dependency cycles across import/require/dynamic-import edges.
+3. **`OB-GRAPH-003` (Warning)**: OpenSpec markdown referencing a non-existent path.
+4. **`OB-GRAPH-004` (Warning / Strict Error)**: Orphaned code (zero inbound import edges).
+5. **`OB-GRAPH-005` (Warning / Strict Error)**: Test coverage gap (no test file referencing the module).
+
+Interactive visual developer guide available at `docs/graph-engineer.html`.
+
+---
+
 ## Project Architecture Quick Reference
 
 ```
