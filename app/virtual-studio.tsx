@@ -237,8 +237,10 @@ export default function VirtualStudio() {
 
       // Animation loop
       let lastTime = performance.now();
+      let isVisible = true;
 
       function animate(time: number) {
+        if (!isVisible || document.hidden) return;
         animationId = requestAnimationFrame(animate);
         const delta = (time - lastTime) / 1000;
         lastTime = time;
@@ -300,10 +302,25 @@ export default function VirtualStudio() {
       };
       window.addEventListener("resize", handleResize);
 
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          isVisible = false;
+          cancelAnimationFrame(animationId);
+        } else {
+          if (!isVisible) {
+            isVisible = true;
+            lastTime = performance.now();
+            animationId = requestAnimationFrame(animate);
+          }
+        }
+      };
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+
       // Cleanup
       return () => {
         cancelled = true;
         cancelAnimationFrame(animationId);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
         renderer.domElement.removeEventListener("click", handleClick);
         window.removeEventListener("keydown", handleKeyDown);
         window.removeEventListener("keyup", handleKeyUp);

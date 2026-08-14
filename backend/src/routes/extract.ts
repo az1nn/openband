@@ -4,6 +4,7 @@ import fs from "fs";
 import { upload } from "../middleware/upload";
 import { runDemucs, checkDemucsInstalled } from "../services/demucs";
 import { runMock } from "../services/mock";
+import { getJob, subscribeToJob, addJob } from "../services/queue";
 import type { ExtractResponse, ErrorResponse } from "../types";
 
 const router = Router();
@@ -86,6 +87,36 @@ function cleanup(filePath: string | undefined): void {
   });
 }
 
+router.get("/extract/progress/:jobId", (req: Request, res: Response) => {
+  const jobId = req.params.jobId as string;
+  const job = getJob(jobId);
+  if (!job) {
+    return res.status(404).json({ error: "Job not found" });
+  }
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+
+  res.write(`data: ${JSON.stringify(job)}\n\n`);
+
+  if (job.status === "completed" || job.status === "failed") {
+    return res.end();
+  }
+
+  const unsubscribe = subscribeToJob(jobId, (updatedJob) => {
+    res.write(`data: ${JSON.stringify(updatedJob)}\n\n`);
+    if (updatedJob.status === "completed" || updatedJob.status === "failed") {
+      res.end();
+    }
+  });
+
+  req.on("close", () => {
+    unsubscribe();
+  });
+});
+
 router.post("/extract", (req: Request, res: Response) => {
   upload.single("audio")(req, res, async (err) => {
     try {
@@ -102,6 +133,8 @@ router.post("/extract", (req: Request, res: Response) => {
         return res.status(400).json({ error: "Nenhum arquivo enviado." });
       }
 
+      const jobId = addJob("extract", { filename: req.file.originalname });
+
       try {
         const duration = await getAudioDuration(req.file.path);
         const hasDemucs = await checkDemucsInstalled();
@@ -115,7 +148,7 @@ router.post("/extract", (req: Request, res: Response) => {
         if (req.file) cleanup(req.file.path);
 
         const body: ExtractResponse = {
-          jobId: `${Date.now()}`,
+          jobId,
           stems,
           duration,
         };
@@ -131,7 +164,7 @@ router.post("/extract", (req: Request, res: Response) => {
             const stems = await runMock(req.file.path, STEMS_DIR);
             cleanup(req.file.path);
             return res.json({
-              jobId: `${Date.now()}`,
+              jobId,
               stems,
               duration,
               warning:

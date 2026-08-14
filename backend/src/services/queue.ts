@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-type JobStatus = "pending" | "processing" | "completed" | "failed";
+export type JobStatus = "queued" | "processing" | "completed" | "failed" | "pending";
 
 const STEMS_DIR = process.env.VERCEL
   ? "/tmp/stems"
@@ -33,11 +33,12 @@ async function writeSilentWav(filePath: string, durationSec: number): Promise<vo
   await fs.promises.writeFile(filePath, buffer);
 }
 
-interface Job<T = unknown> {
+export interface Job<T = unknown> {
   id: string;
   type: string;
   data: T;
   status: JobStatus;
+  progress: number; // 0 to 100
   createdAt: number;
   completedAt?: number;
   result?: unknown;
@@ -45,7 +46,8 @@ interface Job<T = unknown> {
 }
 
 const jobs = new Map<string, Job>();
-const PROCESSING_DELAY_MS = 8000;
+const jobListeners = new Map<string, Set<(job: Job) => void>>();
+const PROCESSING_DELAY_MS = 2000;
 
 let jobCounter = 0;
 
@@ -55,7 +57,8 @@ export function addJob<T>(type: string, data: T): string {
     id,
     type,
     data,
-    status: "pending",
+    status: "queued",
+    progress: 0,
     createdAt: Date.now(),
   };
   jobs.set(id, job as Job);
@@ -63,14 +66,46 @@ export function addJob<T>(type: string, data: T): string {
   return id;
 }
 
+export function getJob(id: string): Job | undefined {
+  return jobs.get(id);
+}
+
 export function getJobStatus(id: string): {
   status: JobStatus;
+  progress: number;
   result?: unknown;
   error?: string;
 } | null {
   const job = jobs.get(id);
   if (!job) return null;
-  return { status: job.status, result: job.result, error: job.error };
+  return { status: job.status, progress: job.progress, result: job.result, error: job.error };
+}
+
+export function subscribeToJob(jobId: string, callback: (job: Job) => void): () => void {
+  if (!jobListeners.has(jobId)) {
+    jobListeners.set(jobId, new Set());
+  }
+  jobListeners.get(jobId)!.add(callback);
+  return () => {
+    const set = jobListeners.get(jobId);
+    if (set) {
+      set.delete(callback);
+      if (set.size === 0) jobListeners.delete(jobId);
+    }
+  };
+}
+
+function notifyJobListeners(job: Job) {
+  const set = jobListeners.get(job.id);
+  if (set) {
+    for (const cb of set) {
+      try {
+        cb(job);
+      } catch {
+        // ignore listener error
+      }
+    }
+  }
 }
 
 async function processJobAsync(id: string): Promise<void> {
@@ -78,9 +113,17 @@ async function processJobAsync(id: string): Promise<void> {
   if (!job) return;
 
   job.status = "processing";
+  job.progress = 10;
+  notifyJobListeners(job);
 
-   try {
-    await new Promise<void>((resolve) => setTimeout(resolve, PROCESSING_DELAY_MS));
+  try {
+    await new Promise<void>((resolve) => setTimeout(resolve, PROCESSING_DELAY_MS / 3));
+    job.progress = 40;
+    notifyJobListeners(job);
+
+    await new Promise<void>((resolve) => setTimeout(resolve, PROCESSING_DELAY_MS / 3));
+    job.progress = 75;
+    notifyJobListeners(job);
 
     if (!fs.existsSync(STEMS_DIR)) fs.mkdirSync(STEMS_DIR, { recursive: true });
 
@@ -106,10 +149,14 @@ async function processJobAsync(id: string): Promise<void> {
     );
 
     job.status = "completed";
+    job.progress = 100;
     job.result = { stems: written };
     job.completedAt = Date.now();
+    notifyJobListeners(job);
   } catch (e: unknown) {
     job.status = "failed";
+    job.progress = 100;
     job.error = e instanceof Error ? e.message : "Unknown error";
+    notifyJobListeners(job);
   }
 }
