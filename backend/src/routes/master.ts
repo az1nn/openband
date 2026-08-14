@@ -31,7 +31,7 @@ function parseAudioHeader(
     2: [22050, 24000, 16000],
     0: [11025, 12000, 8000],
   };
-  for (let i = 0; i + 1 < buf.length; i++) {
+  for (let i = 0; i + 2 < buf.length; i++) {
     if (buf[i] === 0xff && (buf[i + 1] & 0xe0) === 0xe0) {
       const version = (buf[i + 1] >> 3) & 0x03;
       const srIndex = (buf[i + 2] >> 2) & 0x03;
