@@ -80,7 +80,9 @@
     "graph:dependents": "node graph/cli.mjs dependents",
     "graph:path": "node graph/cli.mjs path",
     "graph:impact": "node graph/cli.mjs impact",
-    "graph:context": "node graph/cli.mjs context"
+    "graph:context": "node graph/cli.mjs context",
+    "graph:render": "node graph/cli.mjs render",
+    "graph:ci": "node graph/cli.mjs ci"
   },
   "engines": {
     "node": ">=22"

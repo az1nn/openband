@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildGraph, writeGraph } from "./builder.mjs";
 import { validate, summarize } from "./validate.mjs";
+import { renderSubgraph } from "./render.mjs";
 import {
   resolveTarget,
   directDeps,
@@ -45,17 +46,32 @@ function fail(msg) {
   process.exit(1);
 }
 
+export function evaluateCi(result, { maxWarnings = undefined, strict = false } = {}) {
+  const errorCodes = strict
+    ? ["OB-GRAPH-001", "OB-GRAPH-002", "OB-GRAPH-004", "OB-GRAPH-005"]
+    : ["OB-GRAPH-001", "OB-GRAPH-002"];
+  const errorFail = result.errors.some((e) => errorCodes.includes(e.code));
+  const strictWarnFail = strict && result.warnings.some((w) => errorCodes.includes(w.code));
+  const warnLimit = strict ? (maxWarnings ?? 0) : maxWarnings;
+  const warnFail = warnLimit !== undefined && result.warnings.length > warnLimit;
+  return { failed: errorFail || strictWarnFail || warnFail, errorCodes, warnLimit };
+}
+
 export function run(argv = process.argv.slice(2)) {
   const { positionals, flags } = parseArgs(argv);
   const command = positionals.shift();
   if (!command) {
-    fail("Usage: node graph/cli.mjs <build|validate|deps|dependents|path|impact|context> [args] [--json]");
+    fail("Usage: node graph/cli.mjs <build|validate|deps|dependents|path|impact|context|render|ci> [args] [--json]");
   }
   const root = flags.root ? path.resolve(flags.root) : process.cwd();
 
-  switch (command) {
+   switch (command) {
     case "build": {
-      const { graph, target } = writeGraph(root, flags.out ? path.resolve(flags.out) : undefined);
+      const { graph, target, rebuilt } = writeGraph(
+        root,
+        flags.out ? path.resolve(flags.out) : undefined,
+        { fresh: !!flags.fresh }
+      );
       const stats = edgeStats(graph);
       if (flags.json) {
         out(graph, flags);
@@ -63,7 +79,51 @@ export function run(argv = process.argv.slice(2)) {
         process.stdout.write(
           `Built graph -> ${target}\nNodes: ${stats.nodes}\nEdges: ${stats.edges}\nBy type: ${JSON.stringify(stats.byType)}\n`
         );
+        process.stdout.write(rebuilt ? "(rebuilt)\n" : "(cached)\n");
       }
+      return;
+    }
+    case "render": {
+      const id = positionals[0];
+      if (!id) fail("render requires a <id>");
+      const graph = buildGraph(root);
+      const fmt = flags.format || "mermaid";
+      const depth = flags.depth === true ? 1 : parseInt(flags.depth, 10);
+      const safeDepth = Number.isFinite(depth) && depth > 0 ? depth : 1;
+      const rendered = renderSubgraph(graph, id, { depth: safeDepth, format: fmt });
+      if (flags.json) {
+        const payload =
+          fmt === "mermaid"
+            ? { format: "mermaid", mermaid: rendered }
+            : { format: "dot", dot: rendered };
+        out(payload, flags);
+      } else {
+        process.stdout.write(rendered);
+      }
+      return;
+    }
+    case "ci": {
+      const graph = buildGraph(root);
+      const result = validate(graph);
+      const maxWarnings =
+        flags["max-warnings"] !== undefined ? parseInt(flags["max-warnings"], 10) : undefined;
+      const strict = !!flags.strict;
+      const { failed } = evaluateCi(result, { maxWarnings, strict });
+      const warnLabel = maxWarnings === undefined ? "∞" : maxWarnings;
+      if (flags.json) {
+        out({ valid: !failed, errors: result.errors, warnings: result.warnings, failed }, flags);
+      } else {
+        process.stdout.write(`CI: ${failed ? "FAIL" : "PASS"}\n`);
+        process.stdout.write(`Errors: ${result.errors.length}\n`);
+        process.stdout.write(`Warnings: ${result.warnings.length} (max ${warnLabel})\n`);
+        for (const e of result.errors) {
+          process.stdout.write(`  [${e.code}] ${e.message}\n`);
+        }
+        for (const w of result.warnings) {
+          process.stdout.write(`  [${w.code}] ${w.message}\n`);
+        }
+      }
+      if (failed) process.exit(1);
       return;
     }
     case "validate": {

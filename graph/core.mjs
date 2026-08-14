@@ -1,7 +1,7 @@
 import path from "node:path";
 import { builtinModules } from "node:module";
 
-export const GRAPH_VERSION = "1.0.0";
+export const GRAPH_VERSION = "1.1.0";
 
 export const NODE_TYPES = ["source", "route", "test", "spec", "external"];
 export const EDGE_TYPES = ["import", "route", "test", "specifies", "dynamic-import", "require"];

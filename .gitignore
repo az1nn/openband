@@ -27,4 +27,5 @@ data/*.sqlite-shm
 
 # graph engineer build output
 .openband/graph.json
+.openband/graph.cache.json
 .openband/

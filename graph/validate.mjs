@@ -74,6 +74,43 @@ export function validate(graph) {
     }
   }
 
+  const INBOUND_TYPES = ["import", "require", "dynamic-import"];
+  const isEntryPoint = (id) =>
+    id === "app/_layout.tsx" ||
+    /^app\/.*\/_layout\.tsx$/.test(id) ||
+    id === "src/components/index.ts" ||
+    id === "src/bridge/index.ts" ||
+    id.endsWith(".stories.tsx") ||
+    id.startsWith("stories/");
+
+  for (const node of graph.nodes) {
+    if (node.type !== "source") continue;
+    const inbound = graph.edges.filter(
+      (e) => e.target === node.id && INBOUND_TYPES.includes(e.type)
+    );
+    if (inbound.length === 0 && !isEntryPoint(node.id)) {
+      warnings.push({
+        code: "OB-GRAPH-004",
+        message: `Source '${node.id}' has no inbound import edges (orphaned / dead code).`,
+        file: node.id,
+      });
+    }
+  }
+
+  for (const node of graph.nodes) {
+    if (node.type !== "source") continue;
+    const hasTest = graph.edges.some((e) => e.type === "test" && e.target === node.id);
+    if (hasTest) continue;
+    if (node.id.endsWith(".stories.tsx")) continue;
+    if (node.id.startsWith("app/")) continue;
+    if (node.id.startsWith("src/bridge/") && /electron|tauri/.test(node.id)) continue;
+    warnings.push({
+      code: "OB-GRAPH-005",
+      message: `Source '${node.id}' has no associated test (test-coverage gap).`,
+      file: node.id,
+    });
+  }
+
   return { errors, warnings };
 }
 
