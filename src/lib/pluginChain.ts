@@ -215,12 +215,6 @@ function scheduleModulated(
   }
 }
 
-/**
- * Modulates a single plugin AudioParam at the live transport clock. The target is
- * derived from the plugin param id via `paramToTarget` and the value range from
- * the plugin spec. When no route is active the param is left at its base value,
- * so this is a drop-in for any param that can map to a mod target.
- */
 function modulateParam(
   param: AudioParam,
   plugin: Plugin,

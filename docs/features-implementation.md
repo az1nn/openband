@@ -498,3 +498,18 @@ function autoMix(tracks: TrackDef[], genre: string): TrackDef[] {
 - **Offline Mixdown Buses & Sends**: Integrated `buildBusRouteGraph` into `renderMixdownWeb` so track output bus assignments, aux sends, and sub-mix gain/mute levels are respected in exported audio
 - **Offline Render Guards**: Added `Math.max(1, ...)` and buffer length guards across `mastering.ts`, `midiSynth.ts`, `pluginChain.ts`, and `universalAudio.ts` to prevent `OfflineAudioContext(len=0)` crashes on empty or 0-duration projects
 - **Plugin Type Validation**: Added explicit `console.warn` logging for unhandled plugin and pedal processor types in `pluginChain`, `mastering`, and `pedalboardDsp` instead of silent pass-through
+
+## Roadmap Features (Latest)
+
+### Genre Templates — Trap, House, Dance Hall
+`src/lib/projectTemplates.ts` now ships three new entries in `GENRES` plus matching `GENRE_PLUGINS` chains and `getDrumPattern` cases:
+- **Trap** (`id:"trap"`): BPM 130–150, 808 Bass + Hi-Hats + Snare + Melodia; distortion + compressor chain; 808 kick on every beat with extended decay, snare on 2 & 4, 16th-note hats with velocity variation.
+- **House** (`id:"house"`): BPM 120–130, Kick Bass + Drums + Synth Bass + Vocal Chops; compressor + reverb chain; four-on-the-floor kick, offbeat open hats, claps on 2 & 4.
+- **Dance Hall** (`id:"dancehall"`): BPM 90–110, Dembow Drum + Bass + Brass + Vocal Sample; reverb + delay chain; dembow 3-3-2 kick/snare feel with offbeat hats.
+All three appear automatically in the New Project genre picker (no fixed allow-list).
+
+### MPC Pad Grid
+`src/components/MpcPadGrid.tsx` — a reusable 4×4 (configurable) pad grid for finger-drumming. Emits `onPadDown(padIndex, velocity, note)` / `onPadUp(padIndex, note)`; velocity resolved from `PointerEvent.pressure` (clamped 1–127) falling back to a `velocity` prop. Optional computer-keyboard mapping (`1-4 q-r a-f z-v`) guarded to web only. Exported from `src/components/index.ts`.
+
+### Real-Time Auto-Tune Plugin
+`src/lib/autotune.ts` provides pure pitch math (`hzToMidi`, `midiToHz`, `quantizeToScale`) that snaps a detected frequency to the nearest note in a key/scale with an optional tolerance. `pluginChain.ts` `buildAutoPitchNode` replaces the prior void `formant` no-op with a real-time `ScriptProcessor` that estimates dominant pitch per block, quantizes it, and resamples toward the target (formant factor when `formant > 0`), passing through when no pitch is detected. Fail-soft to a gain passthrough when `createScriptProcessor` is unavailable.
