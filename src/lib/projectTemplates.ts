@@ -80,7 +80,7 @@ interface PluginPreset {
   params: Record<string, number>;
 }
 
-const GENRE_PLUGINS: Record<string, PluginPreset[]> = {
+export const GENRE_PLUGINS: Record<string, PluginPreset[]> = {
   pop: [
     { type: 'compressor', params: { threshold: -18, ratio: 3, attack: 5, release: 50 } },
     { type: 'reverb', params: { decay: 1.2, mix: 0.2 } },
@@ -121,6 +121,18 @@ const GENRE_PLUGINS: Record<string, PluginPreset[]> = {
   blues: [
     { type: 'distortion', params: { drive: 0.5, tone: 0.6, mix: 0.7 } },
     { type: 'reverb', params: { decay: 1.2, mix: 0.2 } },
+  ],
+  trap: [
+    { type: 'distortion', params: { drive: 0.5, tone: 0.6, mix: 0.6 } },
+    { type: 'compressor', params: { threshold: -18, ratio: 4, attack: 3, release: 40 } },
+  ],
+  house: [
+    { type: 'compressor', params: { threshold: -16, ratio: 4, attack: 2, release: 20 } },
+    { type: 'reverb', params: { decay: 1.5, mix: 0.2 } },
+  ],
+  dancehall: [
+    { type: 'reverb', params: { decay: 2.5, mix: 0.3 } },
+    { type: 'delay', params: { time: 375, feedback: 30, mix: 0.25 } },
   ],
 };
 
@@ -295,6 +307,54 @@ export const GENRES: GenreTemplate[] = [
       { name: "Guitarra Base", color: "bg-cyan-500", trackType: "guitar" },
     ],
   },
+  {
+    id: "trap",
+    name: "Trap",
+    icon: "🥁",
+    defaultBpm: 145,
+    bpmRange: [130, 150],
+    defaultKey: "F#m",
+    description: "808s, hi-hat rolls, snare",
+    subgenres: ["trap_urban"],
+    suggestedTracks: [
+      { name: "808 Bass", color: "bg-orange-500", trackType: "bass" },
+      { name: "Hi-Hats", color: "bg-green-500", trackType: "drums" },
+      { name: "Snare", color: "bg-yellow-500", trackType: "drums" },
+      { name: "Melodia", color: "bg-blue-500", trackType: "vocal" },
+    ],
+  },
+  {
+    id: "house",
+    name: "House",
+    icon: "🏠",
+    defaultBpm: 124,
+    bpmRange: [120, 130],
+    defaultKey: "Am",
+    description: "Four-on-the-floor, synth bass, vocal chops",
+    subgenres: [],
+    suggestedTracks: [
+      { name: "Kick Bass", color: "bg-yellow-500", trackType: "drums" },
+      { name: "Drums", color: "bg-green-500", trackType: "drums" },
+      { name: "Synth Bass", color: "bg-purple-500", trackType: "bass" },
+      { name: "Vocal Chops", color: "bg-blue-500", trackType: "vocal" },
+    ],
+  },
+  {
+    id: "dancehall",
+    name: "Dance Hall",
+    icon: "🎶",
+    defaultBpm: 100,
+    bpmRange: [90, 110],
+    defaultKey: "Gm",
+    description: "Dembow, brass, vocal samples",
+    subgenres: [],
+    suggestedTracks: [
+      { name: "Dembow Drum", color: "bg-green-500", trackType: "drums" },
+      { name: "Bass", color: "bg-purple-500", trackType: "bass" },
+      { name: "Brass", color: "bg-yellow-500", trackType: "keys" },
+      { name: "Vocal Sample", color: "bg-orange-500", trackType: "sample" },
+    ],
+  },
 ];
 
 export function genreSubgenreMap(): Record<string, string[]> {
@@ -437,7 +497,7 @@ function getPercussionPattern(secPerBeat: number, numBars: number = 8): MIDINote
   return notes
 }
 
-function getDrumPattern(genreId: string, secPerBeat: number, numBars: number = 8): MIDINote[] {
+export function getDrumPattern(genreId: string, secPerBeat: number, numBars: number = 8): MIDINote[] {
   const notes: MIDINote[] = []
 
   switch (genreId) {
@@ -611,6 +671,59 @@ function getDrumPattern(genreId: string, secPerBeat: number, numBars: number = 8
           const swing = e % 2 === 0 ? 0 : 0.1
           notes.push({ pitch: 51, start: b + (e * 0.5 + swing) * secPerBeat, duration: secPerBeat * 0.15, velocity: 70 })
         }
+      }
+      break
+    }
+    case 'trap': {
+      for (let bar = 0; bar < numBars; bar++) {
+        const b = bar * 4 * secPerBeat
+        for (let beat = 0; beat < 4; beat++) {
+          notes.push({ pitch: 36, start: b + beat * secPerBeat, duration: secPerBeat * 0.9, velocity: 120 })
+        }
+        notes.push({ pitch: 38, start: b + 1 * secPerBeat, duration: secPerBeat * 0.3, velocity: 110 })
+        notes.push({ pitch: 38, start: b + 3 * secPerBeat, duration: secPerBeat * 0.3, velocity: 110 })
+        for (let e = 0; e < 16; e++) {
+          const vel = e % 4 === 0 ? 85 : 60
+          notes.push({ pitch: 42, start: b + e * 0.25 * secPerBeat, duration: secPerBeat * 0.05, velocity: vel })
+        }
+        for (let r = 0; r < 4; r++) {
+          notes.push({ pitch: 42, start: b + (3.75 + r * 0.0625) * secPerBeat, duration: secPerBeat * 0.03, velocity: 50 })
+        }
+      }
+      break
+    }
+    case 'house': {
+      for (let bar = 0; bar < numBars; bar++) {
+        const b = bar * 4 * secPerBeat
+        for (let beat = 0; beat < 4; beat++) {
+          notes.push({ pitch: 36, start: b + beat * secPerBeat, duration: secPerBeat * 0.35, velocity: 125 })
+        }
+        notes.push({ pitch: 38, start: b + 1 * secPerBeat, duration: secPerBeat * 0.25, velocity: 110 })
+        notes.push({ pitch: 38, start: b + 3 * secPerBeat, duration: secPerBeat * 0.25, velocity: 110 })
+        notes.push({ pitch: 46, start: b + 0.5 * secPerBeat, duration: secPerBeat * 0.12, velocity: 60 })
+        notes.push({ pitch: 46, start: b + 1.5 * secPerBeat, duration: secPerBeat * 0.12, velocity: 60 })
+        notes.push({ pitch: 46, start: b + 2.5 * secPerBeat, duration: secPerBeat * 0.12, velocity: 60 })
+        notes.push({ pitch: 46, start: b + 3.5 * secPerBeat, duration: secPerBeat * 0.12, velocity: 60 })
+        for (let e = 0; e < 8; e++) {
+          notes.push({ pitch: 51, start: b + e * 0.5 * secPerBeat, duration: secPerBeat * 0.12, velocity: e % 2 === 0 ? 60 : 45 })
+        }
+      }
+      break
+    }
+    case 'dancehall': {
+      for (let bar = 0; bar < numBars; bar++) {
+        const b = bar * 4 * secPerBeat
+        notes.push({ pitch: 36, start: b, duration: secPerBeat * 0.4, velocity: 115 })
+        notes.push({ pitch: 36, start: b + 2 * secPerBeat, duration: secPerBeat * 0.4, velocity: 110 })
+        notes.push({ pitch: 38, start: b + 1 * secPerBeat, duration: secPerBeat * 0.25, velocity: 105 })
+        notes.push({ pitch: 38, start: b + 3 * secPerBeat, duration: secPerBeat * 0.25, velocity: 105 })
+        for (let e = 0; e < 8; e++) {
+          if (e % 2 === 1) {
+            notes.push({ pitch: 42, start: b + e * 0.5 * secPerBeat, duration: secPerBeat * 0.06, velocity: 65 })
+          }
+        }
+        notes.push({ pitch: 35, start: b, duration: secPerBeat * 0.3, velocity: 95 })
+        notes.push({ pitch: 35, start: b + 2 * secPerBeat, duration: secPerBeat * 0.3, velocity: 90 })
       }
       break
     }
