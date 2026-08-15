@@ -50,6 +50,7 @@ export interface ProjectCommit {
   stateRef: string;
   assetRefs: string[];
   branchName: string;
+  snapshot?: string;
 }
 
 export interface ProjectHistory {
@@ -240,6 +241,7 @@ export async function commitState(
     stateRef: `state/${stateHash.slice(0, 12)}.json`,
     assetRefs: getAssetRefs(),
     branchName: branch,
+    snapshot: stateJson,
   };
 
   currentHistory.commits.push(commit);
@@ -262,7 +264,8 @@ export function revertToCommit(commitId: string): ProjectState | null {
   if (!currentHistory) return null;
   const commit = currentHistory.commits.find((c) => c.id === commitId);
   if (!commit) return null;
-  return currentProject;
+  if (!commit.snapshot) return currentProject;
+  return deserializeProject(commit.snapshot);
 }
 
 export function serializeProject(): string {

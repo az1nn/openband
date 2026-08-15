@@ -28,6 +28,8 @@ self.onmessage = function(e) {
 }
 
 let workerInstance: Worker | null = null;
+let rafId: number | null = null;
+let intervalId: number | null = null;
 let isRunning = false;
 const listeners = new Set<TickListener>();
 
@@ -36,16 +38,21 @@ function getAudioContext(): AudioContext | null {
   return getSharedAudioContext();
 }
 
-export function startClock(intervalMs: number = 25): void {
-  if (Platform.OS !== "web") return;
+function dispatchTick(time: number, audioTime: number): void {
+  for (const listener of listeners) {
+    try {
+      listener(time, audioTime);
+    } catch (e) {
+      console.warn("Tick listener error:", e);
+    }
+  }
+}
 
+function startWorkerClock(ctx: AudioContext, intervalMs: number): void {
   if (workerInstance) {
     workerInstance.terminate();
     workerInstance = null;
   }
-
-  const ctx = getAudioContext();
-  if (!ctx) return;
 
   try {
     const blob = new Blob([createWorkerBlob()], { type: "application/javascript" });
@@ -55,14 +62,7 @@ export function startClock(intervalMs: number = 25): void {
 
     workerInstance.onmessage = (e: MessageEvent<{ type: string; time: number }>) => {
       if (e.data.type === "tick") {
-        const audioTime = ctx.currentTime;
-        for (const listener of listeners) {
-          try {
-            listener(e.data.time, audioTime);
-          } catch (err) {
-            console.warn("Tick listener error:", err);
-          }
-        }
+        dispatchTick(e.data.time, ctx.currentTime);
       }
     };
 
@@ -71,10 +71,46 @@ export function startClock(intervalMs: number = 25): void {
     };
 
     workerInstance.postMessage({ type: "start", interval: intervalMs });
-    isRunning = true;
   } catch (e) {
     console.warn("Failed to start clock worker:", e);
+    startFallbackClock(intervalMs);
   }
+}
+
+function startFallbackClock(intervalMs: number): void {
+  const startTime = Date.now();
+  const tick = () => {
+    const now = Date.now();
+    dispatchTick(now - startTime, now / 1000);
+  };
+
+  if (Platform.OS === "web" && typeof requestAnimationFrame !== "undefined") {
+    let last = 0;
+    const loop = (t: number) => {
+      if (rafId === null) return;
+      if (last === 0) last = t;
+      if (t - last >= intervalMs) {
+        last = t;
+        tick();
+      }
+      rafId = requestAnimationFrame(loop);
+    };
+    rafId = requestAnimationFrame(loop);
+  } else {
+    intervalId = setInterval(tick, intervalMs) as unknown as number;
+  }
+}
+
+export function startClock(intervalMs: number = 25): void {
+  if (isRunning) return;
+
+  const ctx = getAudioContext();
+  if (ctx && Platform.OS === "web") {
+    startWorkerClock(ctx, intervalMs);
+  } else {
+    startFallbackClock(intervalMs);
+  }
+  isRunning = true;
 }
 
 export function stopClock(): void {
@@ -83,6 +119,14 @@ export function stopClock(): void {
     workerInstance.postMessage({ type: "stop" });
     workerInstance.terminate();
     workerInstance = null;
+  }
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+  if (intervalId !== null) {
+    clearInterval(intervalId);
+    intervalId = null;
   }
   isRunning = false;
 }

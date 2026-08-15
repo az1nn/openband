@@ -1,5 +1,4 @@
 import { Platform } from "react-native";
-import { getSharedAudioContext } from "./universalAudio";
 
 export interface LatencyConfig {
   bufferDurationMs: number;
@@ -13,6 +12,7 @@ export interface MonitorState {
   monitorVolume: number;
   delayMs: number;
   trackDelays: Map<string, number>;
+  error: string | null;
 }
 
 const DEFAULT_LATENCY_CONFIG: LatencyConfig = {
@@ -30,17 +30,25 @@ let monitorState: MonitorState = {
   monitorVolume: 0.7,
   delayMs: 0,
   trackDelays: new Map(),
+  error: null,
 };
+
+const failedMonitorState = (error: string): MonitorState => ({
+  ...monitorState,
+  enabled: false,
+  error,
+});
 
 function createLowLatencyContext(
   _config: LatencyConfig = DEFAULT_LATENCY_CONFIG,
 ): AudioContext | null {
   if (Platform.OS !== "web" || typeof AudioContext === "undefined") return null;
-  const ctx = getSharedAudioContext();
-  if (ctx) return ctx;
-
-  console.warn("Shared AudioContext not available, latency monitoring disabled");
-  return null;
+  try {
+    return new AudioContext();
+  } catch (e) {
+    console.warn("Failed to create dedicated monitor AudioContext:", e);
+    return null;
+  }
 }
 
 export async function requestMicrophoneAccess(): Promise<MediaStream | null> {
@@ -67,15 +75,21 @@ let monitorCtx: AudioContext | null = null;
 export async function startDirectMonitor(
   config: LatencyConfig = DEFAULT_LATENCY_CONFIG,
 ): Promise<MonitorState> {
-  if (Platform.OS !== "web") return monitorState;
+  if (Platform.OS !== "web") return failedMonitorState("monitoring unsupported on this platform");
 
   const stream = await requestMicrophoneAccess();
-  if (!stream) return monitorState;
+  if (!stream) {
+    monitorState = failedMonitorState("microphone access denied or unavailable");
+    return monitorState;
+  }
 
   if (!monitorCtx || monitorCtx.state === "closed") {
     monitorCtx = createLowLatencyContext(config);
   }
-  if (!monitorCtx) return monitorState;
+  if (!monitorCtx) {
+    monitorState = failedMonitorState("audio context unavailable for monitoring");
+    return monitorState;
+  }
 
   if (monitorCtx.state === "suspended") {
     await monitorCtx.resume();
@@ -95,6 +109,7 @@ export async function startDirectMonitor(
     ...monitorState,
     enabled: true,
     delayMs: measuredLatency,
+    error: null,
   };
 
   return monitorState;
@@ -178,6 +193,7 @@ export function disposeLatencySystem(): void {
     monitorVolume: 0.7,
     delayMs: 0,
     trackDelays: new Map(),
+    error: null,
   };
 }
 

@@ -107,6 +107,7 @@ class UniversalAudioSystem {
   private recordedChunks: Float32Array[] = [];
   private mediaRecorder: MediaRecorder | null = null;
   private mediaRecorderBlob: Promise<Blob> | null = null;
+  private isRecording = false;
 
   static getInstance(): UniversalAudioSystem {
     if (!UniversalAudioSystem.instance) {
@@ -144,9 +145,16 @@ class UniversalAudioSystem {
   }
 
   async startRecording(onChunk?: (chunk: Float32Array) => void): Promise<void> {
+    if (this.isRecording) {
+      throw new Error("RECORDING_IN_PROGRESS");
+    }
     if (Platform.OS !== "web" || typeof window === "undefined") return;
+    this.isRecording = true;
     const ctx = await this.ensureContext();
-    if (!ctx) return;
+    if (!ctx) {
+      this.isRecording = false;
+      return;
+    }
 
     let workletLoaded = false;
     try {
@@ -281,6 +289,7 @@ class UniversalAudioSystem {
     this.recordedChunks = [];
     this.mediaRecorder = null;
     this.mediaRecorderBlob = null;
+    this.isRecording = false;
   }
 
   async ensureContext(): Promise<AudioContext | null> {
@@ -356,6 +365,7 @@ class UniversalAudioSystem {
     );
 
     const total = audible.reduce((s, t) => s + t.regions.length, 0);
+    const resolvedBlobUrls = new Set<string>();
     if (total === 0 || duration <= 0) {
       onProgress?.(100);
       const rendered = await ctx.startRendering();
@@ -369,8 +379,9 @@ class UniversalAudioSystem {
       for (const region of track.regions) {
         if (region.url) {
           try {
-            // Recorded takes are stored as asset:// pointers; resolve to a live blob URL before fetch + decode.
-            const resp = await fetch(await resolveAssetUrl(region.url), { credentials: "omit" });
+            const resolvedUrl = await resolveAssetUrl(region.url);
+            resolvedBlobUrls.add(resolvedUrl);
+            const resp = await fetch(resolvedUrl, { credentials: "omit" });
             const ab = await resp.arrayBuffer();
             let buf = await this.decodeAudio(ab);
             if (track.plugins && track.plugins.length > 0) {
@@ -406,6 +417,9 @@ class UniversalAudioSystem {
     onProgress?.(65);
     const rendered = await ctx.startRendering();
     cleanup();
+    for (const u of resolvedBlobUrls) {
+      if (u.startsWith("blob:")) URL.revokeObjectURL(u);
+    }
     onProgress?.(70);
     return this.audioBufferToWavBlob(rendered, 24);
   }
@@ -430,13 +444,13 @@ class UniversalAudioSystem {
     const left = new Float32Array(totalSamples);
     const right = new Float32Array(totalSamples);
     const total = audible.reduce((s, t) => s + t.regions.length, 0);
+    const resolvedBlobUrls = new Set<string>();
     let processed = 0;
 
     for (const track of audible) {
       const trackGain = track.volume / 100;
       const pan = track.pan / 100;
-      const leftGain = trackGain * (pan < 0 ? 1 : 1 - pan);
-      const rightGain = trackGain * (pan > 0 ? 1 : 1 + pan);
+      const { left: leftGain, right: rightGain } = this.computePanGains(trackGain, pan);
 
       for (const region of track.regions) {
         if (!region.url) {
@@ -445,9 +459,16 @@ class UniversalAudioSystem {
           continue;
         }
         try {
-          const resp = await fetch(await resolveAssetUrl(region.url), { credentials: "omit" });
+          const resolvedUrl = await resolveAssetUrl(region.url);
+          resolvedBlobUrls.add(resolvedUrl);
+          const resp = await fetch(resolvedUrl, { credentials: "omit" });
           const ab = await resp.arrayBuffer();
           const decodedChannels = await this.decodeAudioPureJS(ab, sampleRate);
+          if (!decodedChannels) {
+            processed++;
+            onProgress?.(Math.round((processed / total) * 80));
+            continue;
+          }
           const startSample = Math.floor(region.start * sampleRate);
           const channelLength = decodedChannels[0]?.length || 0;
           const regionSamples = Math.min(
@@ -466,14 +487,11 @@ class UniversalAudioSystem {
           } else {
             const ch0 = decodedChannels[0];
             const ch1 = decodedChannels[1] || decodedChannels[0];
-            const srcL_gain = trackGain * (pan > 0 ? 1 - pan : 1);
-            const srcR_gain = trackGain * (pan < 0 ? 1 + pan : 1);
-
             for (let i = 0; i < regionSamples; i++) {
               const srcL = ch0[i] || 0;
               const srcR = ch1[i] || 0;
-              left[startSample + i] += srcL * srcL_gain;
-              right[startSample + i] += srcR * srcR_gain;
+              left[startSample + i] += srcL * leftGain;
+              right[startSample + i] += srcR * rightGain;
             }
           }
         } catch (e) {
@@ -484,21 +502,29 @@ class UniversalAudioSystem {
       }
     }
 
+    for (const u of resolvedBlobUrls) {
+      if (u.startsWith("blob:")) URL.revokeObjectURL(u);
+    }
+
     onProgress?.(85);
     const wavBlob = this.float32ToWavBlob(left, right, sampleRate, 24);
     onProgress?.(100);
     return wavBlob;
   }
 
+  private computePanGains(trackGain: number, pan: number): { left: number; right: number } {
+    const rad = ((Math.max(-1, Math.min(1, pan)) + 1) * Math.PI) / 4;
+    return {
+      left: trackGain * Math.cos(rad),
+      right: trackGain * Math.sin(rad),
+    };
+  }
+
   /** Decode audio without AudioContext (pure JS WAV/MP3 decoder fallback for native). */
-  private async decodeAudioPureJS(arrayBuffer: ArrayBuffer, targetSampleRate: number): Promise<Float32Array[]> {
+  private async decodeAudioPureJS(arrayBuffer: ArrayBuffer, targetSampleRate: number): Promise<Float32Array[] | null> {
     const view = new DataView(arrayBuffer);
     if (arrayBuffer.byteLength < 12) {
-      const fallback = new Float32Array(Math.ceil(targetSampleRate * 0.5));
-      for (let i = 0; i < fallback.length; i++) {
-        fallback[i] = Math.sin((i / targetSampleRate) * 220 * 2 * Math.PI) * 0.05;
-      }
-      return [fallback, fallback];
+      return null;
     }
 
     const header = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3));
@@ -587,20 +613,23 @@ class UniversalAudioSystem {
     }
 
     if (header === "ID3" || (view.getUint8(0) === 0xFF && (view.getUint8(1) & 0xE0) === 0xE0)) {
-      const estimatedSeconds = Math.min(10, Math.max(1, arrayBuffer.byteLength / 16000));
-      const numSamples = Math.ceil(targetSampleRate * estimatedSeconds);
-      const fallback = new Float32Array(numSamples);
-      for (let i = 0; i < numSamples; i++) {
-        fallback[i] = Math.sin((i / targetSampleRate) * 440 * 2 * Math.PI) * 0.1;
-      }
-      return [fallback, fallback];
+      return null;
     }
 
-    const fallback = new Float32Array(Math.ceil(targetSampleRate * 0.5));
-    for (let i = 0; i < fallback.length; i++) {
-      fallback[i] = Math.sin((i / targetSampleRate) * 220 * 2 * Math.PI) * 0.05;
+    return null;
+  }
+
+  private writeWavSample(view: DataView, offset: number, sample: number, bitDepth: number): void {
+    const clamped = Math.max(-1, Math.min(1, sample));
+    if (bitDepth === 24) {
+      const pcm = Math.max(-8388608, Math.min(8388607, Math.round(clamped * 8388607)));
+      view.setInt8(offset, pcm & 0xff);
+      view.setInt8(offset + 1, (pcm >> 8) & 0xff);
+      view.setInt8(offset + 2, (pcm >> 16) & 0xff);
+    } else {
+      const val = clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff;
+      view.setInt16(offset, val, true);
     }
-    return [fallback, fallback];
   }
 
   private float32ToWavBlob(left: Float32Array, right: Float32Array, sampleRate: number, bitDepth: number): Blob {
@@ -635,9 +664,7 @@ class UniversalAudioSystem {
     for (let i = 0; i < length; i++) {
       for (let ch = 0; ch < numChannels; ch++) {
         const sample = ch === 0 ? left[i] : right[i];
-        const clamped = Math.max(-1, Math.min(1, sample));
-        const val = clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff;
-        view.setInt16(headerSize + (i * numChannels + ch) * bytesPerSample, val, true);
+        this.writeWavSample(view, headerSize + (i * numChannels + ch) * bytesPerSample, sample, bitDepth);
       }
     }
 
@@ -677,8 +704,7 @@ class UniversalAudioSystem {
     for (let i = 0; i < length; i++) {
       for (let ch = 0; ch < numChannels; ch++) {
         const sample = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
-        const val = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
-        view.setInt16(headerSize + (i * numChannels + ch) * bytesPerSample, val, true);
+        this.writeWavSample(view, headerSize + (i * numChannels + ch) * bytesPerSample, sample, bitDepth);
       }
     }
 
@@ -693,10 +719,15 @@ class UniversalAudioSystem {
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      try {
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (e) {
+        console.warn("Export download failed:", e);
+        try { URL.revokeObjectURL(url); } catch { /* already revoked */ }
+      }
     } else {
       try {
         await OpenBandNative.writeFile(filename, arrayBuffer);
@@ -738,6 +769,10 @@ class UniversalAudioSystem {
       this._audioCtx.close().catch(() => {});
       this._audioCtx = null;
     }
+    for (const [url] of blobUrlRegistry) {
+      try { URL.revokeObjectURL(url); } catch { /* already revoked */ }
+    }
+    blobUrlRegistry.clear();
     this.isInitialized = false;
   }
 }

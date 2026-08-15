@@ -87,8 +87,29 @@ import {
   type PluginSource,
 } from "./parts";
 import { StudioModals } from "./StudioModals";
-import { useProjectParams, useStudioPersistence, useMixSnapshots, useStudioModals, useStudioTransport, usePluginChains, useMixerState, applyPitchShift, renderTracksCached, type BottomTab } from "./hooks";
+import { useProjectParams, useStudioPersistence, useMixSnapshots, useStudioModals, useStudioTransport, usePluginChains, useMixerState, applyPitchShift, renderTracksCached, type BottomTab, type RenderCache } from "./hooks";
 import { getPlayheadBeat, setPlayheadBeat, subscribePlayhead } from "../../src/lib/playheadStore";
+
+export function deriveRecordingUri(
+  recorder: { uri: string | null },
+  recorderState: { url?: string | null } | null,
+): string {
+  return recorder.uri || recorderState?.url || "";
+}
+
+export class RecordingSingleFlight {
+  private inFlight = false;
+
+  begin(): boolean {
+    if (this.inFlight) return false;
+    this.inFlight = true;
+    return true;
+  }
+
+  end(): void {
+    this.inFlight = false;
+  }
+}
 
 function PlayheadBeatDisplay() {
   const [b, setB] = useState(getPlayheadBeat());
@@ -124,6 +145,12 @@ export default function Studio() {
   const status = useAudioPlayerStatus(player);
   const webAudio = useWebAudioPlayer();
   const isWeb = Platform.OS === "web";
+
+  const renderCacheRef = useRef<RenderCache>({ key: null, url: null });
+
+  useEffect(() => () => {
+    if (renderCacheRef.current.url) revokeTrackedBlob(renderCacheRef.current.url);
+  }, []);
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(audioRecorder);
@@ -421,6 +448,7 @@ export default function Studio() {
     sendCursorRef,
     selectedTrackIdRef,
     durationRef,
+    renderCacheRef,
   });
 
   durationRef.current = duration;
@@ -437,6 +465,10 @@ export default function Studio() {
   engineActiveRef.current = engineActive;
   const tracksRef = useRef(tracks);
   tracksRef.current = tracks;
+  const isRecordingRef = useRef(isRecording);
+  isRecordingRef.current = isRecording;
+  const recordingGuardRef = useRef<RecordingSingleFlight | null>(null);
+  if (!recordingGuardRef.current) recordingGuardRef.current = new RecordingSingleFlight();
 
   const handleTimelinePointerMove = useCallback(
     (e: { nativeEvent?: { locationX?: number; offsetX?: number } }) => {
@@ -483,14 +515,60 @@ export default function Studio() {
   );
 
 
+  const rerenderAfterMuteSolo = useCallback(
+    async (updatedTracks: TrackDef[]) => {
+      if (isWeb && engineActive && engineRef.current) {
+        try {
+          const durSec = getProjectDurationSeconds(updatedTracks, initialBpm);
+          await engineRef.current.syncTracks(updatedTracks, initialBpm, durSec);
+          return;
+        } catch (e) {
+          console.warn("Engine sync failed, falling back to blob re-render:", e);
+        }
+      }
+      try {
+        await audioSystem.ensureContext();
+        if (currentUrlRef.current) revokeTrackedBlob(currentUrlRef.current);
+        let url = await renderTracksCached(updatedTracks, initialBpm, projectMood, buses, masterPlugins, renderCacheRef.current);
+        const totalSemitones =
+          pitchShiftSemitones + (pitchCorrected ? -Math.log2(playbackRate) * 12 : 0);
+        if (url && totalSemitones !== 0) {
+          url = await applyPitchShift(url, totalSemitones, renderCacheRef.current);
+        }
+        if (url) {
+          try {
+            currentUrlRef.current = url;
+            if (isWeb) {
+              await webAudio.replace(url);
+              webAudio.seekTo(0);
+            await webAudio.play();
+          } else {
+            await player.replace(url);
+            player.currentTime = 0;
+            await player.play();
+          }
+          markBlobActive(url);
+        } catch (e) {
+          console.warn("Auto-play after mute/solo failed:", e);
+        }
+      }
+    } catch (e) {
+      console.warn("rerenderAfterMuteSolo render failed:", e);
+    }
+  },
+  [player, webAudio, isWeb, initialBpm, projectMood, buses, pitchCorrected, playbackRate, pitchShiftSemitones, engineActive],
+  );
+
   const toggleRecording = useCallback(async () => {
+    const guard = recordingGuardRef.current!;
+    if (!guard.begin()) return;
     try {
       if (!recordSettings.armed) {
         openModal("recordOptions");
         return;
       }
 
-      if (isRecording) {
+      if (isRecordingRef.current) {
         let uri = "";
         let finalDuration = 1;
 
@@ -506,12 +584,13 @@ export default function Studio() {
           finalDuration = (Date.now() - (webRecordingStart || Date.now())) / 1000;
         } else {
           await audioRecorder.stop();
-          uri = recorderState?.url || audioRecorder.uri || "";
+          uri = deriveRecordingUri(audioRecorder, recorderState);
           finalDuration = (recorderState?.durationMillis ?? 0) / 1000;
         }
 
         if (uri) {
-          const armedTrack = tracks.find((t) => t.isArmed);
+          const tracksNow = tracksRef.current;
+          const armedTrack = tracksNow.find((t) => t.isArmed);
           let updatedTracks: TrackDef[];
           if (armedTrack) {
             const newRegion: TrackRegion = {
@@ -520,7 +599,7 @@ export default function Studio() {
               duration: Math.max(finalDuration, 1),
               url: uri,
             };
-            updatedTracks = tracks.map((t) =>
+            updatedTracks = tracksNow.map((t) =>
               t.id === armedTrack.id
                 ? { ...t, regions: [...t.regions, newRegion] }
                 : t
@@ -529,8 +608,8 @@ export default function Studio() {
             const trackId = `rec-${Date.now()}`;
             const newTrack: TrackDef = {
               id: trackId,
-              name: `Recording ${tracks.length + 1}`,
-              color: TRACK_COLORS[tracks.length % TRACK_COLORS.length],
+              name: `Recording ${tracksNow.length + 1}`,
+              color: TRACK_COLORS[tracksNow.length % TRACK_COLORS.length],
               muted: false,
               solo: false,
               volume: 80,
@@ -548,7 +627,7 @@ export default function Studio() {
               plugins: [],
               automation: {},
             };
-            updatedTracks = [...tracks, newTrack];
+            updatedTracks = [...tracksNow, newTrack];
             setSelectedTrackId(trackId);
           }
           setTracks(updatedTracks);
@@ -598,62 +677,24 @@ export default function Studio() {
         Alert.alert(t("studio.errorTitle", "Error"), t("studio.recordError", "Failed to record audio."));
       }
       setIsRecording(false);
+    } finally {
+      guard.end();
     }
   }, [
     recordSettings.armed,
-    isRecording,
     audioRecorder,
-    recorderState.durationMillis,
-    tracks,
+    recorderState,
     setTracks,
     recordSettings.sampleRate,
     recordSettings.mono,
     recordSettings.quality,
-  ]);
-
-  const rerenderAfterMuteSolo = useCallback(
-    async (updatedTracks: TrackDef[]) => {
-      if (isWeb && engineActive && engineRef.current) {
-        try {
-          const durSec = getProjectDurationSeconds(updatedTracks, initialBpm);
-          await engineRef.current.syncTracks(updatedTracks, initialBpm, durSec);
-          return;
-        } catch (e) {
-          console.warn("Engine sync failed, falling back to blob re-render:", e);
-        }
-      }
-      try {
-        await audioSystem.ensureContext();
-        if (currentUrlRef.current) revokeTrackedBlob(currentUrlRef.current);
-        let url = await renderTracksCached(updatedTracks, initialBpm, projectMood, buses, masterPlugins);
-        const totalSemitones =
-          pitchShiftSemitones + (pitchCorrected ? -Math.log2(playbackRate) * 12 : 0);
-        if (url && totalSemitones !== 0) {
-          url = await applyPitchShift(url, totalSemitones);
-        }
-        if (url) {
-          try {
-            currentUrlRef.current = url;
-            if (isWeb) {
-              await webAudio.replace(url);
-              webAudio.seekTo(0);
-            await webAudio.play();
-          } else {
-            await player.replace(url);
-            player.currentTime = 0;
-            await player.play();
-          }
-          markBlobActive(url);
-        } catch (e) {
-          console.warn("Auto-play after mute/solo failed:", e);
-        }
-      }
-    } catch (e) {
-      console.warn("rerenderAfterMuteSolo render failed:", e);
-    }
-  },
-  [player, webAudio, isWeb, initialBpm, projectMood, buses, pitchCorrected, playbackRate, pitchShiftSemitones, engineActive],
-  );
+    isWeb,
+    rerenderAfterMuteSolo,
+    audioSystem,
+    openModal,
+    initialBpm,
+    webRecordingStart,
+  ]  );
 
   const toggleMute = useCallback(
     (trackId: string) => {
@@ -1739,7 +1780,7 @@ export default function Studio() {
           <Pressable
             onPress={async () => {
               try {
-                const url = await renderTracksCached(tracks, metronome.bpm, projectMood, buses, masterPlugins);
+                const url = await renderTracksCached(tracks, metronome.bpm, projectMood, buses, masterPlugins, renderCacheRef.current);
                 if (url) {
                   setMasteringInput({
                     url,
@@ -2268,11 +2309,11 @@ export default function Studio() {
                           peakLevel={isAudible(track) ? Math.min(1, effVol / 100) : 0}
                         />
                         <Pressable
-                          onLayout={(e) =>
+                          onLayout={(e: any) =>
                             (faderHeightRef.current[track.id] =
                               e.nativeEvent.layout.height)
                           }
-                          onPress={(e) => {
+                          onPress={(e: any) => {
                             const h = faderHeightRef.current[track.id];
                             const y = e.nativeEvent.locationY;
                             if (!h) return;
@@ -2322,11 +2363,11 @@ export default function Studio() {
                           L
                         </Text>
                         <Pressable
-                          onLayout={(e) =>
+                          onLayout={(e: any) =>
                             (panWidthRef.current[track.id] =
                               e.nativeEvent.layout.width)
                           }
-                          onPress={(e) => {
+                          onPress={(e: any) => {
                             const w = panWidthRef.current[track.id];
                             const x = e.nativeEvent.locationX;
                             if (!w) return;

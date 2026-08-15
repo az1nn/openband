@@ -47,8 +47,8 @@ export function RecordOptions({
       stopDirectMonitor();
       setMonitoring(false);
     } else {
-      await startDirectMonitor();
-      setMonitoring(true);
+      const state = await startDirectMonitor();
+      if (state.enabled) setMonitoring(true);
     }
   }, [monitoring]);
 

@@ -198,19 +198,22 @@ function scheduleModulated(
   target: ModTarget | null,
   duration: number,
   modTime: number,
+  scheduleTime: number = 0,
 ): void {
   if (!target || !routeEnabledFor(target)) {
     param.value = base;
     return;
   }
   const steps = Math.max(2, Math.min(256, Math.round(duration * 20)));
+  const anchor = Math.max(0, Math.min(scheduleTime, duration));
   param.setValueAtTime(
     applyModulation(target, base, min, max, { time: modTime }),
-    modTime,
+    anchor,
   );
   for (let i = 1; i <= steps; i++) {
-    const t = modTime + (i / steps) * duration;
-    const v = applyModulation(target, base, min, max, { time: t });
+    const off = (i / steps) * duration;
+    const t = Math.max(0, Math.min(anchor + off, duration));
+    const v = applyModulation(target, base, min, max, { time: modTime + off });
     param.linearRampToValueAtTime(v, t);
   }
 }
@@ -232,6 +235,7 @@ function modulateParam(
     paramToTarget(paramId),
     duration,
     modTime,
+    0,
   );
 }
 

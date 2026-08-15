@@ -2,7 +2,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useRef, useState, useReducer } from "react";
 import type { Dispatch, SetStateAction, MutableRefObject } from "react";
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 import { AudioModule, setAudioModeAsync } from "expo-audio";
 import type { AudioPlayer, AudioStatus } from "expo-audio";
 import type { Mood } from "../../src/lib/projectTemplates";
@@ -46,8 +46,12 @@ import type { useWebAudioPlayer } from "../../src/hooks/useWebAudioPlayer";
 import { pitchShift } from "../../src/lib/timeStretch";
 import { audioBufferToWavBlob } from "../../src/lib/audio";
 
-let cachedRenderKey: string | null = null;
-let cachedRenderUrl: string | null = null;
+export interface RenderCache {
+  key: string | null;
+  url: string | null;
+}
+
+const defaultRenderCache: RenderCache = { key: null, url: null };
 
 /** Caches the expensive offline render so repeated unchanged calls reuse the blob. */
 export function renderTracksCached(
@@ -56,6 +60,7 @@ export function renderTracksCached(
   mood: Mood | undefined,
   buses: BusDef[],
   masterPlugins?: Plugin[],
+  cache: RenderCache = defaultRenderCache,
 ): Promise<string | null> {
   const key = JSON.stringify({
     t: tracks.map((t) => ({
@@ -69,16 +74,16 @@ export function renderTracksCached(
     buses,
     mp: masterPlugins,
   });
-  if (cachedRenderKey === key && cachedRenderUrl) {
-    return Promise.resolve(cachedRenderUrl);
+  if (cache.key === key && cache.url) {
+    return Promise.resolve(cache.url);
   }
   return renderTracksToUrl(tracks, bpm, mood, buses, masterPlugins).then((url) => {
     if (url) {
-      if (cachedRenderUrl && cachedRenderUrl !== url) {
-        revokeTrackedBlob(cachedRenderUrl);
+      if (cache.url && cache.url !== url) {
+        revokeTrackedBlob(cache.url);
       }
-      cachedRenderKey = key;
-      cachedRenderUrl = url;
+      cache.key = key;
+      cache.url = url;
     }
     return url;
   });
@@ -456,9 +461,21 @@ export function useStudioModals(init: { synth: boolean; pianoRoll: boolean }) {
 export async function applyPitchShift(
   sourceUrl: string,
   totalSemitones: number,
+  cache?: RenderCache,
 ): Promise<string> {
+  const target = cache ?? defaultRenderCache;
+  if (target.url === sourceUrl) {
+    target.key = null;
+    target.url = null;
+  }
   const sharedCtx = await audioSystem.ensureContext();
-  if (!sharedCtx) return sourceUrl;
+  if (!sharedCtx) {
+    if (Platform.OS !== "web") return sourceUrl;
+    const placeholder = createTrackedBlob(new Blob());
+    markBlobActive(placeholder);
+    revokeTrackedBlob(sourceUrl);
+    return placeholder;
+  }
   try {
     const resp = await fetch(sourceUrl);
     const arrayBuf = await resp.arrayBuffer();
@@ -474,7 +491,7 @@ export async function applyPitchShift(
     source.connect(offline.destination);
     source.start();
     const rendered = await offline.startRendering();
-    const blob = await audioBufferToWavBlob(rendered);
+    const blob = await audioBufferToWavBlob(rendered, 16);
     const pitchUrl = createTrackedBlob(blob);
     markBlobActive(pitchUrl);
     revokeTrackedBlob(sourceUrl);
@@ -483,6 +500,29 @@ export async function applyPitchShift(
     console.warn("Pitch shift failed, using original:", e);
     return sourceUrl;
   }
+}
+
+export interface TransportLock {
+  run: <T>(fn: () => Promise<T>) => Promise<T>;
+  dispose: () => void;
+}
+
+export function createTransportLock(): TransportLock {
+  let chain: Promise<unknown> = Promise.resolve();
+  let disposed = false;
+  return {
+    run<T>(fn: () => Promise<T>): Promise<T> {
+      const next = chain.then(() => {
+        if (disposed) return undefined as unknown as T;
+        return fn();
+      });
+      chain = next.catch(() => {});
+      return next;
+    },
+    dispose() {
+      disposed = true;
+    },
+  };
 }
 
 /**
@@ -514,6 +554,7 @@ export function useStudioTransport(params: {
   >;
   selectedTrackIdRef: MutableRefObject<string | null>;
   durationRef: MutableRefObject<number>;
+  renderCacheRef: MutableRefObject<RenderCache>;
 }): {
   isPlaying: boolean;
   currentTime: number;
@@ -549,6 +590,7 @@ export function useStudioTransport(params: {
     sendCursorRef,
     selectedTrackIdRef,
     durationRef,
+    renderCacheRef,
   } = params;
 
   const { t } = useTranslation();
@@ -557,6 +599,8 @@ export function useStudioTransport(params: {
   const engineRef = useRef<PlaybackEngine | null>(null);
   const [engineActive, setEngineActive] = useState(false);
   const currentSeekRef = useRef(0);
+  const transportLockRef = useRef(createTransportLock());
+  const disposedRef = useRef(false);
 
   function getEngine(): PlaybackEngine {
     if (!engineRef.current) engineRef.current = new PlaybackEngine();
@@ -586,6 +630,8 @@ export function useStudioTransport(params: {
       disposeAudioContext();
       disposeClockManager();
       if (currentUrlRef.current) revokeTrackedBlob(currentUrlRef.current);
+      transportLockRef.current.dispose();
+      disposedRef.current = true;
     };
   }, []);
 
@@ -651,66 +697,80 @@ export function useStudioTransport(params: {
   }, [metronomeBpm, projectTimeSig, isConnected, isWeb, webAudio, engineActive]);
 
   const togglePlay = useCallback(async () => {
-    if (isWeb) webAudio.unlock();
-    if (isWeb) audioSystem.resumeForGesture();
-    const playing = isWeb
-      ? engineActive
-        ? (engineRef.current?.isPlaying ?? false)
-        : webAudio.isPlaying
-      : player.playing;
-    if (playing) {
-      if (isWeb && engineActive && engineRef.current) {
-        engineRef.current.pause();
-        currentSeekRef.current = engineRef.current.getCurrentTime();
-        setEngineActive(false);
-      } else if (isWeb) {
-        webAudio.pause();
-      } else {
-        player.pause();
-      }
-      return;
-    }
-
     try {
-      const ctx = await audioSystem.ensureContext();
-      if (ctx) {
-        const engine = getEngine();
-        const durSec = getProjectDurationSeconds(tracks, initialBpm);
-        const beatsPerMeasure = projectTimeSig.split("/").map(Number)[0];
-        await engine.prepare(tracks, initialBpm, durSec, beatsPerMeasure);
-        engine.onEnded = () => {
+    await transportLockRef.current.run(async () => {
+      if (isWeb) webAudio.unlock();
+      if (isWeb) audioSystem.resumeForGesture();
+      const playing = isWeb
+        ? engineActive
+          ? (engineRef.current?.isPlaying ?? false)
+          : webAudio.isPlaying
+        : player.playing;
+      if (playing) {
+        if (isWeb && engineActive && engineRef.current) {
+          engineRef.current.pause();
+          currentSeekRef.current = engineRef.current.getCurrentTime();
           setEngineActive(false);
-          currentSeekRef.current = 0;
-        };
-        await engine.play(currentSeekRef.current);
-        setEngineActive(true);
+        } else if (isWeb) {
+          webAudio.pause();
+        } else {
+          player.pause();
+        }
         return;
       }
-    } catch (e) {
-      console.warn("PlaybackEngine unavailable, falling back to blob playback:", e);
-    }
 
-    let url = await renderTracksCached(tracks, initialBpm, projectMood, buses, masterPlugins);
-    const totalSemitones =
-      pitchShiftSemitones + (pitchCorrected ? -Math.log2(playbackRate) * 12 : 0);
-    if (url && totalSemitones !== 0) {
-      url = await applyPitchShift(url, totalSemitones);
-    }
-    if (url) {
       try {
-        currentUrlRef.current = url;
-        if (isWeb) {
-          await webAudio.replace(url);
-          await webAudio.play();
-        } else {
-          await player.replace(url);
-          await player.play();
+        const ctx = await audioSystem.ensureContext();
+        if (ctx) {
+          const engine = getEngine();
+          const durSec = getProjectDurationSeconds(tracks, initialBpm);
+          const beatsPerMeasure = projectTimeSig.split("/").map(Number)[0];
+          await engine.prepare(tracks, initialBpm, durSec, beatsPerMeasure);
+          engine.onEnded = () => {
+            setEngineActive(false);
+            currentSeekRef.current = 0;
+          };
+          await engine.play(currentSeekRef.current);
+          setEngineActive(true);
+          return;
         }
-        markBlobActive(url);
       } catch (e) {
-        console.warn("Playback failed:", e);
-        setAutoplayBlocked(true);
+        console.warn("PlaybackEngine unavailable, falling back to blob playback:", e);
       }
+
+      let url = await renderTracksCached(
+        tracks,
+        initialBpm,
+        projectMood,
+        buses,
+        masterPlugins,
+        renderCacheRef.current,
+      );
+      const totalSemitones =
+        pitchShiftSemitones + (pitchCorrected ? -Math.log2(playbackRate) * 12 : 0);
+      if (url && totalSemitones !== 0) {
+        url = await applyPitchShift(url, totalSemitones, renderCacheRef.current);
+      }
+      if (url) {
+        try {
+          if (disposedRef.current) return;
+          currentUrlRef.current = url;
+          if (isWeb) {
+            await webAudio.replace(url);
+            await webAudio.play();
+          } else {
+            await player.replace(url);
+            await player.play();
+          }
+          markBlobActive(url);
+        } catch (e) {
+          console.warn("Playback failed:", e);
+          setAutoplayBlocked(true);
+        }
+      }
+    });
+    } catch (e) {
+      console.warn("togglePlay failed", e);
     }
   }, [player, webAudio, isWeb, tracks, initialBpm, projectMood, buses, pitchCorrected, playbackRate, pitchShiftSemitones, engineActive, projectTimeSig]);
 
