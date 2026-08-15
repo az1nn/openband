@@ -47,7 +47,7 @@
 
 ### Rock
 - [ ] Genre template: guitar, bass, drums, vocals
-- [ ] Amp sim + cabinet IR presets
+- [ ] Amp sim + cabinet IR presets — `ampSim`/`cabinetSim` plugins + 20 amp/10 cab pedalboard models exist; external IR-file preset caching (IndexedDB/SHA-256) is pending (procedural IR convolution reverb already ships)
 - [ ] Default time signatures: 4/4, 7/8
 
 ### LoFi

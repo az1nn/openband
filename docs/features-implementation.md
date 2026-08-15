@@ -84,6 +84,16 @@ Transport toolbar has rate selector (0.5x–2x) and pitch shift buttons (±12 se
 - Wasm plugin host (`wasmPluginHost.ts`) with JSON-RPC MessagePort protocol, dynamic ParamSlider UI
 - Pedalboard with 16 famous pedal presets + 20 amp + 10 cab models
 
+### Impulse Response (IR) & Convolution
+
+OpenBand uses Web Audio `ConvolverNode` for convolution-based effects. Impulse responses are generated procedurally rather than loaded from heavy asset files:
+
+- **Convolution Reverb**: `pluginChain.ts:104` `makeReverbIR(ctx, decay, preDelay, damping, size, shimmerPitch, modulationAmt, numCh, sampleRate)` synthesizes a stereo exponentially-decaying noise impulse buffer (length derived from `decay`), wired into `ctx.createConvolver()` with wet/dry mixing (`pluginChain.ts:325`).
+- **MIDI Synth Reverb**: `midiSynth.ts:970` builds an equivalent procedural IR buffer for the synth bus convolver.
+- **Amp / Cabinet Simulation**: `ampSim` and `cabinetSim` ship as first-class plugin types (see plugin list above) and as 20 amp + 10 cab models on the pedalboard; cabinet IR presets remain a roadmap item (see ROADMAP.md).
+
+**IR asset caching (design intent)**: Heavy external IR files (`.wav`/`.aiff` cabinet impulses) are intended to be cached in IndexedDB (web) / bridge fs (native) keyed by SHA-256 so they load once and survive reloads — mirroring the `openband_assets` store used for recorded URLs. This caching layer is not yet wired; today's IRs are generated in-memory per render.
+
 ---
 
 ## ✅ Phase 7: Waveform Visualization — COMPLETE
