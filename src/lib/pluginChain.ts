@@ -1,7 +1,8 @@
 import type { Plugin, PluginType } from "./types";
 import { applyMasteringChain } from "./mastering";
-import { pitchShift } from "./timeStretch";
 import { PLUGIN_SPECS, clampParam } from "./types";
+import { quantizeToScale } from "./autotune";
+import { estimatePitch } from "./pitchEstimate";
 import { applyVoiceCleanerGraph } from "./plugins/voiceCleaner";
 import {
   paramToTarget,
@@ -681,39 +682,74 @@ async function applySinglePlugin(
   return ctx.startRendering();
 }
 
+export function buildAutoPitchNode(
+  ctx: BaseAudioContext,
+  params: Record<string, number> = {},
+  channelCount = 1,
+): AudioNode {
+  const key = (params.key ?? 0) as number;
+  const scaleIdx = (params.scale ?? 0) as number;
+  const amount = (params.amount ?? 70) as number;
+  const formant = (params.formant ?? 0) as number;
+  const scaleOptions: ScaleType[] = [
+    "major", "minor", "chromatic", "pentatonicMajor", "pentatonicMinor",
+  ];
+  const scaleType = scaleOptions[scaleIdx] || "major";
+  const intervals = SCALE_INTERVALS[scaleType];
+  const blockSize = 1024;
+  const safeCtx = ctx as any;
+
+  if (!safeCtx || typeof safeCtx.createScriptProcessor !== "function") {
+    if (safeCtx && typeof safeCtx.createGain === "function") {
+      return safeCtx.createGain();
+    }
+    throw new Error("[OpenBand] AutoPitch requires a Web Audio context");
+  }
+
+  const node = safeCtx.createScriptProcessor(blockSize, channelCount, channelCount);
+  const formantFactor = formant > 0 ? 1 + (formant / 100) * 0.4 : 1;
+
+  node.onaudioprocess = (e: any) => {
+    const sr = ctx.sampleRate;
+    for (let c = 0; c < channelCount; c++) {
+      const input = e.inputBuffer.getChannelData(c);
+      const output = e.outputBuffer.getChannelData(c);
+      const freq = estimatePitch(input, sr);
+      if (freq === null || freq < 30 || freq > 3000) {
+        output.set(input);
+        continue;
+      }
+      const targetHz = quantizeToScale(freq, key, intervals);
+      if (targetHz === freq) {
+        output.set(input);
+        continue;
+      }
+      const cents = 1200 * Math.log2(targetHz / freq);
+      const semitones = (cents / 100) * (amount / 100);
+      const ratio = Math.pow(2, semitones / 12);
+      const n = input.length;
+      for (let i = 0; i < n; i++) {
+        const src = i * ratio;
+        const i0 = Math.floor(src);
+        const i1 = Math.min(n - 1, i0 + 1);
+        const frac = src - i0;
+        const s = input[i0] * (1 - frac) + input[i1] * frac;
+        output[i] = formant > 0 ? s * formantFactor : s;
+      }
+    }
+  };
+
+  return node;
+}
+
 async function applyAutoPitch(
   buffer: AudioBuffer,
   _plugin: Plugin,
   _sampleRate: number,
   p: Record<string, number>,
 ): Promise<AudioBuffer> {
-  const amount = (p.amount ?? 70) as number;
-  const key = (p.key ?? 0) as number;
-  const scaleIdx = (p.scale ?? 0) as number;
   const mix = (resolveParam(p, "mix") ?? 80) as number;
-  const speed = (p.speed ?? 30) as number;
-  const formant = (p.formant ?? 0) as number;
   const vibrato = (p.vibrato ?? 15) as number;
-  const scaleMap: ScaleType[] = ["major", "minor", "chromatic"];
-  const scale = scaleMap[scaleIdx] || "major";
-  const data = buffer.getChannelData(0);
-  const frameSize = Math.max(256, Math.floor((speed / 100) * data.length || 256));
-  const frameCount = Math.max(1, Math.floor(data.length / frameSize));
-  let correctionSum = 0;
-  for (let f = 0; f < frameCount; f++) {
-    const start = f * frameSize;
-    let zc = 0;
-    for (let i = start + 1; i < start + frameSize && i < data.length; i++) {
-      if (data[i - 1] <= 0 && data[i] > 0) zc++;
-    }
-    const fDur = frameSize / buffer.sampleRate;
-    const fFreq = fDur > 0 ? zc / fDur : 440;
-    correctionSum += snapToScale(fFreq, key, scale).correction;
-  }
-  const avgCorrection = correctionSum / frameCount;
-  const correctionSemitones = avgCorrection * (amount / 100);
-  const shifted = await pitchShift(buffer, correctionSemitones);
-  void formant;
   const mixRatio = mix / 100;
   const numCh = Math.max(1, buffer.numberOfChannels);
   const len = Math.max(1, buffer.length);
@@ -722,7 +758,8 @@ async function applyAutoPitch(
   const srcDry = ctx2.createBufferSource();
   srcDry.buffer = buffer;
   const srcWet = ctx2.createBufferSource();
-  srcWet.buffer = shifted;
+  srcWet.buffer = buffer;
+  const autoNode = buildAutoPitchNode(ctx2, p, numCh);
   const dryGain = ctx2.createGain();
   dryGain.gain.value = 1 - mixRatio;
   const wetGain = ctx2.createGain();
@@ -738,7 +775,8 @@ async function applyAutoPitch(
   }
   srcDry.connect(dryGain);
   dryGain.connect(ctx2.destination);
-  srcWet.connect(wetGain);
+  srcWet.connect(autoNode);
+  autoNode.connect(wetGain);
   wetGain.connect(ctx2.destination);
   srcDry.start(0);
   srcWet.start(0);
