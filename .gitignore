@@ -19,9 +19,6 @@ electron/out/
 electron/node_modules/
 electron/.env
 ios/
-.opencode/
-!.opencode/agents/
-!.opencode/agents/*.md
 
 # local sqlite artifacts
 data/*.sqlite
