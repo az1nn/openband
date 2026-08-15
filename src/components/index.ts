@@ -75,3 +75,4 @@ export { ErrorBoundary } from "./ErrorBoundary";
 export { MobileDrawer } from "./MobileDrawer";
 export { ToastProvider, useToast } from "./Toast";
 export { GenerateCoverModal, sanitizeCoverFilename } from "./GenerateCoverModal";
+export { MpcPadGrid } from "./MpcPadGrid";
