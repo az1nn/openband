@@ -1,4 +1,4 @@
-import { Pressable, Text, View } from "react-native";
+import { Platform, Pressable, Text, View } from "react-native";
 import { useEffect, useRef, useState } from "react";
 
 interface MpcPadGridProps {
@@ -38,7 +38,7 @@ export function MpcPadGrid({
   velocityRef.current = velocity;
 
   useEffect(() => {
-    if (!enableKeyboard) return;
+    if (!enableKeyboard || Platform.OS !== "web" || typeof window === "undefined") return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.repeat) return;
       const idx = KEY_MAP.indexOf(e.key.toLowerCase());
@@ -79,7 +79,7 @@ export function MpcPadGrid({
   return (
     <View
       testID={testID}
-      style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
+      style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` } as any}
       className="grid gap-2 w-full"
     >
       {indices.map((i) => {
@@ -90,7 +90,7 @@ export function MpcPadGrid({
             key={i}
             testID={`pad-${i}`}
             aria-pressed={isActive}
-            onPointerDown={(e: any) => handleDown(i, e.pressure)}
+            onPointerDown={(e: { pressure?: number }) => handleDown(i, e.pressure)}
             onPointerUp={() => handleUp(i)}
             onPointerCancel={() => handleUp(i)}
             className={`aspect-square rounded-xl flex items-center justify-center ${colorClass} ${

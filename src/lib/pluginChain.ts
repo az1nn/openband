@@ -730,7 +730,7 @@ export function buildAutoPitchNode(
       const n = input.length;
       for (let i = 0; i < n; i++) {
         const src = i * ratio;
-        const i0 = Math.floor(src);
+        const i0 = Math.max(0, Math.min(n - 1, Math.floor(src)));
         const i1 = Math.min(n - 1, i0 + 1);
         const frac = src - i0;
         const s = input[i0] * (1 - frac) + input[i1] * frac;
