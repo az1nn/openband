@@ -40,8 +40,8 @@ import {
 import { restoreCrashState } from "../src/lib/crashRecovery";
 
 describe("project-templates", () => {
-  it("has exactly 10 genres each with suggested tracks", () => {
-    expect(GENRES).toHaveLength(10);
+  it("has exactly 13 genres each with suggested tracks", () => {
+    expect(GENRES).toHaveLength(13);
     for (const g of GENRES) {
       expect(g.suggestedTracks.length).toBeGreaterThan(0);
     }

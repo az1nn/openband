@@ -38,12 +38,12 @@ export const tauriBridge: NativeBridge = {
 
   async getDocumentsPath(): Promise<string> {
     warnStub("getDocumentsPath");
-    return "/mock/documents";
+    return "";
   },
 
   async getAppDataPath(): Promise<string> {
     warnStub("getAppDataPath");
-    return "/mock/appdata";
+    return "";
   },
 
   async listProjects(): Promise<ProjectMeta[]> {

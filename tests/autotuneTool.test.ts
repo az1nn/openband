@@ -8,7 +8,6 @@ interface AutotuneParams {
 }
 
 function quantizePitch(midiNote: number, _key: string, _scale: string): number {
-  if (retuneSpeedCheck(0)) return midiNote;
   return Math.round(midiNote);
 }
 

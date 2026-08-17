@@ -427,8 +427,8 @@ describe("midiSynth.ts", () => {
 });
 
 describe("projectTemplates.ts", () => {
-  it("GENRES has exactly 10 genres", () => {
-    expect(GENRES).toHaveLength(10);
+  it("GENRES has exactly 13 genres", () => {
+    expect(GENRES).toHaveLength(13);
   });
 
   it("GENRES includes expected genres", () => {

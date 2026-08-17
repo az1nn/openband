@@ -29,7 +29,7 @@ describe("Advanced Project Creation Tools Tests", () => {
   });
 
   it("handles various musical keys correctly", () => {
-    const keys = ["C", "Cm", "F#", "Bb", "Am"];
+    const keys = ["C", "Cm", "F#", "A#", "Am"];
     for (const key of keys) {
       const res = setupProjectStarter({
         name: `Key ${key}`,
