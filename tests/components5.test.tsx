@@ -485,7 +485,7 @@ describe("AutomationLane deep", () => {
     const { container } = render(<AutomationLane points={points} onChange={fn} duration={8} visible={true} showCurveToggle={true} />);
     const el = container.firstChild! as HTMLElement;
     const pressables = el.querySelectorAll('[tabindex="0"]');
-    for (const p of pressables) {
+    for (const p of Array.from(pressables)) {
       fireEvent.click(p);
     }
     expect(fn).toHaveBeenCalled();

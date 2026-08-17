@@ -1,4 +1,4 @@
-import { Platform, Pressable, Text, View } from "react-native";
+import { Platform, Pressable, Text, View, type PointerEvent } from "react-native";
 import { useEffect, useRef, useState } from "react";
 
 interface MpcPadGridProps {
@@ -90,7 +90,7 @@ export function MpcPadGrid({
             key={i}
             testID={`pad-${i}`}
             aria-pressed={isActive}
-            onPointerDown={(e: { pressure?: number }) => handleDown(i, e.pressure)}
+            onPointerDown={(e: PointerEvent) => handleDown(i, e.nativeEvent.pressure)}
             onPointerUp={() => handleUp(i)}
             onPointerCancel={() => handleUp(i)}
             className={`aspect-square rounded-xl flex items-center justify-center ${colorClass} ${

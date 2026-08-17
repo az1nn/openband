@@ -56,25 +56,18 @@ describe("timeStretchVocoded loads and exposes callables", () => {
     expect(typeof timeStretch.createTimeStretchNode).toBe("function");
   });
 
-  it("main export is callable on a tiny buffer when AudioBuffer is available", () => {
+  it("main export is callable on a tiny buffer when AudioBuffer is available", async () => {
     if (typeof (globalThis as any).AudioBuffer === "undefined") {
       expect(true).toBe(true);
       return;
     }
-    let threw = false;
-    try {
-      const sr = 8000;
-      const len = 1024;
-      const buf = new (globalThis as any).AudioBuffer({ numberOfChannels: 1, length: len, sampleRate: sr });
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) data[i] = Math.sin(i / 10);
-      const out = timeStretch.wsolaTimeStretch(buf, 1.0);
-      expect(out.length).toBeGreaterThan(0);
-    } catch (e) {
-      threw = true;
-      expect(e).toBeDefined();
-    }
-    expect(true).toBe(true);
+    const sr = 8000;
+    const len = 1024;
+    const buf = new (globalThis as any).AudioBuffer({ numberOfChannels: 1, length: len, sampleRate: sr });
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.sin(i / 10);
+    const out = await timeStretch.wsolaTimeStretch(buf, 1.0);
+    expect(out.length).toBeGreaterThan(0);
   });
 });
 

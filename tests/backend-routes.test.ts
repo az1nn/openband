@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import jwt from "jsonwebtoken";
-import express from "express";
+import express, { Application, RequestHandler } from "express";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { requireAuth } from "../backend/src/middleware/authMiddleware";
@@ -75,15 +75,15 @@ describe("Protected route handlers respond when auth is satisfied", () => {
   });
 
   async function withServer(handler: (base: string) => Promise<void>) {
-    const app = express();
+    const app: Application = express();
     app.use(express.json());
     const token = jwt.sign({ userId: "u1", tier: "free" }, "test-secret-s2");
     app.use((req: any, _res, next) => {
       req.userTokenData = jwt.verify(token, "test-secret-s2");
       next();
     });
-    app.use("/api/extract", extractRoutes);
-    app.use("/api/master", masterRoutes);
+    app.use("/api/extract", extractRoutes as unknown as RequestHandler);
+    app.use("/api/master", masterRoutes as unknown as RequestHandler);
     const server = createServer(app);
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
