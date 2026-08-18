@@ -1,5 +1,9 @@
 # ChatGPT Handoff — OpenBand Architecture Planning
 
+> **Maintaining this doc:** this file is live. Before each planning session, refresh it
+> using `docs/chatgpt-handoff-HOWTO.md` (commit to the `docs/chatgpt-handoff` branch — PR #13).
+> Stale counts are the #1 cause of obsolete ChatGPT planning.
+
 > **Feed this to ChatGPT.** Copy this file's contents into a ChatGPT project session and ask it to plan/architect the next development phase. It contains everything ChatGPT needs: product scope, the 5-domain architecture, key libraries with exact file paths, the desktop-bridge and 3D scene patterns, the verification & convention harness, the round-2 hardening already completed, and a prioritized next-steps backlog with entry-point files. Do **not** ask ChatGPT to edit code until it has read `AGENTS.md` (linked in §11).
 
 ---

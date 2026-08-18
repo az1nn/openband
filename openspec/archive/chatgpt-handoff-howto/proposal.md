@@ -1,3 +1,5 @@
+## Status: SHIPPED
+
 # Proposal: Instructions Doc to Keep the ChatGPT Handoff Live
 
 ## Context
