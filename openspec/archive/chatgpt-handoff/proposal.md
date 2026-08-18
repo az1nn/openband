@@ -1,3 +1,4 @@
+## Status: SHIPPED
 # Proposal: ChatGPT Handoff Document for OpenBand Architecture Planning
 
 ## Context
