@@ -37,8 +37,8 @@ OpenBand is organized around five domain-boundary agent specializations (see `AG
 **Frontend boundaries:**
 - `src/bridge/` — All native desktop I/O goes through `OpenBandNative` from `@bridge`. Never `require('fs')`, `ipcRenderer`, or Tauri APIs in `src/` frontend.
 - `app/` — Expo Router screens. The Studio (`app/studio/[id].tsx`) is the DAW; `app/virtual-studio.tsx` is the 3D hub.
-- `src/components/` — 79-component design system (`src/components/index.ts`).
-- `src/lib/` — 77 modules (audio, midi, dsp, state, sync, etc.).
+- `src/components/` — 71-component design system (`src/components/index.ts`).
+- `src/lib/` — 93 modules (audio, midi, dsp, state, sync, etc.).
 - `src/hooks/` — thin wrappers (`useUniversalAudio`, `useKeyboardShortcuts`, etc.).
 
 ---
@@ -251,7 +251,7 @@ These are **already implemented** — verify they work, don't re-implement:
 - **Don't modify config files** (`tailwind.config.js`, `metro.config.js`, `babel.config.js`, `tsconfig.json`) unless explicitly required.
 - **Update `docs/features-implementation.md`** when modifying visual layouts, themes, stylesheets, or core components.
 - **Path aliases:** `@/` → root, `@bridge` → `src/bridge` (defined in `tsconfig.json`).
-- **Design system:** Import from `src/components/`. 79 components available (see AGENTS.md §"Design System Reference" for full props table). CSS utility classes in `global.css`: `.card`, `.card-elevated`, `.btn-secondary`, `.input-field`, `.input-field-focused`, `.badge`, `.label`.
+- **Design system:** Import from `src/components/`. 71 components available (see AGENTS.md §"Design System Reference" for full props table). CSS utility classes in `global.css`: `.card`, `.card-elevated`, `.btn-secondary`, `.input-field`, `.input-field-focused`, `.badge`, `.label`.
 - **3D scenes:** Read `docs/3d-scene-guidelines.md` before editing any Three.js screen.
 
 ---
@@ -275,7 +275,7 @@ If a session goes bad: `git stash` (keep wanted work) → `git reset --hard HEAD
 
 | Doc | Purpose |
 |---|---|
-| `AGENTS.md` | **Mandatory first read.** Full SDD loop, design-system reference (79 components with props), desktop bridge, 3D/Three.js rules, audio system, verification matrix, WSL execution notes, architecture quick-reference tree, domain-driven agent architecture. (~535 lines) |
+| `AGENTS.md` | **Mandatory first read.** Full SDD loop, design-system reference (71 components with props), desktop bridge, 3D/Three.js rules, audio system, verification matrix, WSL execution notes, architecture quick-reference tree, domain-driven agent architecture. (~535 lines) |
 | `docs/HY3-HANDOFF.md` | Previous handoff document (~260 lines) — complementary but drifts; this file supersedes it for ChatGPT planning. |
 | `docs/roadmap.md` | Feature inventory (41 shipped, Phase 1 polish items, Phase 2–3 expansion, what NOT to work on). |
 | `docs/features-implementation.md` | Build plan with phase-by-phase task breakdown, playback improvements, startup perf, studio audio/DSP correctness, hardening notes. (~527 lines) |
@@ -286,6 +286,6 @@ If a session goes bad: `git stash` (keep wanted work) → `git reset --hard HEAD
 | `openspec/changes/` | In-flight specs (read `proposal.md` + `tasks.md` for active work). |
 | `openspec/archive/` | Shipped specs (reference for conventions, conventions adopted, what's already hardened). |
 | `CLAUDE.md` | Alias for `AGENTS.md`. |
-| `stories/` | Storybook for all 79 components — run: `npx storybook dev -p 6006`. |
+| `stories/` | Storybook for all 71 components — run: `npx storybook dev -p 6006`. |
 | `backend/src/index.ts` + `backend/src/routes/*` + `backend/src/services/*` | Express backend — stem extraction, mastering bounce, SSE presence/collab, MIDI generation. |
 | `electron/main.js` + `electron/preload.js` | Electron main process — IPC handlers, context bridge. |
