@@ -18,7 +18,7 @@ Built with **Expo Router**, **TypeScript**, **NativeWind v4 (Tailwind CSS v3)**,
 | Desktop          | [Electron 35](https://www.electronjs.org/) with swappable bridge (`src/bridge/`)                       |
 | 3D / WebGL       | [Three.js](https://threejs.org/) — Virtual Studio (Habbo-style)                                        |
 | Backend          | [Express](https://expressjs.com/) (`backend/src/index.ts`, port 3001) — stems, mastering, auth; optional `openband-backend/` Docker microservices (Redis) |
-| Testing          | [Vitest](https://vitest.dev/) (1479 tests) + [Playwright](https://playwright.dev/) (E2E) + legacy `node:test` (24 tests) |
+| Testing          | [Vitest](https://vitest.dev/) (1650 tests) + optional [Playwright](https://playwright.dev/) (E2E) + legacy `node:test` (24 tests) |
 
 ## Getting Started
 
@@ -377,8 +377,12 @@ npm run build              # Production web export (output: dist/)
 npm run desktop            # Build + launch Electron desktop app
 npm run desktop:dev        # Hot-reload dev (Expo + Electron concurrently)
 npm run test:ui:screenshot # Run Vitest UI, take a dashboard screenshot, and exit
-npx tsc --noEmit           # TypeScript check
-npx vitest run             # Run all component + lib tests (single run)
+npx tsc --noEmit           # TypeScript check (frontend)
+cd backend && npx tsc --noEmit  # TypeScript check (backend)
+npx vitest run             # Run all component + lib tests (single run, 1650 tests)
+npm run test:legacy        # Legacy node:test suite (24 tests)
+npm run graph:ci           # Architecture-graph CI validation gate
+npm run build              # Production web export (output: dist/)
 npx vitest --ui            # Open interactive test dashboard in browser (real-time)
 npx vitest                 # Run test suite in real-time watch mode
 cd backend && npm run dev  # Backend dev server (port 3001)
@@ -389,6 +393,23 @@ cd electron && npm run build:linux     # Package Linux (AppImage + deb)
 cd electron && npm run build:mac       # Package macOS (DMG)
 cd electron && npm run build:win       # Package Windows (NSIS)
 ```
+
+## Verification
+
+The full verification matrix must pass before any change is merged. All commands must run **inside WSL** (Vitest cannot run from the Windows UNC mount):
+
+```bash
+wsl -e bash -lc "cd /home/az1nn/openband && <cmd>"
+```
+
+1. `npx tsc --noEmit` — frontend TypeScript check (zero errors)
+2. `cd backend && npx tsc --noEmit` — backend TypeScript check (zero errors)
+3. `npx vitest run` — Vitest component + lib tests (1650 tests, all green)
+4. `npm run test:legacy` — legacy `node:test` suite (24 tests, all green)
+5. `npm run graph:ci` — architecture-graph CI gate (fails on errors)
+6. `npm run build` — production web build (must succeed)
+
+> **Note:** Playwright/E2E is optional and is not part of the required verification matrix above — no E2E run command is provided here.
 
 ### Electron Desktop
 

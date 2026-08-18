@@ -327,7 +327,8 @@ Operational facts learned during the hardening work (keep these in mind before e
 - **TypeScript types:** `react-native@0.86` ships real type definitions. Do NOT add `src/react-native.d.ts` — it shadows the real types and triggers a ~52-error cascade. For asset module declarations (png/mp3/wasm/etc.) use `src/declarations.d.ts`.
 - **Build / `Expo.fx`:** The published `expo@57.0.4` package omits `Expo.fx`; `metro.config.js` keeps a defensive stub for it. The earlier build break was caused by a corrupted `node_modules/expo` extraction (missing `.tsx` src files), fixed by reinstalling `expo`.
 - **Verification matrix order (Phase 3):** `npx tsc --noEmit` → `cd backend && npx tsc --noEmit` → `npx vitest run` → `npm run test:legacy` → `npm run graph:ci` → `npm run build`.
-- **Full-repo code review:** Partition into 5 domains (Audio/DSP, State/Collab, UI/3D, Backend, 3D+lib) and review in parallel subagents; fix HIGH then MED, then LOW (empty catches, dead vars) in a follow-up pass.
+- **Full-repo code review:** Partition into 5 domains (Audio/DSP, State/Collab, UI/3D, Backend, 3+lib) and review in parallel subagents; fix HIGH then MED, then LOW (empty catches, dead vars) in a follow-up pass.
+- **Round-2 regression suites:** Round-2 regression suites live at `tests/regression-round2-{audio,state,ui,lib,backend}.test.ts` (all green). `tests/futureRoadmap.test.ts` was converted from node:test to vitest; `tests/backend-routes.test.ts` is a node:test script and is excluded from vitest (`vitest.config.ts`).
 
 ---
 
@@ -443,7 +444,7 @@ tests/
   specs-group1..specs-group6  — spec/canonical test groups
   plugins/ (dsp, presetSerial)  — plugin sub-suite
   presets.test.ts, types.test.ts  — Legacy node:test suite (supporting ok-reporter.ts, setup.ts)
-   Full suite totals: 1479 vitest tests + 24 legacy node:test tests across 83 test files (81 at tests/ root + 2 in tests/plugins/)
+   Full suite totals: 1650 vitest tests + 24 legacy node:test tests across 91 test files
 
 stories/                      — Storybook for all 79 components (50 stories)
   *.stories.tsx       — Run: `npx storybook dev -p 6006`

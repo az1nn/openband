@@ -1,3 +1,5 @@
+> **Superseded by [docs/roadmap.md](docs/roadmap.md) — most checklist items below have shipped.**
+
 # OpenBand Roadmap
 
 ## ▶ PLAY
