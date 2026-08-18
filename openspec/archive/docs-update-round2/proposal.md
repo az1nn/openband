@@ -1,3 +1,5 @@
+## Status: SHIPPED
+
 # Proposal: Documentation Sync After Round-2 Hardening
 
 ## Context
