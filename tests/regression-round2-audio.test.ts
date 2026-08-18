@@ -8,6 +8,7 @@ import {
 import {
   detectSampleRate,
   createUnifiedInstrumentEngine,
+  setSampleRate,
   INSTRUMENT_PRESETS,
 } from "../src/lib/wasmInstrumentEngine";
 
@@ -24,21 +25,23 @@ describe("audioTelemetry peakCpu is the true max across the window", () => {
       recordCpuLoad(10);
       vi.advanceTimersByTime(50); // bucket max=10, true peak=10
 
-      recordCpuLoad(90);
-      vi.advanceTimersByTime(50); // bucket max=90, true peak=90
+      recordCpuLoad(95);
+      vi.advanceTimersByTime(50); // bucket max=95, true peak=95
 
       recordCpuLoad(30);
-      vi.advanceTimersByTime(50); // bucket max=30, true peak stays 90 (NOT reset to 30)
+      vi.advanceTimersByTime(50); // bucket max=30, true peak stays 95 (NOT reset to 30)
+
+      recordCpuLoad(20);
+      vi.advanceTimersByTime(50); // bucket max=20, true peak still 95
 
       const m = getAverageMetrics();
       expect(m).not.toBeNull();
       // The fix keeps a separate peakCpuTrue accumulator that only increases,
-      // so the dip in the trailing bucket does not lower the reported peak.
-      expect(m!.peakCpu).toBe(90);
-
-      stopTelemetry();
+      // so the dip in the trailing buckets does not lower the reported peak.
+      expect(m!.peakCpu).toBe(95);
     } finally {
       vi.useRealTimers();
+      stopTelemetry();
     }
   });
 });
@@ -94,13 +97,15 @@ describe("latencyMonitor startDirectMonitor re-entrant guard", () => {
   });
 
   afterEach(async () => {
-    const { stopDirectMonitor } = await import("../src/lib/latencyMonitor");
-    stopDirectMonitor();
+    const { disposeLatencySystem } = await import("../src/lib/latencyMonitor");
+    disposeLatencySystem();
     vi.unstubAllGlobals();
   });
 
   it("calling startDirectMonitor twice opens only one mic stream (second returns early via monitorState.enabled)", async () => {
-    const { startDirectMonitor, getMonitorState } = await import("../src/lib/latencyMonitor");
+    const { startDirectMonitor, getMonitorState, stopDirectMonitor } = await import(
+      "../src/lib/latencyMonitor"
+    );
 
     const state1 = await startDirectMonitor();
     const state2 = await startDirectMonitor();
@@ -112,7 +117,6 @@ describe("latencyMonitor startDirectMonitor re-entrant guard", () => {
     expect(getUserMediaMock).toHaveBeenCalledTimes(1);
 
     // Stopping must flip the enabled flag back off.
-    const { stopDirectMonitor } = await import("../src/lib/latencyMonitor");
     stopDirectMonitor();
     expect(getMonitorState().enabled).toBe(false);
   });
@@ -137,6 +141,7 @@ describe("wasmInstrumentEngine sample rate", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    setSampleRate(44100);
   });
 
   it("detectSampleRate returns a positive number from the probed AudioContext", () => {
@@ -148,10 +153,10 @@ describe("wasmInstrumentEngine sample rate", () => {
   });
 
   it("createUnifiedInstrumentEngine actually uses the passed sample rate", () => {
-    // Module-level engineSampleRate is shared; render A at 48000 first, then
-    // create B at 44100 and render it. Because the DSP math (envelope timing,
-    // filter coefficient) is driven by the active sample rate, the two rendered
-    // buffers must differ — proving the passed rate is propagated (not ignored).
+    // The DSP math (envelope timing, oscillator phase increment) is driven by
+    // the active sample rate, so rendering the same note at 48000 vs 44100 must
+    // produce different buffers — proving the passed rate is propagated, not
+    // ignored.
     const a = createUnifiedInstrumentEngine(INSTRUMENT_PRESETS[0], 48000);
     a.noteOn(69, 100);
     const outA = new Float32Array(2000);
