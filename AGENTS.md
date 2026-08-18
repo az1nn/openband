@@ -2,7 +2,7 @@
 
 > This project uses the **OpenSpec Specification-Driven Development (SDD)** loop as its default development harness. Every change goes through three phases: **Propose** (define specs and tasks in `openspec/changes/`), **Apply** (implement exactly what is specified in `tasks.md`), and **Archive** (record and move completed specs to `openspec/archive/`).
 
-**ALWAYS commit and push after completing changes.** Do not wait to be asked.
+**PR-First Governance:** Commit changes on feature branches (`agent/<issue>-<slug>`), push branch, open a Draft PR via `gh pr create`, and await human review and merge. Never push directly to `master`.
 
 ### Subagent-First Rule (Context Preservation)
 

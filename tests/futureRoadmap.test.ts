@@ -1,14 +1,13 @@
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { addJob, getJobStatus } from "../backend/src/services/queue.ts";
 
 describe("Stem Separation Queue & Progress", () => {
   it("tracks job status and progress percentage correctly", async () => {
     const jobId = addJob("test_extraction", { source: "test.wav" });
     const initialStatus = getJobStatus(jobId);
-    assert.notEqual(initialStatus, null);
-    assert.ok(["queued", "processing", "pending"].includes(initialStatus!.status));
-    assert.ok(initialStatus!.progress >= 0 && initialStatus!.progress <= 100);
+    expect(initialStatus).not.toBeNull();
+    expect(["queued", "processing", "pending"].includes(initialStatus!.status)).toBe(true);
+    expect(initialStatus!.progress >= 0 && initialStatus!.progress <= 100).toBe(true);
 
     let completed = false;
     let finalStatus: any = null;
@@ -22,10 +21,10 @@ describe("Stem Separation Queue & Progress", () => {
       await new Promise((r) => setTimeout(r, 100));
     }
 
-    assert.equal(completed, true);
-    assert.equal(finalStatus.status, "completed");
-    assert.equal(finalStatus.progress, 100);
-    assert.ok(finalStatus.result);
+    expect(completed).toBe(true);
+    expect(finalStatus.status).toBe("completed");
+    expect(finalStatus.progress).toBe(100);
+    expect(finalStatus.result).toBeTruthy();
   });
 });
 
@@ -35,8 +34,8 @@ describe("3D Virtual Studio Visibility Pause Logic", () => {
     const handleVisibilityChange = (doc: any) => {
       return doc.hidden ? "paused" : "resumed";
     };
-    assert.equal(handleVisibilityChange(mockDocument), "paused");
+    expect(handleVisibilityChange(mockDocument)).toBe("paused");
     mockDocument.hidden = false;
-    assert.equal(handleVisibilityChange(mockDocument), "resumed");
+    expect(handleVisibilityChange(mockDocument)).toBe("resumed");
   });
 });

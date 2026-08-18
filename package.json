@@ -65,7 +65,7 @@
   "scripts": {
     "lint": "npx tsc --noEmit",
     "test": "npx vitest run",
-    "test:legacy": "npx tsx --test tests/presets.test.ts tests/types.test.ts tests/futureRoadmap.test.ts",
+    "test:legacy": "npx tsx --test tests/presets.test.ts tests/types.test.ts",
     "test:ui": "npx vitest --ui",
     "test:ui:screenshot": "node scripts/screenshot-vitest-ui.mjs",
     "build": "expo export --platform web --clear && node scripts/post-export.js",
