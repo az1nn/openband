@@ -125,8 +125,8 @@ function notifyJobListeners(job: Job) {
     for (const cb of set) {
       try {
         cb(job);
-      } catch {
-        // ignore listener error
+      } catch (e) {
+        console.error("queue listener error", e);
       }
     }
   }

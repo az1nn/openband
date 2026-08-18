@@ -64,7 +64,8 @@ function broadcastToProject(
       if (!ok) {
         clients.delete(id);
       }
-    } catch {
+    } catch (e) {
+      console.error("presence cursor failed", e);
       clients.delete(id);
     }
   }
@@ -178,7 +179,8 @@ router.get(
         const p = getUserPresence(projectId);
         const d = p.get(userId);
         if (d) d.lastSeen = Date.now();
-      } catch {
+      } catch (e) {
+        console.error("presence cleanup failed", e);
         clearInterval(keepAlive);
       }
     }, 15000);

@@ -1,3 +1,7 @@
+## Status: SHIPPED
+
+LOW-severity findings (L1–L3) implemented and verified green (tsc, vitest, legacy, build).
+
 # Proposal: Code Review LOW-Severity Cleanup
 
 > **Status: PENDING IMPLEMENTATION.** Not yet shipped. This change covers the

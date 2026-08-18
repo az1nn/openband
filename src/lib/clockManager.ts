@@ -53,6 +53,10 @@ function startWorkerClock(ctx: AudioContext, intervalMs: number): void {
   if (workerInstance) {
     workerInstance.terminate();
     workerInstance = null;
+    if (workerBlobUrl) {
+      URL.revokeObjectURL(workerBlobUrl);
+      workerBlobUrl = null;
+    }
   }
 
   try {

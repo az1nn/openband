@@ -113,7 +113,6 @@ export function usePresence({
   const connectingRef = useRef(false);
   const backoffMsRef = useRef(1000);
   const maxBackoffMs = 30000;
-  const reconnectOnLineRef = useRef<(() => void) | null>(null);
 
   const getStore = useCallback(() => {
     const key = projectId ?? "global";
@@ -227,12 +226,10 @@ export function usePresence({
         connect();
       }
     };
-    reconnectOnLineRef.current = handleOnline;
     window.addEventListener("online", handleOnline);
 
     return () => {
       window.removeEventListener("online", handleOnline);
-      reconnectOnLineRef.current = null;
       if (cleanupFnRef.current) {
         cleanupFnRef.current();
         cleanupFnRef.current = null;

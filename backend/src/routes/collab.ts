@@ -66,7 +66,8 @@ function broadcastToProject(
       if (!ok) {
         clients.delete(id);
       }
-    } catch {
+    } catch (e) {
+      console.error("collab broadcast failed", e);
       clients.delete(id);
     }
   }
@@ -182,7 +183,8 @@ router.get(
         res.write(": keepalive\n\n");
         const map = userLastSeen.get(projectId);
         if (map) map.set(userId, Date.now());
-      } catch {
+      } catch (e) {
+        console.error("collab cleanup failed", e);
         clearInterval(keepAlive);
       }
     }, 15000);
