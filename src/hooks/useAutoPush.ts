@@ -20,11 +20,10 @@ export function useAutoPush(
 
   useEffect(() => {
     if (!enabled || !onPush) {
-      setOnProjectSaved(null);
       return;
     }
 
-    setOnProjectSaved((id, project) => {
+    const unsubscribe = setOnProjectSaved((id, project) => {
       pendingRef.current = { id, project };
 
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -38,7 +37,7 @@ export function useAutoPush(
     });
 
     return () => {
-      setOnProjectSaved(null);
+      unsubscribe();
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [enabled, delayMs, onPush]);

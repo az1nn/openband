@@ -249,6 +249,9 @@ export class ChunkedRenderer {
           interleaved[i * 2 + 1] = right[i];
         }
         chunks.push(interleaved);
+        (ctx as unknown as AudioContext).close().catch((e: unknown) =>
+          console.warn("[chunkedRenderer] chunk OAC close failed", e),
+        );
 
         this.onProgress?.(
           ((chunkIdx + 1) / totalChunks) * 100,

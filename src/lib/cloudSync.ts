@@ -15,6 +15,17 @@ const syncStates = new Map<string, CloudSyncState>();
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const DEBOUNCE_MS = 5000;
 const STORAGE_BUCKET = "projects";
+const MAX_SYNC_STATES = 100;
+
+function pruneSyncStates(): void {
+  if (syncStates.size <= MAX_SYNC_STATES) return;
+  const iterator = syncStates.keys();
+  while (syncStates.size > MAX_SYNC_STATES) {
+    const next = iterator.next();
+    if (next.done) break;
+    syncStates.delete(next.value);
+  }
+}
 
 function getInitialSyncState(projectId: string): CloudSyncState {
   const cached = syncStates.get(projectId);
@@ -45,14 +56,13 @@ async function syncAssetRefs(): Promise<void> {
     if (refs.length === 0) return;
     const storage = getObjectStorage();
     await Promise.all(refs.map((ref) => storage.headAsset(ref).catch(() => false)));
-  } catch {
-    /* object storage is best-effort alongside the JSON push */
+  } catch (e) {
+    console.warn("[cloudSync] asset ref sync failed:", e);
   }
 }
 
 /** Immediately sync a project to Supabase Storage. */
 export async function syncNow(projectId: string): Promise<void> {
-  // Cancel any pending debounce
   const existingTimer = debounceTimers.get(projectId);
   if (existingTimer) {
     clearTimeout(existingTimer);
@@ -98,6 +108,7 @@ export async function syncNow(projectId: string): Promise<void> {
 
 /** Get the current sync state for a project. */
 export function getSyncState(projectId: string): CloudSyncState {
+  pruneSyncStates();
   return syncStates.get(projectId) ?? getInitialSyncState(projectId);
 }
 
@@ -188,7 +199,7 @@ export function useCloudSync(projectId: string): CloudSyncState {
     };
 
     // Register our callback — the projectStore calls onProjectSaved after every local save.
-    setOnProjectSaved(handleSave);
+    const unsubscribe = setOnProjectSaved(handleSave);
 
     return () => {
       const timer = debounceTimers.get(projectIdRef.current);
@@ -196,7 +207,7 @@ export function useCloudSync(projectId: string): CloudSyncState {
         clearTimeout(timer);
         debounceTimers.delete(projectIdRef.current);
       }
-      setOnProjectSaved(null);
+      unsubscribe();
     };
   }, [projectId]);
 

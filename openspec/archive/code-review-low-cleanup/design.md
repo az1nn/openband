@@ -1,6 +1,6 @@
 # Design: Code Review LOW-Severity Cleanup
 
-> **Status: PENDING IMPLEMENTATION.** Mirrors `proposal.md` (LOW items L1–L3).
+## Status: SHIPPED
 > Each section gives Current vs New with a code sketch and a file-change table.
 
 ## 1. Clock worker blob URL leak guard (L1 — AUDIO)

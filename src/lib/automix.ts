@@ -197,16 +197,10 @@ const PRESETS: Record<string, MixPreset[]> = {
 
 export const AUTOMIX_GENRES = Object.keys(PRESETS);
 
-/**
- * Compute spectral centroid from MIDI note distribution.
- * Returns a value 0-1 representing the brightness of the track.
- */
 function computeSpectralCentroid(track: TrackDef): number {
   if (!track.midiNotes || track.midiNotes.length === 0) {
-    // For audio tracks, estimate from region duration patterns
     if (track.regions.length === 0) return 0.3;
     const avgDuration = track.regions.reduce((s, r) => s + r.duration, 0) / track.regions.length;
-    // Short regions tend to be percussive (brighter)
     return Math.max(0, Math.min(1, 1 - avgDuration / 4));
   }
 
@@ -215,10 +209,6 @@ function computeSpectralCentroid(track: TrackDef): number {
   return Math.max(0, Math.min(1, avgPitch / 127));
 }
 
-/**
- * Compute transient density (events per second) for a track.
- * High transient density suggests drums/percussion.
- */
 function computeTransientDensity(track: TrackDef): number {
   if (!track.midiNotes || track.midiNotes.length === 0) {
     if (track.regions.length <= 1) return 0;
@@ -235,7 +225,6 @@ function computeTransientDensity(track: TrackDef): number {
 function classifyTrack(track: TrackDef): TrackRole {
   const name = track.name.toLowerCase();
 
-  // Name-based classification (fast path)
   if (/kick|bass\s*drum|bd/.test(name)) return "kick";
   if (/snare|sd|rim/.test(name)) return "snare";
   if (/hi[\s-]?hat|hh|open\s*hh|closed\s*hh|ride|crash/.test(name))
@@ -244,36 +233,30 @@ function classifyTrack(track: TrackDef): TrackRole {
   if (/vocal|vox|voice|singer|rap/.test(name)) return "vocal";
   if (/lead|melody|synth\s*lead|arp/.test(name)) return "lead";
   if (/pad|atmos|ambient|string|choir/.test(name)) return "pad";
-  if (/keys|piano|rhodes|organ|keys|epiano/.test(name)) return "keys";
+  if (/keys|piano|rhodes|organ|epiano/.test(name)) return "keys";
   if (/guitar|gtr|acoustic|electric|riff/.test(name)) return "guitar";
   if (/fx|effect|riser|downlifter|sweep|noise/.test(name)) return "fx";
 
-  // Spectral analysis fallback
   const centroid = computeSpectralCentroid(track);
   const transients = computeTransientDensity(track);
 
-  // High transient density + low centroid = kick/snare
   if (transients > 4 && centroid < 0.3) return "kick";
   if (transients > 3 && centroid < 0.4) return "snare";
   if (transients > 2 && centroid > 0.6) return "hihat";
 
-  // Low centroid = bass
   if (centroid < 0.25) return "bass";
 
-  // Medium centroid, medium transients = vocal/guitar
   if (centroid > 0.3 && centroid < 0.5) {
     const hasAudio = track.regions.some((r) => r.url);
     if (hasAudio) return "vocal";
     return "guitar";
   }
 
-  // High centroid = lead/fx
   if (centroid > 0.6) {
     if (transients > 1) return "fx";
     return "lead";
   }
 
-  // Default based on content type
   const hasMidiNotes = track.midiNotes && track.midiNotes.length > 0;
   const hasAudioRegions = track.regions.length > 0 && track.regions.some((r) => r.url);
 
@@ -294,9 +277,7 @@ function applyRoleProfile(
 ): TrackDef {
   const profile = ROLE_PROFILES[role];
 
-  // Calibrate volume to LUFS target instead of random
-  // Map LUFS target (-24 to -12) to volume range (40-95)
-  const lufsNorm = (profile.targetLUFS + 24) / 12; // 0-1 scale
+  const lufsNorm = (profile.targetLUFS + 24) / 12;
   const vol = profile.volumeRange[0] + lufsNorm * (profile.volumeRange[1] - profile.volumeRange[0]);
 
   let pan = profile.panPreference;
@@ -361,10 +342,6 @@ export interface AutoMixResult {
   classifications: { trackId: string; role: TrackRole; centroid: number; transients: number; targetLUFS: number }[];
 }
 
-/**
- * AutoMix with full analysis report.
- * Returns both the adjusted tracks and a classification report.
- */
 export function autoMixWithAnalysis(tracks: TrackDef[], genre: string): AutoMixResult {
   const preset = PRESETS[genre] || PRESETS.rock;
   const classified = tracks.map((t) => ({

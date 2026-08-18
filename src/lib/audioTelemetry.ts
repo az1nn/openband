@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import { API_BASE_URL } from "./apiUrl";
+import { getSharedAudioContext } from "./universalAudio";
 
 export interface AudioMetrics {
   underruns: number;
@@ -127,7 +128,7 @@ function collectMetrics(): AudioMetrics {
     droppedFrames: droppedFrameCount,
     cpuLoad: maxCpu,
     peakCpu: peakCpuTrue,
-    sampleRate: typeof AudioContext !== "undefined" ? 44100 : 0,
+    sampleRate: getSharedAudioContext()?.sampleRate ?? (typeof AudioContext !== "undefined" ? 44100 : 0),
     bufferDuration: 0,
     timestamp: Date.now(),
   };

@@ -275,13 +275,6 @@ export default function DJStudio() {
         stripMat.emissive.setHex(lc.color);
         dotMat.color.setHex(lc.color);
 
-        // Random VU meter animation
-        scene.traverse((obj: ThreeAny) => {
-          if (obj.material && obj.material.emissiveIntensity !== undefined && obj.material.color && obj.material.color.getHex() === ACCENT) {
-            // VU meter LEDs are already set; skip
-          }
-        });
-
         renderer.render(scene, camera);
       }
       animate(performance.now());

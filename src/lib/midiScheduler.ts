@@ -37,10 +37,6 @@ function getAudioContext(): AudioContext | null {
   return getSharedAudioContext();
 }
 
-function midiToMidiId(note: SchedulerNote): string {
-  return `${note.pitch}-${note.startBeat.toFixed(3)}`;
-}
-
 function noteOn(
   pitch: number,
   velocity: number,
@@ -95,14 +91,15 @@ function noteOff(id: string): void {
       voice.gain.gain.setValueAtTime(voice.gain.gain.value, ctx.currentTime);
       voice.gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
       setTimeout(() => {
-        try { voice.osc.stop(); } catch {}
+        try { voice.osc.stop(); } catch (e) { console.warn("osc stop failed", e); }
         activeOscillators.delete(id);
       }, 40);
     } else {
       voice.osc.stop();
       activeOscillators.delete(id);
     }
-  } catch {
+  } catch (e) {
+    console.warn("noteOff failed", e);
     activeOscillators.delete(id);
   }
   clearTimeout(voice.endTimeout);
@@ -163,11 +160,7 @@ export function createLookaheadScheduler(): LookaheadScheduler {
 
       if (when < now - 0.01) continue;
 
-      const existingId = midiToMidiId(note);
-      const alreadyScheduled = activeOscillators.has(existingId);
-      if (!alreadyScheduled && when >= now - 0.01) {
-        noteOn(note.pitch, note.velocity, when, durationSec, waveform);
-      }
+      noteOn(note.pitch, note.velocity, when, durationSec, waveform);
     }
   }
 
@@ -240,7 +233,6 @@ export function createLookaheadScheduler(): LookaheadScheduler {
 
 export function disposeMidiScheduler(): void {
   stopAll();
-  // AudioContext lifecycle is now managed by universalAudio.dispose()
 }
 
 export function noteNumberToName(note: number): string {

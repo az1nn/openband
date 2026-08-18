@@ -1,6 +1,6 @@
 # Design: Vitest Failure Cleanup (1 Source Defect + 4 Stale Assertions)
 
-> **Status: PROPOSED.** Not SHIPPED. Implementation pending approval.
+## Status: SHIPPED
 
 ## 1. F1 — Tauri stub return values (`src/bridge/tauri.ts`)
 

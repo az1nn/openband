@@ -171,6 +171,7 @@ app.use(
     res: express.Response,
     _next: express.NextFunction,
   ) => {
+    if (res.headersSent) return;
     console.error("Unhandled error:", err instanceof Error ? err.message : err);
     res.status(500).json({ error: "Internal server error" });
   },

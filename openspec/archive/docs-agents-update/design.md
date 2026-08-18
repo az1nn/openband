@@ -1,7 +1,6 @@
 # Design: docs-agents-update — Document Hardening Outcomes & Conventions
 
-> **Status: DRAFT.** Not started. Source of truth once shipped:
-> `tasks.md` (checklist). Do NOT mark SHIPPED until the doc edits are applied.
+## Status: SHIPPED
 
 ## 1. AGENTS.md — new `## Known Issues & Project Conventions` section
 

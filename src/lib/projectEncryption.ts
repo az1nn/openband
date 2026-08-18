@@ -59,7 +59,12 @@ export async function encryptProjectToJson(data: object, password: string): Prom
   const payload = await encryptProject(data, password)
   const base64 = (buf: ArrayBuffer | Uint8Array) => {
     const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf)
-    return btoa(String.fromCharCode(...bytes))
+    let bin = ""
+    const CHUNK = 0x8000
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK))
+    }
+    return btoa(bin)
   }
   return JSON.stringify({
     ciphertext: base64(payload.ciphertext),

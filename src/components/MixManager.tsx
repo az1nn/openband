@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
-import { View, Text, Pressable, TextInput, ScrollView } from "react-native";
+import { View, Text, Pressable, ScrollView } from "react-native";
+import { TextInput } from "./TextInput";
 import type { MixSnapshot } from "../lib/types";
 
 interface MixManagerProps {
@@ -84,13 +85,14 @@ export function MixManager({
 
           {showSave ? (
             <View className="flex-row items-center gap-2 mb-3">
-              <TextInput
-                value={saveName}
-                onChangeText={setSaveName}
-                placeholder="Nome do mix..."
-                placeholderTextColor="#555"
-                className="flex-1 h-9 bg-dark-surface border border-dark-border rounded-lg text-white text-xs px-3"
-              />
+              <View className="flex-1">
+                <TextInput
+                  value={saveName}
+                  onChangeText={setSaveName}
+                  placeholder="Nome do mix..."
+                  className="h-9 bg-dark-surface border border-dark-border rounded-lg text-white text-xs px-3"
+                />
+              </View>
               <Pressable
                 onPress={handleSave}
                 className="h-9 px-4 rounded-lg bg-brand-accent items-center justify-center active:opacity-70"

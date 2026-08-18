@@ -327,8 +327,7 @@ export default function VocalBooth() {
         previousMouse = { x: e.clientX, y: e.clientY };
 
         spherical.theta -= dx * 0.005;
-        spherical.phi = Math.max(0.3, Math.min(Math.PI - 0.2, spherical.phi + dy * 0.005));
-        spherical.phi = Math.max(0.2, Math.min(Math.PI / 2 - 0.05, spherical.phi));
+        spherical.phi = Math.max(0.2, Math.min(Math.PI / 2 - 0.05, spherical.phi + dy * 0.005));
 
         updateCamera();
       };

@@ -1,3 +1,5 @@
+## Status: SHIPPED
+
 # Roadmap Step 1: AI Audio Assistant & Voice Command Integration — Proposal
 
 ## Context

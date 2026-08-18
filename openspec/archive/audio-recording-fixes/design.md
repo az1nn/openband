@@ -1,6 +1,6 @@
 # Design: Audio & Recording Correctness Fixes
 
-> **Status: PENDING IMPLEMENTATION.** Mirrors `proposal.md` (HIGH + MED items
+## Status: SHIPPED
 > H1–H3, M4–M15). Each section gives Current vs New with a code sketch and a
 > file-change table.
 

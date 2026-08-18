@@ -53,7 +53,7 @@ function stopCurrentPlayback(): void {
     try {
       currentSource.stop();
     } catch (e) {
-      /* already stopped */
+      console.warn("stopCurrentPlayback failed", e);
     }
     currentSource.disconnect();
     currentSource = null;
@@ -184,7 +184,6 @@ export function disposePreviewEngine(): void {
     gainNode.disconnect();
     gainNode = null;
   }
-  // AudioContext lifecycle is now managed by universalAudio.dispose()
 }
 
 export async function generateThumbnail(

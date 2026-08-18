@@ -6,6 +6,7 @@ import {
   applyOperation,
   decodeState,
   getClientId,
+  compactOperations,
   type CrdtOperation,
 } from "./crdt";
 
@@ -80,7 +81,7 @@ async function enqueueOperation(
   });
 }
 
-async function dequeueAll(projectId: string): Promise<
+async function readQueuedOperations(projectId: string): Promise<
   Array<{ operation: CrdtOperation; userId: string; userName: string; id: string }>
 > {
   const db = await openQueueDb();
@@ -89,7 +90,7 @@ async function dequeueAll(projectId: string): Promise<
     [];
   return new Promise((resolve) => {
     try {
-      const tx = db.transaction(COLLAB_STORE_NAME, "readwrite");
+      const tx = db.transaction(COLLAB_STORE_NAME, "readonly");
       const store = tx.objectStore(COLLAB_STORE_NAME);
       const request = store.openCursor();
       request.onsuccess = () => {
@@ -109,22 +110,30 @@ async function dequeueAll(projectId: string): Promise<
               userId: entry.userId,
               userName: entry.userName,
             });
-            cursor.continue();
-          } else {
-            cursor.continue();
           }
+          cursor.continue();
         }
-      };
-      tx.oncomplete = () => {
-        for (const item of items) {
-          store.delete(item.id);
-        }
-        resolve(items);
       };
       tx.onerror = () => resolve(items);
     } catch (e) {
-      console.warn("Failed to dequeue operations:", e);
+      console.warn("Failed to read queued operations:", e);
       resolve(items);
+    }
+  });
+}
+
+async function deleteQueuedOperation(id: string): Promise<void> {
+  const db = await openQueueDb();
+  if (!db) return;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(COLLAB_STORE_NAME, "readwrite");
+      tx.objectStore(COLLAB_STORE_NAME).delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    } catch (e) {
+      console.warn("Failed to delete queued operation:", e);
+      resolve();
     }
   });
 }
@@ -143,6 +152,7 @@ export function useCollaboration({
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const eventSourceRef = useRef<EventSource | null>(null);
   const operationsRef = useRef<CrdtOperation[]>([]);
+  const appliedOpIdsRef = useRef<Set<string>>(new Set());
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectingRef = useRef(false);
   const backoffMsRef = useRef(1000);
@@ -155,19 +165,22 @@ export function useCollaboration({
     const baseUrl = serverUrl.replace(/\/+$/, "");
     const url = `${baseUrl}/api/collab/${encodeURIComponent(projectId)}/operation`;
 
-    const queued = await dequeueAll(projectId);
+    const queued = await readQueuedOperations(projectId);
     for (const entry of queued) {
-      fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          operation: entry.operation,
-          userId: entry.userId,
-          userName: entry.userName,
-        }),
-      }).catch((e) => {
-        console.warn("Failed to flush queued operation:", e);
-      });
+      try {
+        await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            operation: entry.operation,
+            userId: entry.userId,
+            userName: entry.userName,
+          }),
+        });
+        await deleteQueuedOperation(entry.id);
+      } catch (e) {
+        console.warn("Failed to flush queued operation, keeping for retry:", e);
+      }
     }
   }, [projectId, serverUrl]);
 
@@ -211,6 +224,10 @@ export function useCollaboration({
               operationsRef.current,
               incoming,
             );
+            for (const op of incoming) appliedOpIdsRef.current.add(op.id);
+            if (operationsRef.current.length > 2000) {
+              operationsRef.current = compactOperations(operationsRef.current, 2000);
+            }
             OPERATION_STORE.set(key, operationsRef.current);
             setState((prev) => ({
               ...prev,
@@ -228,6 +245,10 @@ export function useCollaboration({
                 operationsRef.current,
                 decoded.operations,
               );
+              for (const op of decoded.operations) appliedOpIdsRef.current.add(op.id);
+              if (operationsRef.current.length > 2000) {
+                operationsRef.current = compactOperations(operationsRef.current, 2000);
+              }
               OPERATION_STORE.set(key, operationsRef.current);
               setState((prev) => ({
                 ...prev,
@@ -347,7 +368,11 @@ export function useCollaboration({
   const applyToState = useCallback(
     (localState: Record<string, unknown>): Record<string, unknown> => {
       let result = { ...localState };
-      for (const op of operationsRef.current) {
+      const pending = operationsRef.current.filter(
+        (op) => !appliedOpIdsRef.current.has(op.id),
+      );
+      for (const op of pending) {
+        appliedOpIdsRef.current.add(op.id);
         result = applyOperation(result, op);
       }
       return result;

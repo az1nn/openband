@@ -1,3 +1,5 @@
+## Status: SHIPPED
+
 # Proposal: Stem Separation Queue & SSE Progress + 3D Virtual Studio Visibility Pause
 
 ## Context & Problem

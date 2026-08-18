@@ -73,6 +73,7 @@ export async function checkAssetExists(hash: string): Promise<boolean> {
     const data = await resp.json() as { id: string }[];
     const exists = data.length > 0;
     if (exists) assetHashCache.set(hash, data[0].id);
+    if (assetHashCache.size > 1000) assetHashCache.clear();
     return exists;
   } catch (e) {
     console.warn("Failed to check asset existence:", e);

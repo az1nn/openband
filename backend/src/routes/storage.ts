@@ -36,6 +36,10 @@ router.get(
       if (!key) {
         return res.status(400).json({ error: "key é obrigatório" });
       }
+      const userId = req.userTokenData?.userId ?? "anon";
+      if (!key.startsWith(`${userId}/`)) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
       const presigner = await createPresigner();
       const result = await presigner.presignGet(key);
       res.json(result);
@@ -55,6 +59,10 @@ router.get(
       if (!key) {
         return res.status(400).json({ error: "key é obrigatório" });
       }
+      const userId = req.userTokenData?.userId ?? "anon";
+      if (!key.startsWith(`${userId}/`)) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
       const presigner = await createPresigner();
       const exists = await presigner.head(key);
       res.json({ exists });
@@ -71,6 +79,10 @@ router.put(
   (req: AuthenticatedRequest, res: Response) => {
     const key = req.params[0];
     if (!key) return res.status(400).json({ error: "key ausente" });
+    const userId = req.userTokenData?.userId ?? "anon";
+    if (!key.startsWith(`${userId}/`)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
     const chunks: Buffer[] = [];
     req.on("data", (c: Buffer) => chunks.push(c));
     req.on("end", () => {
@@ -89,6 +101,10 @@ router.get(
   (req: AuthenticatedRequest, res: Response) => {
     const key = req.params[0];
     if (!key) return res.status(400).json({ error: "key ausente" });
+    const userId = req.userTokenData?.userId ?? "anon";
+    if (!key.startsWith(`${userId}/`)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
     const buf = getMockStore().get(key);
     if (!buf) return res.status(404).json({ error: "asset não encontrado" });
     res.setHeader("Content-Type", "application/octet-stream");

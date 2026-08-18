@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 import { OpenBandNative } from "@bridge";
 import type { BridgePatchRoute } from "@bridge";
+import { getSharedAudioContext } from "./universalAudio";
 
 export interface AudioDevice {
   id: string;
@@ -306,18 +307,12 @@ export function disposeHardwareIO(): void {
   };
 }
 
-/**
- * Set the audio output device (sink) for the shared AudioContext.
- * Only works on Chrome 110+ web. Returns true if successful.
- */
 export async function setAudioOutputDevice(deviceId: string): Promise<boolean> {
   if (Platform.OS !== "web") return false;
 
-  const { getSharedAudioContext } = require("./universalAudio");
   const ctx = getSharedAudioContext();
   if (!ctx) return false;
 
-  // Check for setSinkId support (Chrome 110+)
   if ("setSinkId" in ctx) {
     try {
       await (ctx as AudioContext & { setSinkId: (id: string) => Promise<void> }).setSinkId(deviceId);
@@ -330,12 +325,8 @@ export async function setAudioOutputDevice(deviceId: string): Promise<boolean> {
   return false;
 }
 
-/**
- * Get the current output device ID. Returns empty string if default.
- */
 export function getCurrentOutputDevice(): string {
   if (Platform.OS !== "web") return "";
-  const { getSharedAudioContext } = require("./universalAudio");
   const ctx = getSharedAudioContext();
   if (!ctx) return "";
   return (ctx as AudioContext & { sinkId?: string }).sinkId ?? "";

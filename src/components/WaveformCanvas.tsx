@@ -41,6 +41,7 @@ export function WaveformCanvas({
 }: WaveformCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<View | HTMLDivElement | null>(null);
+  const drawRef = useRef<() => void>(() => {});
   const [isVisible, setIsVisible] = useState(true);
   const barCount = Math.max(8, Math.min(80, Math.floor(duration * 0.5 * zoom)));
   const peaks = useMemo(
@@ -58,39 +59,48 @@ export function WaveformCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    const width = Math.max(1, duration * 2.4 * zoom);
-    const displayWidth = Math.ceil(width);
-    const displayHeight = Math.ceil(height);
+    const render = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const width = Math.max(1, duration * 2.4 * zoom);
+      const displayWidth = Math.ceil(width);
+      const displayHeight = Math.ceil(height);
 
-    canvas.width = displayWidth * dpr;
-    canvas.height = displayHeight * dpr;
-    canvas.style.width = `${displayWidth}px`;
-    canvas.style.height = `${displayHeight}px`;
+      canvas.width = displayWidth * dpr;
+      canvas.height = displayHeight * dpr;
+      canvas.style.width = `${displayWidth}px`;
+      canvas.style.height = `${displayHeight}px`;
 
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, displayWidth, displayHeight);
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, displayWidth, displayHeight);
 
-    const alpha = muted ? 0.2 : audible ? 0.9 : 0.5;
-    const mid = displayHeight / 2;
-    const maxBar = mid - 4;
-    const barWidth = Math.max(1, displayWidth / peaks.length);
+      const alpha = muted ? 0.2 : audible ? 0.9 : 0.5;
+      const mid = displayHeight / 2;
+      const maxBar = mid - 4;
+      const barWidth = Math.max(1, displayWidth / peaks.length);
 
-    ctx.globalAlpha = alpha;
+      ctx.globalAlpha = alpha;
 
-    for (let i = 0; i < peaks.length; i++) {
-      const val = Math.max(-1, Math.min(1, peaks[i]));
-      const barH = Math.max(1, Math.abs(val) * maxBar);
-      const x = i * barWidth;
+      for (let i = 0; i < peaks.length; i++) {
+        const val = Math.max(-1, Math.min(1, peaks[i]));
+        const barH = Math.max(1, Math.abs(val) * maxBar);
+        const x = i * barWidth;
 
-      ctx.fillStyle = selected ? "#5ac8fa" : fillColor;
-      ctx.globalAlpha = selected ? 0.9 : alpha;
+        ctx.fillStyle = selected ? "#5ac8fa" : fillColor;
+        ctx.globalAlpha = selected ? 0.9 : alpha;
 
-      ctx.fillRect(x, mid - barH, Math.max(1, barWidth - 1), barH);
-      ctx.fillRect(x, mid, Math.max(1, barWidth - 1), barH);
-    }
+        ctx.fillRect(x, mid - barH, Math.max(1, barWidth - 1), barH);
+        ctx.fillRect(x, mid, Math.max(1, barWidth - 1), barH);
+      }
 
-    ctx.globalAlpha = 1;
+      ctx.globalAlpha = 1;
+    };
+
+    render();
+    drawRef.current = render;
+
+    return () => {
+      drawRef.current = () => {};
+    };
   }, [peaks, duration, color, audible, selected, muted, height, zoom, isVisible]);
 
   useEffect(() => {
@@ -107,6 +117,24 @@ export function WaveformCanvas({
 
     observer.observe(container as Element);
     return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") return;
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const observer = new ResizeObserver(() => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => drawRef.current(), 100);
+    });
+
+    observer.observe(container as Element);
+    return () => {
+      if (timer) clearTimeout(timer);
+      observer.disconnect();
+    };
   }, []);
 
   return (

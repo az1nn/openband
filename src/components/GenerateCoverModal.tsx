@@ -57,21 +57,22 @@ function blobToDataURL(blob: Blob): Promise<string> {
   });
 }
 
-function dataURLToBlob(dataUrl: string): Blob {
+function dataURLToBytes(dataUrl: string): { bytes: Uint8Array; mime: string } {
   const [meta, b64] = dataUrl.split(",");
   const mime = meta.match(/data:(.*?);/)?.[1] ?? "image/png";
   const bin = atob(b64 ?? "");
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new Blob([bytes], { type: mime });
+  return { bytes, mime };
+}
+
+function dataURLToBlob(dataUrl: string): Blob {
+  const { bytes, mime } = dataURLToBytes(dataUrl);
+  return new Blob([bytes as BlobPart], { type: mime });
 }
 
 function dataURLToArrayBuffer(dataUrl: string): ArrayBuffer {
-  const b64 = dataUrl.split(",")[1] ?? "";
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes.buffer;
+  return dataURLToBytes(dataUrl).bytes.buffer as ArrayBuffer;
 }
 
 async function getToken(): Promise<string | null> {
@@ -79,7 +80,8 @@ async function getToken(): Promise<string | null> {
     const supabase = await getSupabase();
     const { data } = await supabase.auth.getSession();
     return data.session?.access_token ?? null;
-  } catch {
+  } catch (e) {
+    console.warn("getToken failed", e);
     return null;
   }
 }

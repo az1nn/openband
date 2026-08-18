@@ -23,7 +23,6 @@ export interface KeyBinding {
 interface CommandRegistryState {
   commands: Map<string, Command>;
   shortcutMap: Map<string, string>;
-  activeBinding: KeyBinding | null;
   paletteOpen: boolean;
   searchQuery: string;
 }
@@ -31,7 +30,6 @@ interface CommandRegistryState {
 let registryState: CommandRegistryState = {
   commands: new Map(),
   shortcutMap: new Map(),
-  activeBinding: null,
   paletteOpen: false,
   searchQuery: "",
 };
@@ -317,11 +315,11 @@ export function disposeCommandRegistry(): void {
 export function registerDefaultCommands(actions: Record<string, () => void>): void {
   const defaultCommands: [string, string, string, string, string?, string?][] = [
     ["transport.play", "Play", "Start playback", "Transport", "Space", undefined],
-    ["transport.stop", "Stop", "Stop playback", "Transport", "Space", undefined],
+    ["transport.stop", "Stop", "Stop playback", "Transport", "Shift+Space", undefined],
     ["transport.record", "Record", "Toggle recording", "Transport", "R", undefined],
     ["transport.metronome", "Metronome", "Toggle metronome click", "Transport", "M", undefined],
-    ["edit.undo", "Undo", "Undo last action", "Edit", "Ctrl+Z", "Ctrl+Shift+Z"],
-    ["edit.redo", "Redo", "Redo last action", "Edit", "Ctrl+Shift+Z", "Ctrl+Z"],
+    ["edit.undo", "Undo", "Undo last action", "Edit", "Ctrl+Z", undefined],
+    ["edit.redo", "Redo", "Redo last action", "Edit", "Ctrl+Shift+Z", undefined],
     ["edit.split", "Split Region", "Split selected region at playhead", "Edit", "S", undefined],
     ["edit.delete", "Delete", "Delete selected", "Edit", "Delete", "Backspace"],
     ["edit.selectAll", "Select All", "Select all regions", "Edit", "Ctrl+A", undefined],

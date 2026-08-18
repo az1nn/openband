@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import { OpenBandNative, isDesktop } from "@bridge";
 import type { TrackDef, BusDef } from "./types";
 
 export interface OpenBandProject {
@@ -170,7 +171,7 @@ function parseArchive(data: Uint8Array): ArchiveEntry[] {
 
     const computedCrc = crc32(fileData);
     if (computedCrc !== crc) {
-      console.error(`CRC mismatch for ${name}: expected ${crc}, got ${computedCrc}`);
+      throw new Error(`CRC32 mismatch for ${name}: expected ${crc}, got ${computedCrc}`);
     }
 
     entries.push({ name, data: fileData, crc });
@@ -263,38 +264,53 @@ export async function saveOpenBandFile(
   project: OpenBandProject,
   suggestedName?: string,
 ): Promise<boolean> {
-  if (Platform.OS !== "web" || typeof window === "undefined") return false;
-
   try {
     const archiveData = createOpenBandArchive(project);
-    const blob = new Blob([archiveData.buffer as ArrayBuffer], { type: "application/octet-stream" });
+    const fileName = suggestedName ?? `${project.metadata.name}.openband`;
 
-    if ("showSaveFilePicker" in window) {
-      const handle = await (window as Record<string, unknown>["showSaveFilePicker"] as Function)({
-        suggestedName: suggestedName ?? `${project.metadata.name}.openband`,
-        types: [
-          {
-            description: "OpenBand Project",
-            accept: { "application/octet-stream": [".openband"] },
-          },
-        ],
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const blob = new Blob([archiveData as Uint8Array<ArrayBuffer>], { type: "application/octet-stream" });
+
+      if ("showSaveFilePicker" in window) {
+        const handle = await (window as Record<string, unknown>["showSaveFilePicker"] as Function)({
+          suggestedName: fileName,
+          types: [
+            {
+              description: "OpenBand Project",
+              accept: { "application/octet-stream": [".openband"] },
+            },
+          ],
+        });
+
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return true;
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return true;
+      }
+    }
+
+    if (isDesktop) {
+      const path = await OpenBandNative.showSaveDialog({
+        title: "Save OpenBand Project",
+        defaultPath: fileName,
+        filters: [{ name: "OpenBand Project", extensions: ["openband"] }],
       });
-
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      return true;
-    } else {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = suggestedName ?? `${project.metadata.name}.openband`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      if (!path) return false;
+      await OpenBandNative.writeFile(path, archiveData.buffer as ArrayBuffer);
       return true;
     }
+
+    return false;
   } catch (e) {
     if ((e as Error).name === "AbortError") return false;
     console.error("Failed to save .openband file:", e);
@@ -303,41 +319,53 @@ export async function saveOpenBandFile(
 }
 
 export async function loadOpenBandFile(): Promise<OpenBandProject | null> {
-  if (Platform.OS !== "web" || typeof window === "undefined") return null;
-
   try {
-    if ("showOpenFilePicker" in window) {
-      const handles = await (window as Record<string, unknown>["showOpenFilePicker"] as Function)({
-        types: [
-          {
-            description: "OpenBand Project",
-            accept: { "application/octet-stream": [".openband"] },
-          },
-        ],
-        multiple: false,
-      });
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      if ("showOpenFilePicker" in window) {
+        const handles = await (window as Record<string, unknown>["showOpenFilePicker"] as Function)({
+          types: [
+            {
+              description: "OpenBand Project",
+              accept: { "application/octet-stream": [".openband"] },
+            },
+          ],
+          multiple: false,
+        });
 
-      if (handles.length === 0) return null;
-      const file = await handles[0].getFile();
-      const arrayBuffer = await file.arrayBuffer();
-      return parseOpenBandArchive(new Uint8Array(arrayBuffer));
-    } else {
-      return new Promise((resolve) => {
-        const input = document.createElement("input");
-        input.type = "file";
-        input.accept = ".openband";
-        input.onchange = async (e: Event) => {
-          const file = (e.target as HTMLInputElement).files?.[0];
-          if (!file) {
-            resolve(null);
-            return;
-          }
-          const arrayBuffer = await file.arrayBuffer();
-          resolve(parseOpenBandArchive(new Uint8Array(arrayBuffer)));
-        };
-        input.click();
-      });
+        if (handles.length === 0) return null;
+        const file = await handles[0].getFile();
+        const arrayBuffer = await file.arrayBuffer();
+        return parseOpenBandArchive(new Uint8Array(arrayBuffer));
+      } else {
+        return new Promise((resolve) => {
+          const input = document.createElement("input");
+          input.type = "file";
+          input.accept = ".openband";
+          input.onchange = async (e: Event) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (!file) {
+              resolve(null);
+              return;
+            }
+            const arrayBuffer = await file.arrayBuffer();
+            resolve(parseOpenBandArchive(new Uint8Array(arrayBuffer)));
+          };
+          input.click();
+        });
+      }
     }
+
+    if (isDesktop) {
+      const path = await OpenBandNative.showOpenDialog({
+        title: "Open OpenBand Project",
+        filters: [{ name: "OpenBand Project", extensions: ["openband"] }],
+      });
+      if (!path) return null;
+      const arrayBuffer = await OpenBandNative.readFile(path);
+      return parseOpenBandArchive(new Uint8Array(arrayBuffer));
+    }
+
+    return null;
   } catch (e) {
     if ((e as Error).name === "AbortError") return null;
     console.error("Failed to load .openband file:", e);

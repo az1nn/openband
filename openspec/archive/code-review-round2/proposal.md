@@ -1,3 +1,6 @@
+## Status: SHIPPED
+> Second full-repo code review: HIGH+MED+LOW fixes across audio/state/ui/3d/backend/lib plus OpenSpec spec-hygiene (archive leftover change dirs, reconcile status markers, standardize SHIPPED).
+
 # Proposal: code-review-round2 — Fix HIGH + MED + LOW Findings (Second Full-Repo Review)
 
 > **Status: PROPOSED.** Writing task only — no source or spec edits. Covers the

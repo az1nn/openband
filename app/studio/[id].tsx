@@ -166,7 +166,7 @@ export default function Studio() {
 
   const [isRecording, setIsRecording] = useState(false);
   const [webRecordingStart, setWebRecordingStart] = useState<number | null>(null);
-  const [recordingTick, setRecordingTick] = useState(0);
+  const [, setRecordingTick] = useState(0);
   const faderHeightRef = useRef<Record<string, number>>({});
   const panWidthRef = useRef<Record<string, number>>({});
   useEffect(() => {
@@ -392,7 +392,7 @@ export default function Studio() {
     for (const t of tracks) {
       for (const r of t.regions) {
         if (r.url && r.url.startsWith("asset://")) {
-          resolveAssetUrl(r.url).catch(() => {});
+          resolveAssetUrl(r.url).catch((e) => console.warn("resolve asset url failed", e));
         }
       }
     }
@@ -1954,7 +1954,7 @@ export default function Studio() {
                           prev.map((t) =>
                             t.id === track.id
                               ? { ...t, isArmed: !t.isArmed }
-                              : { ...t, isArmed: false }, // Only one track armed at a time
+                              : { ...t, isArmed: false },
                           ),
                         )
                       }
@@ -2113,8 +2113,8 @@ export default function Studio() {
                       {isRecording && track.isArmed && (
                         <View
                           style={{
-                            left: getPlayheadBeat() * pxPerSec, // rough sync with beat width, but usually recording starts at current position
-                            width: ((Date.now() - (webRecordingStart || Date.now())) / 1000 + recordingTick * 0) * (initialBpm / 60) * pxPerSec,
+                            left: getPlayheadBeat() * pxPerSec,
+                            width: ((Date.now() - (webRecordingStart || Date.now())) / 1000) * (initialBpm / 60) * pxPerSec,
                             minWidth: 100, // so we can see it growing
                             position: "absolute",
                           }}

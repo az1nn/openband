@@ -1,4 +1,4 @@
-import { useReducer, useCallback } from "react";
+import { useReducer, useCallback, useRef } from "react";
 
 export interface UndoCommand {
   id: string;
@@ -334,14 +334,17 @@ export function useHistory<T>(initialValue: T): {
     { present: initialValue, undoStack: [], redoStack: [] },
   );
 
+  const historyRef = useRef(history);
+  historyRef.current = history;
+
   const setState = useCallback(
     (updater: T | ((prev: T) => T)) => {
       const payload = typeof updater === "function"
-        ? (updater as (prev: T) => T)(history.present)
+        ? (updater as (prev: T) => T)(historyRef.current.present)
         : updater;
       dispatch({ type: "SET", payload });
     },
-    [history.present],
+    [],
   );
 
   const undo = useCallback(() => dispatch({ type: "UNDO" }), []);

@@ -46,23 +46,17 @@ const ONBOARDING_KEY = "openband_onboarding";
 const pendingBridgeSaves = new Map<string, ProjectData>();
 let bridgeAvailable: boolean | null = null;
 
-/** Listeners fired after a successful local save — used for cloud sync auto-push. */
 const onProjectSavedListeners = new Set<
   (id: string, project: ProjectData) => void
 >();
 
-/**
- * Register a callback to be invoked after every project save.
- * Use this for cloud sync auto-push, analytics, etc.
- */
 export function setOnProjectSaved(
-  cb: ((id: string, project: ProjectData) => void) | null,
-): void {
-  if (cb === null) {
-    onProjectSavedListeners.clear();
-    return;
-  }
+  cb: (id: string, project: ProjectData) => void,
+): () => void {
   onProjectSavedListeners.add(cb);
+  return () => {
+    onProjectSavedListeners.delete(cb);
+  };
 }
 
 async function checkBridge(): Promise<boolean> {

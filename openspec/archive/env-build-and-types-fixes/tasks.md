@@ -1,6 +1,6 @@
 # Tasks: Env Build & Types Fixes (Unblock Verification Gates)
 
-> **Status: PROPOSED** — not yet implemented or SHIPPED. Implement per `design.md`.
+## Status: SHIPPED
 
 ## Phase 1 — Spec (this change)
 
@@ -53,7 +53,6 @@
 ## Phase 4 — Archive
 
 - [ ] Move implemented spec to `openspec/archive/` once all checks pass and
-      committed (per OpenSpec SDD loop). Do NOT mark SHIPPED until implemented.
 
 ## Remaining / Out of Scope
 

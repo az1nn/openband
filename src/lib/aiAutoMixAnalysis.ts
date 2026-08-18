@@ -45,7 +45,7 @@ export interface AutoMixResult {
 function detectRole(name: string, analysis: StemAnalysis): StemAnalysis["role"] {
   const lower = name.toLowerCase();
 
-  if (lower.includes("kick") || lower.includes("drum") && lower.includes("low")) return "kick";
+  if ((lower.includes("drum") && lower.includes("low")) || lower.includes("kick")) return "kick";
   if (lower.includes("snare") || lower.includes("clap")) return "snare";
   if (lower.includes("hihat") || lower.includes("hi-hat") || lower.includes("hat")) return "hihat";
   if (lower.includes("bass") || lower.includes("sub")) return "bass";
@@ -338,6 +338,21 @@ export function generateAutoMix(
   analyses: StemAnalysis[],
 ): AutoMixResult {
   const suggestions = analyses.map((a) => suggestForRole(a, analyses));
+
+  if (analyses.length === 0) {
+    return {
+      suggestions,
+      masterSuggestion: {
+        targetLufs: -14,
+        targetPeak: -1,
+        masterEQ: [
+          { frequency: 60, gain: 0 },
+          { frequency: 10000, gain: 0 },
+        ],
+      },
+      analysis: analyses,
+    };
+  }
 
   const avgLufs = analyses.reduce((sum, a) => sum + a.lufs, 0) / analyses.length;
   const maxPeak = Math.max(...analyses.map((a) => a.peakDb));

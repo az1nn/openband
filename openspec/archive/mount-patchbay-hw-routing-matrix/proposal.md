@@ -1,3 +1,5 @@
+## Status: SHIPPED
+
 # Proposal: mount-patchbay Hardware I/O Routing Matrix
 
 ## Context

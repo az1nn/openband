@@ -54,6 +54,15 @@ interface LoadedPlugin {
 
 const loadedPlugins = new Map<string, LoadedPlugin>();
 
+function uint8ToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(bin);
+}
+
 function buildPluginUrl(pluginId: string, _wasmBytes?: ArrayBuffer): string {
   const code = `
     class PluginProcessor extends AudioWorkletProcessor {
@@ -136,14 +145,14 @@ function buildPluginUrl(pluginId: string, _wasmBytes?: ArrayBuffer): string {
         const input = inputs[0];
         const output = outputs[0];
 
-        if (this._wasmInstance && this._heapF32 && this._inputPtr && this._outputPtr) {
+        if (this._wasmInstance && this._inputPtr && this._outputPtr) {
           const numChannels = Math.max(input.length, output.length);
           const numFrames = output[0]
             ? output[0].length
             : (input[0] ? input[0].length : 0);
 
           if (numFrames > 0 && numFrames * numChannels <= 8192 * 8) {
-            const heap = this._heapF32;
+            const heap = new Float32Array(this._wasmInstance.exports.memory.buffer);
             const inBase = this._inputPtr >> 2;
             const outBase = this._outputPtr >> 2;
 
@@ -280,7 +289,7 @@ export async function loadPlugin(
   port.postMessage({
     type: "init",
     pluginId: descriptor.id,
-    wasmB64: wasmBytes ? btoa(String.fromCharCode(...new Uint8Array(wasmBytes))) : undefined,
+    wasmB64: wasmBytes ? uint8ToBase64(new Uint8Array(wasmBytes)) : undefined,
   } as PluginMessage);
 
   await waitForWorkletMessage(port, "ready", 10000);

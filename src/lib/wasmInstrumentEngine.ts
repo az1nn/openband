@@ -111,50 +111,76 @@ function getOscSample(type: string, phase: number): number {
 }
 
 function simpleFilter(input: number, cutoff: number, _resonance: number, state: number): number {
-  const fc = Math.sin(Math.PI * cutoff / sampleRate);
+  const fc = Math.sin(Math.PI * cutoff / engineSampleRate);
 
   const output = fc * fc * input + 2 * fc * fc * state - (fc * fc - 1) * state;
   return Math.max(-1, Math.min(1, output));
 }
 
-let sampleRate = 44100;
+function detectSampleRate(): number {
+  const w = globalThis as unknown as {
+    AudioContext?: new () => { sampleRate: number; close: () => Promise<void> | void };
+    webkitAudioContext?: new () => { sampleRate: number; close: () => Promise<void> | void };
+  };
+  const Ctor = w.AudioContext || w.webkitAudioContext;
+  if (typeof Ctor === "function") {
+    try {
+      const probe = new Ctor();
+      const rate = probe.sampleRate;
+      try {
+        probe.close();
+      } catch (e) {
+      }
+      return rate;
+    } catch (e) {
+      return 44100;
+    }
+  }
+  return 44100;
+}
+
+let engineSampleRate = detectSampleRate();
+
+export function setSampleRate(n: number): void {
+  engineSampleRate = n;
+}
 
 function processVoice(
   voice: VoiceState,
   preset: InstrumentPreset,
   numSamples: number,
+  renderPos: number,
 ): Float32Array {
   const output = new Float32Array(numSamples);
   const freq = NOTE_FREQS[voice.note] ?? 440;
 
   for (let i = 0; i < numSamples; i++) {
-    const dt = 1 / sampleRate;
-    const elapsed = voice.startTime + i * dt;
+    const elapsed = (renderPos + i) / engineSampleRate - voice.startTime;
 
     let ampEnv = 0;
-    if (elapsed < preset.ampAttack) {
+    if (elapsed >= 0 && elapsed < preset.ampAttack) {
       ampEnv = elapsed / preset.ampAttack;
-    } else if (elapsed < preset.ampAttack + preset.ampDecay) {
+    } else if (elapsed >= preset.ampAttack && elapsed < preset.ampAttack + preset.ampDecay) {
       const t = (elapsed - preset.ampAttack) / preset.ampDecay;
       ampEnv = 1 - (1 - preset.ampSustain) * t;
-    } else {
+    } else if (elapsed >= preset.ampAttack + preset.ampDecay) {
       ampEnv = preset.ampSustain;
     }
 
     let filterEnv = 0;
-    if (elapsed < preset.filterAttack) {
+    if (elapsed >= 0 && elapsed < preset.filterAttack) {
       filterEnv = elapsed / preset.filterAttack;
-    } else if (elapsed < preset.filterAttack + preset.filterDecay) {
+    } else if (elapsed >= preset.filterAttack && elapsed < preset.filterAttack + preset.filterDecay) {
       const t = (elapsed - preset.filterAttack) / preset.filterDecay;
       filterEnv = 1 - (1 - preset.filterSustain) * t;
-    } else {
+    } else if (elapsed >= preset.filterAttack + preset.filterDecay) {
       filterEnv = preset.filterSustain;
     }
 
     const filterCutoff = preset.filterCutoff + filterEnv * preset.filterEnvAmount;
 
-    voice.osc1Phase += freq / sampleRate;
-    voice.osc2Phase += freq * Math.pow(2, preset.osc2Detune / 12) / sampleRate;
+    voice.osc1Phase += freq / engineSampleRate;
+    voice.osc2Phase += freq * Math.pow(2, preset.osc2Detune / 12) / engineSampleRate;
 
     const osc1 = getOscSample(preset.osc1Type, voice.osc1Phase);
     const osc2 = getOscSample(preset.osc2Type, voice.osc2Phase) * preset.osc2Level;
@@ -181,10 +207,15 @@ export interface UnifiedInstrumentEngine {
 
 export function createUnifiedInstrumentEngine(
   preset: InstrumentPreset = INSTRUMENT_PRESETS[0],
+  sampleRate?: number,
 ): UnifiedInstrumentEngine {
+  if (typeof sampleRate === "number" && sampleRate > 0) {
+    setSampleRate(sampleRate);
+  }
   let currentPreset = { ...preset };
   const activeVoices = new Map<number, VoiceState>();
   let maxVoices = preset.voices;
+  let renderPos = 0;
 
   function getVoices(): VoiceState[] {
     return Array.from(activeVoices.values()).sort((a, b) => a.startTime - b.startTime);
@@ -219,7 +250,7 @@ export function createUnifiedInstrumentEngine(
         frequency: freq,
         ampEnvelope: 0,
         filterEnvelope: 0,
-        startTime: 0,
+        startTime: renderPos / engineSampleRate,
         active: true,
         osc1Phase: 0,
         osc2Phase: 0,
@@ -244,7 +275,7 @@ export function createUnifiedInstrumentEngine(
       output.fill(0);
 
       for (const [, voice] of activeVoices) {
-        const rendered = processVoice(voice, currentPreset, numSamples);
+        const rendered = processVoice(voice, currentPreset, numSamples, renderPos);
         for (let i = 0; i < numSamples; i++) {
           output[i] += rendered[i] * (voice.velocity / 127);
         }
@@ -253,6 +284,8 @@ export function createUnifiedInstrumentEngine(
       for (let i = 0; i < numSamples; i++) {
         output[i] = Math.max(-1, Math.min(1, output[i]));
       }
+
+      renderPos += numSamples;
     },
     dispose() {
       activeVoices.clear();

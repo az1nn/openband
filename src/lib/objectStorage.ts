@@ -82,8 +82,8 @@ async function authHeaders(): Promise<Record<string, string>> {
     if (data.session?.access_token) {
       return { Authorization: `Bearer ${data.session.access_token}` };
     }
-  } catch {
-    /* ignore */
+  } catch (e) {
+    console.warn("[objectStorage] authHeaders failed:", e);
   }
   return {};
 }
@@ -92,6 +92,7 @@ class SupabaseStorageBackend implements ObjectStorageClient {
   readonly kind = "supabase" as const;
   private baseUrl = `${API_BASE_URL}/api/storage`;
   private presigns = new Map<string, PresignedUpload>();
+  private static MAX_PRESIGNS = 200;
 
   async requestUploadUrl(
     hash: string,
@@ -111,6 +112,10 @@ class SupabaseStorageBackend implements ObjectStorageClient {
     }
     const presign = (await res.json()) as PresignedUpload;
     this.presigns.set(presign.key, presign);
+    if (this.presigns.size > SupabaseStorageBackend.MAX_PRESIGNS) {
+      const firstKey = this.presigns.keys().next().value;
+      if (firstKey !== undefined) this.presigns.delete(firstKey);
+    }
     return presign;
   }
 

@@ -1,3 +1,5 @@
+## Status: SHIPPED
+
 # Proposal: Web Playback — No Sound & App Freeze
 
 > **Status: SHIPPED.** Folded-in test requirements for the shipped work live in

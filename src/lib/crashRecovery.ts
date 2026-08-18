@@ -75,7 +75,8 @@ export async function restoreCrashState(projectId: string): Promise<object | nul
       return result.state
     }
     return null
-  } catch {
+  } catch (e) {
+    console.warn("restoreCrashState failed:", e)
     return null
   }
 }
@@ -88,7 +89,9 @@ export async function clearCrashState(projectId: string): Promise<void> {
     store.delete(projectId)
     await new Promise<void>((resolve) => { tx.oncomplete = () => resolve() })
     db.close()
-  } catch {}
+  } catch (e) {
+    console.warn("clearCrashState failed:", e)
+  }
 }
 
 export async function getAllCrashStates(): Promise<{ projectId: string; savedAt: number }[]> {

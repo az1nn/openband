@@ -1,6 +1,6 @@
 # Proposal: Env Build & Types Fixes (Unblock Verification Gates)
 
-> **Status: PROPOSED.** Not yet SHIPPED. This change is a writing/spec-only
+## Status: SHIPPED
 > stage; the implementation tasks are enumerated in `tasks.md` and the design
 > lives in `design.md`.
 
@@ -96,3 +96,11 @@ The type-safe canonical fix is to restore react-native's bundled declarations
 - The ambient `react-native` declaration removes type safety; flagged for removal
   after a proper reinstall restores declarations.
 - Neither change touches app logic, so functional regressions are not expected.
+
+## Correction
+
+The src/react-native.d.ts shim was actually HARMFUL: it shadowed the real
+type definitions shipped with react-native@0.86, triggering a cascading
+~52-error TypeScript failure across the frontend. The file has been DELETED.
+The durable fix is src/declarations.d.ts, which provides the asset module
+declarations (png/mp3/wasm/etc.) without overriding the real React Native types.

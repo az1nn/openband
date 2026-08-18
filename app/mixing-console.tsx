@@ -618,10 +618,12 @@ export default function MixingConsole() {
               for (const child of strip.children) {
                 if ((child as ThreeAny).geometry && (child as ThreeAny).geometry.parameters) {
                   const p = (child as ThreeAny).geometry.parameters;
-                  if (p.width === 0.1 && p.height === 0.04) {
-                    const bob = Math.sin(t * 2 + c * 0.5) * 0.005;
-                    child.position.y += bob;
-                  }
+                   if (p.width === 0.1 && p.height === 0.04) {
+                     if (child.userData.baseY === undefined) child.userData.baseY = child.position.y;
+                     const baseY = child.userData.baseY as number;
+                     const bob = Math.sin(t * 2 + c * 0.5) * 0.005;
+                     child.position.y = baseY + bob;
+                   }
                 }
               }
             }

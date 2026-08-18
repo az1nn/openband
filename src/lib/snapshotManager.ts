@@ -148,6 +148,7 @@ function applyOperationToState(
 
   switch (op.type) {
     case "track.add":
+    case "bus.add":
     case "note.add":
     case "chord.update":
       if (Array.isArray(current[lastKey])) {
@@ -157,6 +158,7 @@ function applyOperationToState(
       }
       break;
     case "track.remove":
+    case "bus.remove":
     case "note.remove":
       if (Array.isArray(current[lastKey])) {
         const arr = current[lastKey] as { id: string }[];
@@ -166,6 +168,7 @@ function applyOperationToState(
       }
       break;
     case "track.update":
+    case "bus.update":
     case "note.update":
     case "mix.update":
       if (Array.isArray(current[lastKey])) {

@@ -1,3 +1,5 @@
+## Status: SHIPPED
+
 # Proposal — Native Builds
 
 ## Context

@@ -17,7 +17,6 @@ export const LAYOUT_MAX_WIDTHS = {
 
 export function useResponsive() {
   const { width, height } = useWindowDimensions();
-  // Safe area insets (web returns 0 natively or we can just read it safely)
   const insets = useSafeAreaInsets();
   
   const breakpoint: Breakpoint =
@@ -28,8 +27,7 @@ export function useResponsive() {
   const isPortrait = height > width;
   const headerHeight = breakpoint === "mobile" ? 48 : 56;
   const bottomNavHeight = breakpoint === "mobile" ? 56 : breakpoint === "tablet" ? 64 : 0;
-  
-  // Dynamic columns
+
   const numColumns =
     width < 800 ? 1 :
     width < 1300 ? 2 :

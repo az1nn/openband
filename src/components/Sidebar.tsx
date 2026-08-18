@@ -140,7 +140,7 @@ export function Sidebar({
                   <View className="w-2 h-2 rounded-full bg-brand-primary shadow-sm shadow-brand-primary/50 ml-auto" />
                 )}
               </Pressable>
-              {hasSubItems && isExpanded && (item as typeof item & { subItems: typeof item.subItems }).subItems && (
+              {hasSubItems && isExpanded && (
                 <View className="ml-3 mt-0.5 mb-0.5 border-l border-dark-border/40 pl-2">
                   {((item as typeof item & { subItems: typeof item.subItems }).subItems || []).map((sub) => (
                     <Pressable

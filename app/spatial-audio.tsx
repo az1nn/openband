@@ -236,8 +236,8 @@ export default function SpatialAudio() {
       };
       updateCamera();
 
-      renderer.domElement.addEventListener("mousedown", (e: MouseEvent) => { isDragging = true; lastMX = e.clientX; lastMY = e.clientY; });
-      window.addEventListener("mousemove", (e: MouseEvent) => {
+      const onMouseDown = (e: MouseEvent) => { isDragging = true; lastMX = e.clientX; lastMY = e.clientY; };
+      const onMouseMove = (e: MouseEvent) => {
         if (!isDragging) return;
         const dx = e.clientX - lastMX;
         const dy = e.clientY - lastMY;
@@ -246,24 +246,24 @@ export default function SpatialAudio() {
         lastMX = e.clientX;
         lastMY = e.clientY;
         updateCamera();
-      });
-      window.addEventListener("mouseup", () => { isDragging = false; });
-      renderer.domElement.addEventListener("wheel", (e: WheelEvent) => {
+      };
+      const onMouseUp = () => { isDragging = false; };
+      const onWheel = (e: WheelEvent) => {
         sphericalRadius = Math.max(4, Math.min(15, sphericalRadius + e.deltaY * 0.01));
         updateCamera();
-      });
+      };
 
       // Touch support
       let lastTouchDist = 0;
-      renderer.domElement.addEventListener("touchstart", (e: TouchEvent) => {
+      const onTouchStart = (e: TouchEvent) => {
         if (e.touches.length === 1) { isDragging = true; lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY; }
         if (e.touches.length === 2) {
           const dx = e.touches[0].clientX - e.touches[1].clientX;
           const dy = e.touches[0].clientY - e.touches[1].clientY;
           lastTouchDist = Math.sqrt(dx * dx + dy * dy);
         }
-      });
-      renderer.domElement.addEventListener("touchmove", (e: TouchEvent) => {
+      };
+      const onTouchMove = (e: TouchEvent) => {
         e.preventDefault();
         if (e.touches.length === 1 && isDragging) {
           const dx = e.touches[0].clientX - lastMX;
@@ -282,8 +282,16 @@ export default function SpatialAudio() {
           lastTouchDist = dist;
           updateCamera();
         }
-      }, { passive: false });
-      renderer.domElement.addEventListener("touchend", () => { isDragging = false; });
+      };
+      const onTouchEnd = () => { isDragging = false; };
+
+      renderer.domElement.addEventListener("mousedown", onMouseDown);
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+      renderer.domElement.addEventListener("wheel", onWheel);
+      renderer.domElement.addEventListener("touchstart", onTouchStart);
+      renderer.domElement.addEventListener("touchmove", onTouchMove, { passive: false });
+      renderer.domElement.addEventListener("touchend", onTouchEnd);
 
       // Animation loop
       let lastTime = performance.now();
@@ -341,6 +349,13 @@ export default function SpatialAudio() {
         cancelled = true;
         cancelAnimationFrame(animationId);
         window.removeEventListener("resize", handleResize);
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+        renderer.domElement.removeEventListener("mousedown", onMouseDown);
+        renderer.domElement.removeEventListener("wheel", onWheel);
+        renderer.domElement.removeEventListener("touchstart", onTouchStart);
+        renderer.domElement.removeEventListener("touchmove", onTouchMove);
+        renderer.domElement.removeEventListener("touchend", onTouchEnd);
         if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
         disposeScene(THREE, scene, renderer);
       };

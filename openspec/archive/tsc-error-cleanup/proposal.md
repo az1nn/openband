@@ -1,6 +1,6 @@
 # Proposal: tsc Error Cleanup — Remove Shadowing Ambient Declaration
 
-> **Status: DRAFT.** Not started. Do NOT mark SHIPPED until `npx tsc --noEmit`
+## Status: SHIPPED
 > reports 0 errors and all verification gates pass.
 
 ## Context

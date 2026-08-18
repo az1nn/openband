@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express"
-import { AuthenticatedRequest } from "./authMiddleware"
+import { AuthenticatedRequest, requireAuth } from "./authMiddleware"
 
 export type PlanTier = "FREE" | "TIER1_LIVE" | "TIER2_STUDIO"
 
@@ -61,10 +61,12 @@ export function getTierLimits(tier: PlanTier): TierLimits {
 
 export function requireFeature(feature: keyof TierLimits) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const tier = getTierFromRequest(req)
-    if (!checkTierAccess(tier, feature)) {
-      return res.status(403).json({ error: `Recurso '${feature}' não disponível no plano ${tier}.` })
-    }
-    next()
+    requireAuth(req as AuthenticatedRequest, res, () => {
+      const tier = getTierFromRequest(req)
+      if (!checkTierAccess(tier, feature)) {
+        return res.status(403).json({ error: `Recurso '${feature}' não disponível no plano ${tier}.` })
+      }
+      next()
+    })
   }
 }

@@ -1,3 +1,5 @@
+## Status: SHIPPED
+
 # Proposal — Vercel Frontend Performance
 
 > Status: P0+P1 shipped; P2 gated. See openspec/specs/vercel-performance/spec.md.

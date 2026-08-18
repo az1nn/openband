@@ -29,7 +29,7 @@ export function createTrackedBlob(blob: Blob): string {
  */
 export function revokeTrackedBlob(url: string): void {
   blobUrlRegistry.delete(url);
-  try { URL.revokeObjectURL(url); } catch { /* already revoked */ }
+  try { URL.revokeObjectURL(url); } catch (e) { console.warn("revokeTrackedBlob failed", e); }
 }
 
 /**
@@ -48,7 +48,7 @@ function cleanupBlobUrls(): void {
   for (const [url, created] of blobUrlRegistry) {
     if (now - created > MAX_AGE_MS) {
       blobUrlRegistry.delete(url);
-      try { URL.revokeObjectURL(url); } catch { /* ignore */ }
+        try { URL.revokeObjectURL(url); } catch (e) { console.warn("cleanupBlobUrls revoke failed", e); }
     }
   }
   if (blobUrlRegistry.size > MAX_ENTRIES) {
@@ -57,7 +57,7 @@ function cleanupBlobUrls(): void {
       .slice(0, blobUrlRegistry.size - MAX_ENTRIES);
     for (const [url] of oldest) {
       blobUrlRegistry.delete(url);
-      try { URL.revokeObjectURL(url); } catch { /* ignore */ }
+        try { URL.revokeObjectURL(url); } catch (e) { console.warn("cleanupBlobUrls revoke failed", e); }
     }
   }
 }
@@ -185,7 +185,6 @@ class UniversalAudioSystem {
         this.recordedChunks.push(chunk);
         if (onChunk) onChunk(chunk);
       };
-      // Note: Do not connect worklet to destination to avoid feedback loop while recording
       this.mediaStreamSource.connect(this.recordingWorkletNode);
     } else {
       this.startMediaRecorderFallback(stream, onChunk);
@@ -224,8 +223,8 @@ class UniversalAudioSystem {
       this.mediaRecorderBlob = null;
       try {
         recorder.stop();
-      } catch {
-        /* already stopped */
+      } catch (e) {
+        console.warn("recorder stop failed", e);
       }
       try {
         const blob = await blobPromise;
@@ -265,20 +264,19 @@ class UniversalAudioSystem {
       combined.set(c, offset);
       offset += c.length;
     }
-    // Mono capture is duplicated into both L/R channels to produce a valid 2-channel WAV.
     return this.float32ToWavBlob(combined, combined, sampleRate, 16);
   }
 
   private cleanupRecording(): void {
     try {
       this.recordingWorkletNode?.disconnect();
-    } catch {
-      /* node already disconnected */
+    } catch (e) {
+      console.warn("cleanupRecording disconnect failed", e);
     }
     try {
       this.mediaStreamSource?.disconnect();
-    } catch {
-      /* node already disconnected */
+    } catch (e) {
+      console.warn("cleanupRecording disconnect failed", e);
     }
     if (this.recordingStream) {
       this.recordingStream.getTracks().forEach((t) => t.stop());
@@ -316,7 +314,7 @@ class UniversalAudioSystem {
 
   async decodeAudio(
     arrayBuffer: ArrayBuffer,
-    ctx?: AudioContext,
+    ctx?: AudioContext | OfflineAudioContext,
   ): Promise<AudioBuffer> {
     const context = ctx || (await this.ensureContext());
     if (!context) throw new Error("AudioContext not available");
@@ -383,7 +381,7 @@ class UniversalAudioSystem {
             resolvedBlobUrls.add(resolvedUrl);
             const resp = await fetch(resolvedUrl, { credentials: "omit" });
             const ab = await resp.arrayBuffer();
-            let buf = await this.decodeAudio(ab);
+            let buf = await this.decodeAudio(ab, ctx);
             if (track.plugins && track.plugins.length > 0) {
               const { applyPluginChain } = await import("../lib/pluginChain");
               buf = await applyPluginChain(buf, track.plugins, sampleRate, {
@@ -730,7 +728,7 @@ class UniversalAudioSystem {
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       } catch (e) {
         console.warn("Export download failed:", e);
-        try { URL.revokeObjectURL(url); } catch { /* already revoked */ }
+        try { URL.revokeObjectURL(url); } catch (e) { console.warn("revokeTrackedBlob failed", e); }
       }
     } else {
       try {
@@ -770,11 +768,11 @@ class UniversalAudioSystem {
 
   dispose(): void {
     if (this._audioCtx) {
-      this._audioCtx.close().catch(() => {});
+      this._audioCtx.close().catch((e) => console.warn("audioCtx close failed", e));
       this._audioCtx = null;
     }
     for (const [url] of blobUrlRegistry) {
-      try { URL.revokeObjectURL(url); } catch { /* already revoked */ }
+      try { URL.revokeObjectURL(url); } catch (e) { console.warn("revokeTrackedBlob failed", e); }
     }
     blobUrlRegistry.clear();
     this.isInitialized = false;

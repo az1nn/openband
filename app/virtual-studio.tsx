@@ -170,7 +170,7 @@ export default function VirtualStudio() {
 
         const mesh = new THREE.Mesh(
           new THREE.BoxGeometry(f.w, f.h, f.d),
-          new THREE.MeshToonMaterial({ color: baseColor })
+          new THREE.MeshStandardMaterial({ color: baseColor, emissive: baseColor.clone(), emissiveIntensity: 0 })
         );
         mesh.position.set(f.x, f.y + f.h / 2, f.z);
         mesh.userData = { furnitureId: f.id, route: f.route };
@@ -180,7 +180,7 @@ export default function VirtualStudio() {
         // Top highlight
         const topMesh = new THREE.Mesh(
           new THREE.BoxGeometry(f.w - 0.1, 0.05, f.d - 0.1),
-          new THREE.MeshToonMaterial({ color: baseColor.clone().multiplyScalar(1.3) })
+          new THREE.MeshStandardMaterial({ color: baseColor.clone().multiplyScalar(1.3), emissive: baseColor.clone().multiplyScalar(1.3), emissiveIntensity: 0 })
         );
         topMesh.position.set(f.x, f.y + f.h + 0.025, f.z);
         furnitureGroup.add(topMesh);
@@ -272,7 +272,7 @@ export default function VirtualStudio() {
         // Furniture glow pulse (own color, subtle)
         for (let i = 0; i < furnitureMeshes.length; i++) {
           const pulse = 0.05 + Math.sin(time * 0.002 + i * 1.2) * 0.04;
-          furnitureMeshes[i].material.emissive = furnitureBaseColors[i].clone().multiplyScalar(pulse);
+          furnitureMeshes[i].material.emissive.copy(furnitureBaseColors[i]).multiplyScalar(pulse);
         }
 
         const lc = lightRef.current;

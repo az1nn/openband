@@ -1,3 +1,5 @@
+## Status: SHIPPED
+
 # Proposal — i18n Completeness
 
 ## Context

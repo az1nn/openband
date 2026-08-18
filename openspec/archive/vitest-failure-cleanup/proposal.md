@@ -1,6 +1,6 @@
 # Proposal: Vitest Failure Cleanup (1 Source Defect + 4 Stale Assertions)
 
-> **Status: PROPOSED.** Not SHIPPED. Implementation pending approval.
+## Status: SHIPPED
 
 ## Context
 

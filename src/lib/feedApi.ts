@@ -26,7 +26,7 @@ async function getToken(): Promise<string | null> {
   }
 }
 
-async function authedFetch(path: string, options: RequestInit = {}): Promise<any> {
+async function authedFetch(path: string, options: RequestInit = {}): Promise<unknown> {
   const token = await getToken()
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -35,7 +35,7 @@ async function authedFetch(path: string, options: RequestInit = {}): Promise<any
   if (token) headers["Authorization"] = `Bearer ${token}`
   const res = await fetch(`${API_BASE_URL}/api${path}`, { ...options, headers })
   if (!res.ok) throw new Error(`Request failed: ${res.status}`)
-  return res.json()
+  return res.json() as unknown
 }
 
 export async function fetchFeed(params: {
@@ -52,7 +52,7 @@ export async function fetchFeed(params: {
   if (params.sort) qs.set("sort", params.sort)
   if (params.type) qs.set("type", params.type)
   const query = qs.toString()
-  return authedFetch(`/feed${query ? `?${query}` : ""}`)
+  return (await authedFetch(`/feed${query ? `?${query}` : ""}`)) as FeedPage
 }
 
 export async function publishPost(body: Record<string, unknown>): Promise<unknown> {
@@ -60,12 +60,12 @@ export async function publishPost(body: Record<string, unknown>): Promise<unknow
 }
 
 export async function toggleLike(id: string): Promise<LikeResult> {
-  return authedFetch(`/feed/${id}/like`, { method: "POST" })
+  return (await authedFetch(`/feed/${id}/like`, { method: "POST" })) as LikeResult
 }
 
 export async function toggleFavorite(id: string): Promise<FavoriteResult> {
   try {
-    return await authedFetch(`/feed/${id}/favorite`, { method: "POST" })
+    return (await authedFetch(`/feed/${id}/favorite`, { method: "POST" })) as FavoriteResult
   } catch {
     const favorited = !localFavorites.has(id)
     if (favorited) localFavorites.add(id)
@@ -75,10 +75,10 @@ export async function toggleFavorite(id: string): Promise<FavoriteResult> {
 }
 
 export async function createRemix(id: string, newProjectId?: string): Promise<RemixResult> {
-  return authedFetch(`/feed/${id}/remix`, {
+  return (await authedFetch(`/feed/${id}/remix`, {
     method: "POST",
     body: JSON.stringify({ newProjectId }),
-  })
+  })) as RemixResult
 }
 
 export async function toggleRemix(id: string, newProjectId?: string): Promise<RemixResult> {

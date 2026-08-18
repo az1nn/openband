@@ -245,6 +245,9 @@ export async function commitState(
   };
 
   currentHistory.commits.push(commit);
+  if (currentHistory.commits.length > 200) {
+    currentHistory.commits.splice(0, currentHistory.commits.length - 200);
+  }
   currentHistory.branches.set(branch, commit.id);
 
   return commit;

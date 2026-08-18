@@ -412,7 +412,7 @@ export function generateTracksForGenre(
     const bpmVal = mood
       ? baseBpm + (MOODS.find((m) => m.id === mood)?.bpmOffset ?? 0)
       : baseBpm;
-    return getFallbackTracks(numBars, bpmVal, key ?? genre?.defaultKey ?? "C", mood);
+    return getFallbackTracks(numBars, bpmVal, key ?? genre?.defaultKey ?? "C", mood, genreId);
   }
 
   const baseBpm = bpm ?? genre?.defaultBpm ?? 120;
@@ -424,10 +424,10 @@ export function generateTracksForGenre(
   const rootNote = keyToRootNote(key ?? genre?.defaultKey ?? "C");
   const now = Date.now();
 
-  return suggested.map((track, i) => {
+  return suggested.map((track, trackIdx) => {
     const midiNotes = generateMidiForTrack(track.name, genreId, rootNote, bpmVal, mood, numBars, track.trackType);
     return {
-      id: `track-${now}-${i}`,
+      id: `track-${now}-${trackIdx}`,
       name: track.name,
       color: track.color,
       muted: false,
@@ -439,8 +439,8 @@ export function generateTracksForGenre(
       regions: [
         { id: nextRegionId(), start: 0, duration: Math.round(regionDuration) },
       ],
-      plugins: GENRE_PLUGINS[genreId]?.map((p, i) => ({
-        id: `plugin-${now}-${i}`,
+      plugins: GENRE_PLUGINS[genreId]?.map((p, pi) => ({
+        id: `plugin-${now}-${trackIdx}-${pi}`,
         name: p.type.charAt(0).toUpperCase() + p.type.slice(1),
         type: p.type as PluginType,
         enabled: true,
@@ -963,6 +963,7 @@ function getFallbackTracks(
   bpm: number = 120,
   key: string = "C",
   mood?: Mood,
+  genreId: string = "pop",
 ): TrackDef[] {
   const now = Date.now();
   const baseDuration = (numBars * 4 * 60) / bpm;
@@ -970,7 +971,7 @@ function getFallbackTracks(
   const trackNames = ["Vocal", "Instrumento", "Bateria", "Baixo"];
   const colors = ["bg-red-500", "bg-blue-500", "bg-green-500", "bg-purple-500"];
   return trackNames.map((name, i) => {
-    const midiNotes = generateMidiForTrack(name, "pop", rootNote, bpm, mood, numBars);
+    const midiNotes = generateMidiForTrack(name, genreId, rootNote, bpm, mood, numBars);
     return {
       id: `track-${now}-${i}`,
       name,

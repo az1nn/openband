@@ -4,7 +4,7 @@ import fs from "fs";
 import { upload } from "../middleware/upload";
 import { runDemucs, checkDemucsInstalled } from "../services/demucs";
 import { runMock } from "../services/mock";
-import { getJob, subscribeToJob, addJob } from "../services/queue";
+import { getJob, subscribeToJob } from "../services/queue";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/authMiddleware";
 import type { ExtractResponse, ErrorResponse } from "../types";
 
@@ -127,7 +127,7 @@ router.get("/extract/progress/:jobId", (req: Request, res: Response) => {
   });
 });
 
-router.post("/extract", (req: Request, res: Response) => {
+router.post("/extract", requireAuth, (req: AuthenticatedRequest, res: Response) => {
   upload.single("audio")(req, res, async (err) => {
     try {
       if (err) {
@@ -143,7 +143,8 @@ router.post("/extract", (req: Request, res: Response) => {
         return res.status(400).json({ error: "Nenhum arquivo enviado." });
       }
 
-      const jobId = addJob("extract", { filename: req.file.originalname });
+      const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const userId = req.userTokenData?.userId ?? "anon";
 
       try {
         const duration = await getAudioDuration(req.file.path);
@@ -152,8 +153,9 @@ router.post("/extract", (req: Request, res: Response) => {
           ? await runDemucs({
               inputPath: req.file.path,
               stemDir: STEMS_DIR,
+              userId,
             })
-          : await runMock(req.file.path, STEMS_DIR);
+          : await runMock(req.file.path, STEMS_DIR, userId);
 
         if (req.file) cleanup(req.file.path);
 
@@ -171,7 +173,7 @@ router.post("/extract", (req: Request, res: Response) => {
           try {
             if (!req.file) throw new Error("No file uploaded");
             const duration = await getAudioDuration(req.file.path);
-            const stems = await runMock(req.file.path, STEMS_DIR);
+            const stems = await runMock(req.file.path, STEMS_DIR, userId);
             cleanup(req.file.path);
             return res.json({
               jobId,
@@ -182,6 +184,7 @@ router.post("/extract", (req: Request, res: Response) => {
             });
           } catch (e) {
             console.error("Stem processing error:", e);
+            cleanup(req.file?.path);
             return res
               .status(500)
               .json({ error: "Erro ao processar áudio (fallback falhou)" });
@@ -212,6 +215,10 @@ router.get("/stems/:filename", requireAuth, (req: AuthenticatedRequest, res: Res
   ) {
     return res.status(403).json({ error: "Forbidden" });
   }
+  const userId = req.userTokenData?.userId ?? "anon";
+  if (!filename.startsWith(`${userId}__`)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
   const filePath = path.resolve(STEMS_DIR, filename);
   if (!filePath.startsWith(STEMS_DIR)) {
     return res.status(403).json({ error: "Forbidden" });
@@ -225,7 +232,7 @@ router.get("/stems/:filename", requireAuth, (req: AuthenticatedRequest, res: Res
   });
 });
 
-router.post("/stems/manifest", (req: Request, res: Response) => {
+router.post("/stems/manifest", requireAuth, (req: AuthenticatedRequest, res: Response) => {
   const { projectId, bpm, key, chords, tracks } = req.body || {};
 
   if (!projectId || bpm === undefined || !key || !Array.isArray(chords) || !Array.isArray(tracks)) {

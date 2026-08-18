@@ -86,7 +86,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (Platform.OS === "web") {
-      const initAudio = () => { audioSystem.initialize().catch(() => {}); };
+      const initAudio = () => { audioSystem.initialize().catch((e) => console.warn("audio init failed", e)); };
       document.addEventListener("pointerdown", initAudio, { once: true });
       document.addEventListener("keydown", initAudio, { once: true });
       return () => {

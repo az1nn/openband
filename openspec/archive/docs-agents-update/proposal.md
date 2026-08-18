@@ -4,7 +4,6 @@
 
 # Proposal: docs-agents-update — Document Hardening Outcomes & Conventions
 
-> **Status: DRAFT.** Not started. Do NOT mark SHIPPED until the documentation
 > edits are applied and a `npm run build` confirms no regressions (no source is
 > touched, so verification is light — the gates are documentation-only).
 

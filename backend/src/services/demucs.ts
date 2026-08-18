@@ -8,6 +8,7 @@ const DEMUCS_MODEL = "htdemucs";
 interface DemucsOptions {
   inputPath: string;
   stemDir: string;
+  userId?: string;
   onProgress?: (stage: string, pct: number) => void;
 }
 
@@ -50,8 +51,9 @@ function execPython(args: string[]): Promise<string> {
 }
 
 export async function runDemucs(options: DemucsOptions): Promise<StemFile[]> {
-  const { inputPath, stemDir, onProgress } = options;
+  const { inputPath, stemDir, userId = "anon", onProgress } = options;
   const baseName = path.basename(inputPath, path.extname(inputPath));
+  const prefix = `${userId}__`;
 
   onProgress?.("Preparando áudio...", 5);
 
@@ -84,7 +86,7 @@ export async function runDemucs(options: DemucsOptions): Promise<StemFile[]> {
 
   for (const [stemName, meta] of Object.entries(stemMap)) {
     const stemPath = path.join(demucsOut, `${stemName}.wav`);
-    const destPath = path.join(stemDir, `${baseName}-${stemName}.wav`);
+    const destPath = path.join(stemDir, `${prefix}${baseName}-${stemName}.wav`);
 
     try {
       await fs.promises.access(stemPath, fs.constants.R_OK);
@@ -93,9 +95,9 @@ export async function runDemucs(options: DemucsOptions): Promise<StemFile[]> {
       stems.push({
         type: meta.type,
         label: meta.label,
-        filename: `${baseName}-${stemName}.wav`,
+        filename: `${prefix}${baseName}-${stemName}.wav`,
         size,
-        url: `/api/stems/${baseName}-${stemName}.wav`,
+        url: `/api/stems/${prefix}${baseName}-${stemName}.wav`,
       });
     } catch (e) {
       console.warn(`Stem ${stemName} error at ${stemPath}:`, e);

@@ -1,6 +1,6 @@
 # Design: Env Build & Types Fixes (Unblock Verification Gates)
 
-> **Status: PROPOSED.** Not yet SHIPPED. Implementation tasks are in `tasks.md`.
+## Status: SHIPPED
 
 ## 1. Fix 1 — tsc gate (`TS7016: Could not find a declaration file for module 'react-native'`)
 
@@ -146,3 +146,11 @@ is safe for non-RSC web exports and only ever loads if the real file is absent
   if/when the repo migrates off the trimmed `react-native` stub strategy; they
   stay because they add zero cost in a healthy environment (real `Expo.fx.tsx`
   wins via the `fs.existsSync` guard).
+
+## Correction
+
+The src/react-native.d.ts shim was actually HARMFUL: it shadowed the real
+type definitions shipped with react-native@0.86, triggering a cascading
+~52-error TypeScript failure across the frontend. The file has been DELETED.
+The durable fix is src/declarations.d.ts, which provides the asset module
+declarations (png/mp3/wasm/etc.) without overriding the real React Native types.

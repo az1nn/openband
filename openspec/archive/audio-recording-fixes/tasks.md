@@ -1,6 +1,6 @@
 # Tasks: Audio & Recording Correctness Fixes
 
-> **Status: COMPLETE.** All items implemented and verified.
+## Status: SHIPPED
 
 ## Phase 1 — Spec (this change)
 - [x] `proposal.md` — context/problem/objectives/non-goals/approach/risks (H1–H3, M4–M15)

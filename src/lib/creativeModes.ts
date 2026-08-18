@@ -141,7 +141,7 @@ export function registerCreativeModeCommands(router: ImperativeRouter): void {
       mode.label,
       mode.description,
       mode.category,
-      () => router.push(mode.route as any),
+      () => router.push(mode.route),
     );
   }
 }

@@ -49,27 +49,27 @@ export function useKeyboardShortcuts(shortcuts: ShortcutMap) {
         e.preventDefault();
         return;
       }
-      if (key === "m" || key === "M") {
+      if (key === "m") {
         s.toggleMute?.();
         e.preventDefault();
         return;
       }
-      if (key === "s" || key === "S") {
+      if (key === "s") {
         s.toggleSolo?.();
         e.preventDefault();
         return;
       }
-      if (key === "r" || key === "R") {
+      if (key === "r") {
         s.record?.();
         e.preventDefault();
         return;
       }
-      if (key === "Delete" || key === "Backspace") {
+      if (key === "delete" || key === "backspace") {
         s.delete?.();
         e.preventDefault();
         return;
       }
-      if (key === "Escape") {
+      if (key === "escape") {
         s.escape?.();
         e.preventDefault();
         return;

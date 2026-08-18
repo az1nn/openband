@@ -231,7 +231,8 @@ export async function phaseVocoderStretch(
         while (phaseDiff < -Math.PI) phaseDiff += 2 * Math.PI;
 
         const instantaneousFreq = (phaseDiff / (2 * Math.PI * analysisHop)) * sampleRate;
-        accumulatedPhase[k] += instantaneousFreq * synthesisHop * pitchRatio * (2 * Math.PI / sampleRate);
+        const synthesisHopScaled = synthesisHop * pitchRatio;
+        accumulatedPhase[k] += instantaneousFreq * synthesisHopScaled * (2 * Math.PI / sampleRate);
       }
 
       const synthesisFrame: SpectralFrame = {

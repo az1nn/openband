@@ -1,6 +1,6 @@
 # Design: code-review-hardening — Fix HIGH + MED Repo-Wide Findings
 
-> **Status: PROPOSED.** No source edits yet. Dead-code-correctness fixes (H1
+## Status: SHIPPED
 > worklets) are flagged separately from live-bug fixes.
 
 ## AUDIO ENGINE & DSP

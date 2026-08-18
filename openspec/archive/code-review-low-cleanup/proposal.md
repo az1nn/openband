@@ -4,7 +4,6 @@ LOW-severity findings (L1–L3) implemented and verified green (tsc, vitest, leg
 
 # Proposal: Code Review LOW-Severity Cleanup
 
-> **Status: PENDING IMPLEMENTATION.** Not yet shipped. This change covers the
 > LOW-severity findings from the full-repo code review that were intentionally
 > deferred from the HIGH+MED `code-review-hardening` change. Scope is ONLY the
 > safe, mechanical code-quality LOWs enumerated below (L1–L3). Source fixes are

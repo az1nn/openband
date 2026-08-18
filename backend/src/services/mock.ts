@@ -34,38 +34,40 @@ async function generateSilentWav(
 export async function runMock(
   inputPath: string,
   stemDir: string,
+  userId = "anon",
 ): Promise<StemFile[]> {
   if (!fs.existsSync(stemDir)) fs.mkdirSync(stemDir, { recursive: true });
 
   const baseName = path.basename(inputPath, path.extname(inputPath));
   const duration = 30;
+  const prefix = `${userId}__`;
 
   const stems: StemFile[] = [
     {
       type: "drums",
       label: "Bateria",
-      filename: `${baseName}-drums.wav`,
+      filename: `${prefix}${baseName}-drums.wav`,
       size: 0,
       url: "",
     },
     {
       type: "bass",
       label: "Baixo",
-      filename: `${baseName}-bass.wav`,
+      filename: `${prefix}${baseName}-bass.wav`,
       size: 0,
       url: "",
     },
     {
       type: "vocals",
       label: "Vocal",
-      filename: `${baseName}-vocals.wav`,
+      filename: `${prefix}${baseName}-vocals.wav`,
       size: 0,
       url: "",
     },
     {
       type: "other",
       label: "Outros",
-      filename: `${baseName}-other.wav`,
+      filename: `${prefix}${baseName}-other.wav`,
       size: 0,
       url: "",
     },

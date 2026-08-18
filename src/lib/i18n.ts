@@ -23,14 +23,14 @@ const initI18n = async () => {
       savedLanguage = localStorage.getItem(LANGUAGE_KEY);
     }
   } catch (e) {
-    // Ignore error
+    console.warn("Failed to read saved language:", e);
   }
 
   const deviceLanguageRaw = getLocales()[0]?.languageCode || 'en';
   const deviceLanguage =
     deviceLanguageRaw === 'pt' ? 'pt-BR' : deviceLanguageRaw;
 
-  const initialLanguage = savedLanguage || (resources[deviceLanguage as keyof typeof resources] ? deviceLanguage : 'pt-BR');
+  const initialLanguage = savedLanguage || (resources[deviceLanguage as keyof typeof resources] ? deviceLanguage : 'en');
 
   await i18n
     .use(initReactI18next)
@@ -55,7 +55,7 @@ export const changeLanguage = async (lng: string) => {
       localStorage.setItem(LANGUAGE_KEY, lng);
     }
   } catch (e) {
-    // Ignore error
+    console.warn("Failed to persist language:", e);
   }
 };
 

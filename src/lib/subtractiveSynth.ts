@@ -88,9 +88,9 @@ function noteOn(
     if (oldest) {
       const v = voices.get(oldest);
       if (v) {
-        try { v.osc1.stop(); } catch {}
-        try { v.osc2.stop(); } catch {}
-        if (v.lfoNode) try { v.lfoNode.stop(); } catch {}
+        try { v.osc1.stop(); } catch (e) { console.warn("osc1 stop failed", e); }
+        try { v.osc2.stop(); } catch (e) { console.warn("osc2 stop failed", e); }
+        if (v.lfoNode) try { v.lfoNode.stop(); } catch (e) { console.warn("lfo stop failed", e); }
         voices.delete(oldest);
       }
     }
@@ -231,10 +231,16 @@ function noteOff(id: string, config: SubtractiveSynthConfig): void {
     now + config.filterEnvelope.release,
   );
 
-  setTimeout(() => {
-    try { voice.osc1.stop(); } catch {}
-    try { voice.osc2.stop(); } catch {}
-    if (voice.lfoNode) try { voice.lfoNode.stop(); } catch {}
+    setTimeout(() => {
+    try { voice.osc1.stop(); } catch (e) { console.warn("osc1 stop failed", e); }
+    try { voice.osc2.stop(); } catch (e) { console.warn("osc2 stop failed", e); }
+    if (voice.lfoNode) try { voice.lfoNode.stop(); } catch (e) { console.warn("lfo stop failed", e); }
+    voice.osc1.disconnect();
+    voice.osc2.disconnect();
+    voice.filter.disconnect();
+    voice.ampGain.disconnect();
+    if (voice.lfoNode) voice.lfoNode.disconnect();
+    if (voice.lfoGain) voice.lfoGain.disconnect();
     voices.delete(id);
   }, (release + 0.1) * 1000);
 }
@@ -255,11 +261,16 @@ export interface SubtractiveSynth {
 }
 
 export function disposeSubtractiveSynthAudio(): void {
-  // AudioContext lifecycle is now managed by universalAudio.dispose()
   for (const [id, voice] of voices) {
-    try { voice.osc1.stop(); } catch {}
-    try { voice.osc2.stop(); } catch {}
-    if (voice.lfoNode) try { voice.lfoNode.stop(); } catch {}
+    try { voice.osc1.stop(); } catch (e) { console.warn("osc1 stop failed", e); }
+    try { voice.osc2.stop(); } catch (e) { console.warn("osc2 stop failed", e); }
+    if (voice.lfoNode) try { voice.lfoNode.stop(); } catch (e) { console.warn("lfo stop failed", e); }
+    voice.osc1.disconnect();
+    voice.osc2.disconnect();
+    voice.filter.disconnect();
+    voice.ampGain.disconnect();
+    if (voice.lfoNode) voice.lfoNode.disconnect();
+    if (voice.lfoGain) voice.lfoGain.disconnect();
     voices.delete(id);
   }
 }

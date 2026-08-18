@@ -58,6 +58,7 @@ if (!fs.existsSync(MASTER_DIR)) {
 
 router.post(
   "/master/bounce",
+  requireAuth,
   (req: Request, res: Response, next) => {
     upload.single("audio")(req, res, (err) => {
       if (err) {
@@ -83,7 +84,7 @@ router.post(
       next();
     });
   },
-  async (req: Request, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response) => {
     try {
       if (!req.file) {
         return res
@@ -92,6 +93,7 @@ router.post(
       }
 
       const { pluginStates } = req.body || {};
+      const userId = req.userTokenData?.userId ?? "anon";
 
       const filePath = req.file.path;
 
@@ -106,7 +108,7 @@ router.post(
       }
 
       const outputFormat = header.format === "mp3" ? "mp3" : "wav";
-      const outputFilename = `master_${Date.now()}.${outputFormat}`;
+      const outputFilename = `master_${userId}_${Date.now()}.${outputFormat}`;
       const outputPath = path.resolve(MASTER_DIR, outputFilename);
       await new Promise<void>((resolve, reject) => {
         const inputStream = fs.createReadStream(filePath);
@@ -176,6 +178,10 @@ router.get("/master/download/:filename", requireAuth, (req: AuthenticatedRequest
     filename.includes("\\") ||
     filename.includes("\0")
   ) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  const userId = req.userTokenData?.userId ?? "anon";
+  if (!filename.startsWith(`master_${userId}_`)) {
     return res.status(403).json({ error: "Forbidden" });
   }
   const filePath = path.resolve(MASTER_DIR, filename);

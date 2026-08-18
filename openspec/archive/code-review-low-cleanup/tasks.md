@@ -1,6 +1,6 @@
 # Tasks: Code Review LOW-Severity Cleanup
 
-> **Status: PENDING IMPLEMENTATION.** All items are pending; this file is the
+## Status: SHIPPED
 > implementation checklist for the LOW-severity cleanup (L1–L3).
 
 ## Phase 1 — Spec (this change)

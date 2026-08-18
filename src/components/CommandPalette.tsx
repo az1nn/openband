@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from "react";
-import { View, Text, Pressable, TextInput, ScrollView } from "react-native";
+import { useState, useCallback, useEffect } from "react";
+import { View, Text, Pressable, ScrollView } from "react-native";
+import { TextInput } from "./TextInput";
 import type { Command } from "../lib/commandRegistry";
 import {
   searchCommands,
@@ -18,7 +19,6 @@ export function CommandPalette({ visible, onClose }: CommandPaletteProps) {
   const [results, setResults] = useState<Command[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
-  const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     const unsub = onRegistryStateChange((state) => {
@@ -50,6 +50,26 @@ export function CommandPalette({ visible, onClose }: CommandPaletteProps) {
     [onClose],
   );
 
+  const handleKeyDown = useCallback(
+    (e: any) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((i) => Math.min(results.length - 1, i + 1));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((i) => Math.max(0, i - 1));
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const cmd = results[selectedIndex];
+        if (cmd) handleSelect(cmd);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    },
+    [results, selectedIndex, handleSelect, onClose],
+  );
+
   if (!visible && !isOpen) return null;
 
   const categories = new Map<string, Command[]>();
@@ -67,16 +87,18 @@ export function CommandPalette({ visible, onClose }: CommandPaletteProps) {
       <View className="bg-neutral-900 border border-neutral-700 rounded-xl w-[520px] shadow-2xl overflow-hidden">
         <View className="flex-row items-center px-4 border-b border-neutral-800">
           <Text className="text-neutral-500 text-lg mr-2">⌘</Text>
-          <TextInput
-            ref={inputRef}
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search commands..."
-            placeholderTextColor="#555"
-            className="flex-1 bg-transparent text-white text-sm py-3 outline-none"
-            autoFocus
-            selectTextOnFocus
-          />
+          <View className="flex-1">
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              {...({ onKeyDown: handleKeyDown } as object)}
+              placeholder="Search commands..."
+              placeholderTextColor="#555"
+              className="flex-1 bg-transparent text-white text-sm py-3 outline-none"
+              autoFocus
+              selectTextOnFocus
+            />
+          </View>
           <Text className="text-neutral-600 text-xs">ESC</Text>
         </View>
 

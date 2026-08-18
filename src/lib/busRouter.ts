@@ -28,6 +28,7 @@ export function buildBusRouteGraph(
   const busNodes = new Map<string, BusRoutingNode>();
   const trackOutputs = new Map<string, AudioNode>();
   const sendGainNodes: GainNode[] = [];
+  const trackGainNodes: GainNode[] = [];
 
   for (const bus of buses) {
     const inputGain = ctx.createGain();
@@ -68,6 +69,8 @@ export function buildBusRouteGraph(
       trackGain.connect(masterGain);
     }
 
+    trackGainNodes.push(trackGain);
+
     if (track.sends) {
       for (const [busId, sendAmount] of Object.entries(track.sends)) {
         if (typeof sendAmount === "number" && sendAmount > 0 && busNodes.has(busId)) {
@@ -104,6 +107,11 @@ export function buildBusRouteGraph(
     for (const sendGain of sendGainNodes) {
       try { sendGain.disconnect(); } catch (e) {
         console.warn("busRouter send disconnect failed:", e);
+      }
+    }
+    for (const gain of trackGainNodes) {
+      try { gain.disconnect(); } catch (e) {
+        console.warn("busRouter track gain disconnect failed:", e);
       }
     }
   };

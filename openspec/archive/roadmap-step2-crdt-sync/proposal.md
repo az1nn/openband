@@ -1,3 +1,5 @@
+## Status: SHIPPED
+
 # Roadmap Step 2: Real-Time Collaborative CRDT & WebSocket Sync — Proposal
 
 ## Context

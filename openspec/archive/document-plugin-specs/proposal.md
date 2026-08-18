@@ -1,3 +1,5 @@
+## Status: SHIPPED
+
 # Change: Document Audio & Mastering Plugin Specs
 
 > **Status (docs only, uncommitted):** §1 scaffolding and all §5 spec areas (incl. immersive-studio) are done; §2 per-plugin test gaps + §3 coverage target remain open.

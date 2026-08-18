@@ -1,3 +1,5 @@
+## Status: SHIPPED
+
 # Proposal: Docs & Specs Full Reconciliation
 
 ## Context

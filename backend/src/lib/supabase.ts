@@ -1,10 +1,8 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { sqlite } from "./sqlite"
 
-// Database mode: "sqlite" for local dev, "supabase" for production
 const dbMode = process.env.DATABASE_MODE || "sqlite"
 
-// Export a unified client that works the same way in both modes
 export const supabase: SupabaseClient = (dbMode === "supabase" ? createSupabaseClient() : sqlite) as unknown as SupabaseClient
 
 function createSupabaseClient(): SupabaseClient {
@@ -22,5 +20,4 @@ function createSupabaseClient(): SupabaseClient {
   return createClient(supabaseUrl, supabaseKey)
 }
 
-// Export sqlite directly for schema operations
 export { sqlite }

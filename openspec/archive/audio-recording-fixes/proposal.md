@@ -1,6 +1,6 @@
 # Proposal: Audio & Recording Correctness Fixes
 
-> **Status: PENDING IMPLEMENTATION.** Not yet shipped. This change covers the
+## Status: SHIPPED
 > HIGH + MED severity defects enumerated in the audio/recording audit below.
 > Test requirements and source fixes are specified in `design.md` and `tasks.md`.
 

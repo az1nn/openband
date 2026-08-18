@@ -127,6 +127,7 @@ function generateEnvelope(
 
 let modulationState: ModulationState = { ...DEFAULT_MOD_STATE };
 let lfoTime = 0;
+let lastTickTime = 0;
 let frameId: number | null = null;
 
 const MOD_SOURCES: ModSource[] = [
@@ -373,14 +374,14 @@ function writeLiveParam(entry: LiveModParam, value: number): void {
     try {
       param.setTargetAtTime(value, ctx.currentTime, 0.008);
       return;
-    } catch {
-      /* fall through to direct assignment */
+    } catch (e) {
+      console.warn("setTargetAtTime failed", e);
     }
   }
   try {
     param.value = value;
-  } catch {
-    /* param is not writable in this context */
+  } catch (e) {
+    console.warn("param value assignment failed", e);
   }
 }
 
@@ -423,9 +424,13 @@ export function startModulationEngine(
   timeSource = getTime ?? null;
   if (frameId !== null) return;
   lfoTime = 0;
+  lastTickTime = 0;
 
   function tick(): void {
-    lfoTime += 1 / 60;
+    const nowMs = performance.now();
+    const dt = lastTickTime > 0 ? (nowMs - lastTickTime) / 1000 : 1 / 60;
+    lastTickTime = nowMs;
+    lfoTime += dt;
     const time = timeSource ? timeSource() : lfoTime;
     if (frameCallback) frameCallback(time);
     frameId = requestAnimationFrame(tick);
@@ -439,6 +444,7 @@ export function stopModulationEngine(): void {
     frameId = null;
   }
   lfoTime = 0;
+  lastTickTime = 0;
   frameCallback = null;
   timeSource = null;
 }

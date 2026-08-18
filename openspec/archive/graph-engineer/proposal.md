@@ -1,3 +1,5 @@
+## Status: SHIPPED
+
 # Proposal: Graph Engineer V1
 
 ## Context

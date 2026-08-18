@@ -1,6 +1,6 @@
 # Tasks: tsc Error Cleanup — Remove Shadowing Ambient Declaration
 
-> **Status: DRAFT.** Not started. Do NOT mark SHIPPED until `npx tsc --noEmit`
+## Status: SHIPPED
 > is 0 and all Phase-3 gates pass.
 
 ## Phase 1 — Spec (this change)

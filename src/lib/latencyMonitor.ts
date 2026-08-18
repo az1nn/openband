@@ -76,6 +76,7 @@ export async function startDirectMonitor(
   config: LatencyConfig = DEFAULT_LATENCY_CONFIG,
 ): Promise<MonitorState> {
   if (Platform.OS !== "web") return failedMonitorState("monitoring unsupported on this platform");
+  if (monitorState.enabled) return monitorState;
 
   const stream = await requestMicrophoneAccess();
   if (!stream) {
@@ -183,8 +184,8 @@ export function applyLatencyCompensationToTrack(
 
 export function disposeLatencySystem(): void {
   stopDirectMonitor();
-  if (monitorCtx && monitorCtx.state !== "closed") {
-    monitorCtx.close().catch(() => {});
+    if (monitorCtx && monitorCtx.state !== "closed") {
+    monitorCtx.close().catch((e) => console.warn("monitorCtx close failed", e));
   }
   monitorCtx = null;
   monitorState = {

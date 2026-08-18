@@ -128,7 +128,9 @@ router.get(
     }
 
     const userId = sanitizeString(
-      (req.query.userId as string) || `anon-${Date.now()}`,
+      req.userTokenData?.userId ||
+        (req.query.userId as string) ||
+        `anon-${Date.now()}`,
       MAX_KEY_LENGTH,
     );
     const userName = sanitizeString(

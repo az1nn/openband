@@ -1,6 +1,6 @@
 # Proposal: code-review-hardening — Fix HIGH + MED Repo-Wide Findings
 
-> **Status: SHIPPED.** All HIGH + MED code-review findings were implemented across
+## Status: SHIPPED
 > the AUDIO, STATE, UI/3D, and BACKEND domains and verified green (tsc, vitest,
 > legacy node:test, graph:ci, production build). LOW-severity convention nits
 > (comment removal, `any`-sprawl) remain explicitly OUT of scope.

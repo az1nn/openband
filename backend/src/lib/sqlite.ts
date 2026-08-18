@@ -2,8 +2,6 @@ import Database from "better-sqlite3"
 import path from "path"
 import fs from "fs"
 
-// ─── Types ────────────────────────────────────────────────────────────────
-
 type Operator = "=" | "!="
 
 interface DbRow {
@@ -36,15 +34,12 @@ interface SingleResult<T = DbRow> {
   error: Error | null
 }
 
-// JSON column names that need parsing
 const JSON_COLUMNS = new Set([
   "chords",
   "details",
   "mixing_preferences",
   "creative_tags",
 ])
-
-// ─── Factory: Database Connection ─────────────────────────────────────────
 
 interface DatabaseConfig {
   path?: string
@@ -71,8 +66,6 @@ function createDatabaseConnection(config: DatabaseConfig = {}): Database.Databas
 
   return db
 }
-
-// ─── Factory: Query Builder ───────────────────────────────────────────────
 
 interface QueryBuilderConfig {
   table: string
@@ -192,8 +185,6 @@ class QueryBuilder {
   }
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
-
 function toSnakeCase(str: string): string {
   return str.replace(/([A-Z])/g, "_$1").toLowerCase()
 }
@@ -208,7 +199,8 @@ function rowToCamel(row: DbRow): DbRow {
     if (typeof value === "string" && JSON_COLUMNS.has(key)) {
       try {
         result[toCamelCase(key)] = JSON.parse(value) as unknown
-      } catch {
+      } catch (e) {
+        console.error("sqlite JSON parse failed:", e)
         result[toCamelCase(key)] = value
       }
     } else {
@@ -239,8 +231,6 @@ function buildWhereClauses(
   return parts
 }
 
-// ─── Singleton ────────────────────────────────────────────────────────────
-
 let dbInstance: Database.Database | null = null
 
 function getDb(): Database.Database {
@@ -249,8 +239,6 @@ function getDb(): Database.Database {
   }
   return dbInstance
 }
-
-// ─── Public API (Supabase-compatible) ─────────────────────────────────────
 
 export const sqlite = {
   from(table: string): QueryBuilder {
@@ -296,8 +284,6 @@ export const sqlite = {
     }),
   },
 }
-
-// ─── Schema initialization ────────────────────────────────────────────────
 
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS profiles (

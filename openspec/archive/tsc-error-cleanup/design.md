@@ -1,7 +1,6 @@
 # Design: tsc Error Cleanup — Remove Shadowing Ambient Declaration
 
-> **Status: DRAFT.** Not started. Source of truth once shipped:
-> `tasks.md` (checklist). Do NOT mark SHIPPED until all gates pass.
+## Status: SHIPPED
 
 ## 1. Delete the shadowing ambient declaration
 

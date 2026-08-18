@@ -101,7 +101,11 @@ export function mergeOperations(
     }
   }
 
-  localClock = Math.max(localClock, ...merged.map((o) => o.timestamp));
+  let maxClock = localClock;
+  for (const o of merged) {
+    if (o.timestamp > maxClock) maxClock = o.timestamp;
+  }
+  localClock = maxClock;
 
   return merged.sort(compareLamport);
 }

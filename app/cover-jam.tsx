@@ -193,14 +193,10 @@ export default function CoverJamStudio() {
         }
 
         // Check speed dial click
-        for (const child of speedGroup.children) {
-          if (child.userData.isSpeedDial) {
-            const hits = raycaster.intersectObject(child);
-            if (hits.length > 0) {
-              speedIdx = (speedIdx + 1) % 3;
-              return;
-            }
-          }
+        const hits = raycaster.intersectObject(speedDial, true);
+        if (hits.length > 0) {
+          speedIdx = (speedIdx + 1) % 3;
+          return;
         }
       };
 

@@ -1,3 +1,5 @@
+## Status: SHIPPED
+
 # Roadmap Step 4: Native Desktop Build Pipeline & CI Automation — Proposal
 
 ## Context

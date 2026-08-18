@@ -1,6 +1,6 @@
 # Tasks: code-review-hardening — Fix HIGH + MED Repo-Wide Findings
 
-> **Status: PROPOSED.** All items pending. Writing task only — no source edits,
+## Status: SHIPPED
 > no test runs.
 
 ## AUDIO ENGINE & DSP
