@@ -810,7 +810,8 @@ export async function renderTracksToUrl(
           const input = ctx.createGain();
           input.gain.value = 1;
           const output = ctx.createGain();
-          output.gain.value = bus.muted ? 0 : bus.volume;
+          const busVol = typeof bus.volume === "number" ? (bus.volume > 1 ? bus.volume / 100 : bus.volume) : 1;
+          output.gain.value = bus.muted ? 0 : Math.max(0, Math.min(1, busVol));
           input.connect(output);
           output.connect(masterGain);
           busGainNodes.set(bus.id, { input, output, muted: bus.muted });
@@ -841,7 +842,9 @@ export async function renderTracksToUrl(
         if (track.muted || (anySolo && !track.solo)) continue;
 
         const trackGain = ctx.createGain();
-        trackGain.gain.value = track.volume ?? 1;
+        const rawVol = track.volume ?? 1;
+        const normalizedVol = rawVol > 1 ? rawVol / 100 : rawVol;
+        trackGain.gain.value = Math.max(0, Math.min(1, normalizedVol));
 
         const panNode = ctx.createStereoPanner();
         panNode.pan.value = track.pan ?? 0;

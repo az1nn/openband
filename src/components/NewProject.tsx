@@ -1,9 +1,11 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { View, Text, Pressable, ScrollView, TextInput } from "react-native";
 import { useTranslation } from "react-i18next";
 import { GENRES, MUSICAL_KEYS, keyLabel, MOODS, TIME_SIGNATURES } from "../lib/projectTemplates";
 import type { GenreTemplate, Mood } from "../lib/projectTemplates";
 import { setupProjectStarter, type ProjectStarterResult } from "../lib/projectStarter";
+import { useProjectPreview } from "../hooks/useProjectPreview";
+import { ProjectPreviewPlayer } from "./ProjectPreviewPlayer";
 
 interface NewProjectProps {
   visible: boolean;
@@ -65,6 +67,21 @@ export function NewProject({
     initialMood ? "details" : initialGenre ? "mood" : "genre",
   );
 
+  const isCreatingRef = useRef(false);
+
+  const preview = useProjectPreview(
+    {
+      genreId: selectedGenre.id,
+      mood: selectedMood,
+      bpm,
+      key: selectedKey,
+      timeSignature,
+      numBars,
+      name,
+    },
+    { enabled: visible && step === "details" },
+  );
+
   const handleSelectGenre = useCallback((genre: GenreTemplate) => {
     setSelectedGenre(genre);
     setBpm(genre.defaultBpm);
@@ -83,6 +100,9 @@ export function NewProject({
   }, [selectedGenre.defaultBpm]);
 
   const handleCreate = useCallback(() => {
+    if (isCreatingRef.current) return;
+    isCreatingRef.current = true;
+    preview.stop();
     const finalName = name.trim() || `${selectedGenre.name} - ${t("newProject.defaultName", "Novo Projeto")}`;
     const result = setupProjectStarter({
       name: finalName,
@@ -102,9 +122,11 @@ export function NewProject({
     setTimeSignature("4/4");
     setStep("genre");
     onCreate(result);
-  }, [name, selectedGenre, selectedKey, bpm, selectedMood, numBars, timeSignature, onCreate]);
+    isCreatingRef.current = false;
+  }, [name, selectedGenre, selectedKey, bpm, selectedMood, numBars, timeSignature, onCreate, preview]);
 
   const handleClose = useCallback(() => {
+    preview.stop();
     setName("");
     setSelectedGenre(GENRES[0]);
     setBpm(GENRES[0].defaultBpm);
@@ -114,9 +136,10 @@ export function NewProject({
     setTimeSignature("4/4");
     setStep("genre");
     onClose();
-  }, [onClose]);
+  }, [onClose, preview]);
 
   const handleScratch = useCallback(() => {
+    preview.stop();
     const finalName = name.trim() || `${selectedGenre.name} - ${t("newProject.defaultName", "Novo Projeto")}`;
     const result = setupProjectStarter({
       name: finalName,
@@ -138,7 +161,7 @@ export function NewProject({
     setStep("genre");
     onStartFromScratch?.(result);
     onClose();
-  }, [name, selectedGenre, selectedKey, bpm, selectedMood, numBars, timeSignature, onStartFromScratch, onClose]);
+  }, [name, selectedGenre, selectedKey, bpm, selectedMood, numBars, timeSignature, onStartFromScratch, onClose, preview]);
 
   if (!visible) return null;
 
@@ -460,6 +483,8 @@ export function NewProject({
                   </View>
                 ))}
               </View>
+
+              <ProjectPreviewPlayer preview={preview} disabled={isCreatingRef.current} />
 
               <View className="flex-row gap-3 mb-6">
                 <Pressable

@@ -76,3 +76,4 @@ export { MobileDrawer } from "./MobileDrawer";
 export { ToastProvider, useToast } from "./Toast";
 export { GenerateCoverModal, sanitizeCoverFilename } from "./GenerateCoverModal";
 export { MpcPadGrid } from "./MpcPadGrid";
+export { ProjectPreviewPlayer } from "./ProjectPreviewPlayer";
