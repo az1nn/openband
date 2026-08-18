@@ -1,3 +1,7 @@
+## Status: SHIPPED
+
+> Documentation synced to hardening work (AGENTS.md, 3D scene guidelines, features-implementation).
+
 # Proposal: docs-agents-update — Document Hardening Outcomes & Conventions
 
 > **Status: DRAFT.** Not started. Do NOT mark SHIPPED until the documentation

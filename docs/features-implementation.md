@@ -499,6 +499,18 @@ function autoMix(tracks: TrackDef[], genre: string): TrackDef[] {
 - **Offline Render Guards**: Added `Math.max(1, ...)` and buffer length guards across `mastering.ts`, `midiSynth.ts`, `pluginChain.ts`, and `universalAudio.ts` to prevent `OfflineAudioContext(len=0)` crashes on empty or 0-duration projects
 - **Plugin Type Validation**: Added explicit `console.warn` logging for unhandled plugin and pedal processor types in `pluginChain`, `mastering`, and `pedalboardDsp` instead of silent pass-through
 
+## Stability & Code-Review Hardening (Latest)
+
+Post-implementation stabilization across six archived changes (see `openspec/archive/`):
+
+- **Audio/DSP:** Guarded `OfflineAudioContext.close()` after every render; guarded `audioWorklet.addModule()` with blob-URL revoke in `finally`; real `bpm` threading into native MIDI render; worker blob-URL revoke moved off the synchronous `new Worker` tick; sample-rate-keyed shared buffer context; separate true peak-CPU accumulator.
+- **State/Collab:** CRDT `*.add` now merges commutatively (no lost update) with Lamport-clock ordering; `projectBranching.mergeBranch` applies modified tracks always and gates only added tracks by the accept list, with a single `main.state` assignment and a filtered `crdtOperations` log; bridge-save queue bounded; presence/collaboration reconnect + timer guards; `Set`-based listeners; `supabaseRemote` does a remote-preferring rebase on divergence.
+- **UI / 3D:** All 13 Three.js screens dispose on async unmount (cancelled flag + immediate teardown), remove resize listeners, traverse-dispose geometry/material/textures and `renderer.forceContextLoss()` via `src/lib/sceneLighting.ts`'s `disposeScene`; `GenerateCoverModal` uses `@bridge` `isElectron` instead of `window.electronAPI`; init failures are logged; `aiAutoMixAnalysis` guards zero-length/zero-channel buffers.
+- **Backend:** SSE subscribe routes use `requireAuthQuery` (token via `Authorization` header OR `?token=` query, since browser `EventSource` cannot send headers); queue artifacts survive until job eviction; `extract.ts`/`master.ts` close file descriptors in `try/finally`; stem/master downloads require auth; generator/extract errors are logged.
+- **LOW pass:** empty `catch` blocks now bind `e` and log; dead `reconnectOnLineRef` removed; defensive worker-URL revoke added.
+
+Operational notes: `metro.config.js` keeps an `Expo.fx` stub; asset module types live in `src/declarations.d.ts` (do NOT add `src/react-native.d.ts`); verification runs `tsc` → backend `tsc` → `vitest` → legacy → `graph:ci` → `build`.
+
 ## Roadmap Features (Latest)
 
 ### Genre Templates — Trap, House, Dance Hall

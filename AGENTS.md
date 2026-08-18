@@ -319,6 +319,18 @@ Types: `fix`, `feat`, `chore`, `refactor`, `docs`
 
 ---
 
+## Known Issues & Project Conventions
+
+Operational facts learned during the hardening work (keep these in mind before editing build/config/types):
+
+- **WSL execution wrapper:** Run git/tsc/vitest via `wsl -e bash -lc "cd /home/az1nn/openband && <cmd>"`. Vitest cannot run from the Windows UNC mount (it must execute inside WSL). Pure file edits may use the `\\wsl.localhost\...` UNC path; bash commands must not.
+- **TypeScript types:** `react-native@0.86` ships real type definitions. Do NOT add `src/react-native.d.ts` — it shadows the real types and triggers a ~52-error cascade. For asset module declarations (png/mp3/wasm/etc.) use `src/declarations.d.ts`.
+- **Build / `Expo.fx`:** The published `expo@57.0.4` package omits `Expo.fx`; `metro.config.js` keeps a defensive stub for it. The earlier build break was caused by a corrupted `node_modules/expo` extraction (missing `.tsx` src files), fixed by reinstalling `expo`.
+- **Verification matrix order (Phase 3):** `npx tsc --noEmit` → `cd backend && npx tsc --noEmit` → `npx vitest run` → `npm run test:legacy` → `npm run graph:ci` → `npm run build`.
+- **Full-repo code review:** Partition into 5 domains (Audio/DSP, State/Collab, UI/3D, Backend, 3D+lib) and review in parallel subagents; fix HIGH then MED, then LOW (empty catches, dead vars) in a follow-up pass.
+
+---
+
 ## Graph Engineering & Architecture Toolchain
 
 OpenBand includes a zero-dependency (Node.js built-ins only) architecture-graph toolchain under `graph/` that continuously analyzes repository structure, invariants, component usage, and documentation traceability.

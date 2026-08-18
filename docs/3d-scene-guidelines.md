@@ -51,9 +51,10 @@ Status markers used below:
 ### 2.3 Render loop & lifecycle
 
 - ✅ One rAF loop per screen, delta-timed; avatar bob, per-furniture emissive pulse, `LightControls` color read via ref.
-- ✅ Cleanup on unmount: `cancelAnimationFrame`, remove all listeners, `container.removeChild(renderer.domElement)`, `renderer.dispose()`.
+- ✅ Cleanup on unmount: `cancelAnimationFrame`, remove all listeners, `container.removeChild(renderer.domElement)`, then **traverse the scene disposing every `geometry`, every `material` and its texture-valued props, and finally call `renderer.forceContextLoss()`** via the shared `disposeScene(THREE, scene, renderer)` helper from `src/lib/sceneLighting.ts`.
+- ✅ **Async-init cancellation:** the outer `useEffect` returns `() => { cancelled = true; cleanup?.(); }`; if the component unmounts during the async `loadThree()` call, the `.then` callback disposes the scene/renderer immediately when `cancelled` is already `true`.
 - 🚫 No rAF pause on hidden tab / minimized / blur.
-- 🚫 No discovery of `renderer.forceContextLoss()`, no device-tier quality scaling, no mesh LOD.
+- 🚫 No device-tier quality scaling, no mesh LOD.
 
 ### 2.4 Audio / DAW decoupling (the key rule)
 
