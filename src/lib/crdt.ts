@@ -39,6 +39,25 @@ export function createOperation(
   };
 }
 
+function isAddType(type: CrdtOperation["type"]): boolean {
+  return type === "track.add" || type === "bus.add" || type === "note.add";
+}
+
+function getValueId(value: unknown): string | null {
+  if (value && typeof value === "object" && "id" in (value as object)) {
+    const id = (value as { id: unknown }).id;
+    return typeof id === "string" ? id : null;
+  }
+  return null;
+}
+
+export function compareLamport(a: CrdtOperation, b: CrdtOperation): number {
+  if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+  if (a.clientId < b.clientId) return -1;
+  if (a.clientId > b.clientId) return 1;
+  return 0;
+}
+
 export function mergeOperations(
   existing: CrdtOperation[],
   incoming: CrdtOperation[],
@@ -49,20 +68,32 @@ export function mergeOperations(
     const existingIdx = merged.findIndex((e) => e.id === op.id);
     if (existingIdx >= 0) continue;
 
-    const conflictIdx = merged.findIndex(
-      (e) => e.path === op.path && e.type === op.type && e.userId !== op.userId,
-    );
-
-    if (conflictIdx >= 0) {
-      const existing = merged[conflictIdx];
-      if (
-        op.timestamp > existing.timestamp ||
-        (op.timestamp === existing.timestamp && op.clientId > existing.clientId)
-      ) {
-        merged[conflictIdx] = op;
+    if (isAddType(op.type)) {
+      const vid = getValueId(op.value);
+      const dupIdx = merged.findIndex(
+        (e) =>
+          e.path === op.path &&
+          e.type === op.type &&
+          vid !== null &&
+          getValueId(e.value) === vid,
+      );
+      if (dupIdx >= 0) {
+        if (compareLamport(op, merged[dupIdx]) > 0) merged[dupIdx] = op;
+      } else {
+        merged.push(op);
       }
     } else {
-      merged.push(op);
+      const conflictIdx = merged.findIndex(
+        (e) => e.path === op.path && e.type === op.type && e.userId !== op.userId,
+      );
+
+      if (conflictIdx >= 0) {
+        if (compareLamport(op, merged[conflictIdx]) > 0) {
+          merged[conflictIdx] = op;
+        }
+      } else {
+        merged.push(op);
+      }
     }
 
     if (op.timestamp > localClock) {
@@ -70,7 +101,9 @@ export function mergeOperations(
     }
   }
 
-  return merged.sort((a, b) => a.timestamp - b.timestamp);
+  localClock = Math.max(localClock, ...merged.map((o) => o.timestamp));
+
+  return merged.sort(compareLamport);
 }
 
 export function applyOperation(
@@ -145,12 +178,14 @@ export function decodeState(
 ): { clock: number; clientId: string; operations: CrdtOperation[] } {
   try {
     const parsed = JSON.parse(data);
+    localClock = Math.max(localClock, parsed.clock ?? 0);
     return {
       clock: parsed.clock ?? 0,
       clientId: parsed.clientId ?? "unknown",
       operations: parsed.operations ?? [],
     };
-  } catch {
+  } catch (e) {
+    console.warn("Failed to decode CRDT state:", e);
     return { clock: 0, clientId: "unknown", operations: [] };
   }
 }

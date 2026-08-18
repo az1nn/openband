@@ -254,6 +254,7 @@ function renderMidiNotesNative(
   duration: number,
   sampleRate: number,
   mood: Mood | undefined,
+  bpm: number = 120,
 ): Float32Array {
   const totalSamples = Math.ceil(sampleRate * duration);
   const left = new Float32Array(totalSamples);
@@ -271,7 +272,7 @@ function renderMidiNotesNative(
   }
 
   const moodPreset = mood ? MOODS.find((m) => m.id === mood) : undefined;
-  const beatDuration = 60 / 120;
+  const beatDuration = 60 / Math.max(1, bpm);
 
   for (const track of audible) {
     if (!track.midiNotes || track.midiNotes.length === 0) continue;
@@ -992,6 +993,10 @@ export async function renderTracksToUrl(
       }
 
       let buffer = await ctx.startRendering();
+      const oac = ctx as { close?: () => Promise<void> };
+      if (typeof oac.close === "function") {
+        oac.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
+      }
       if (masterPlugins && masterPlugins.length > 0) {
         try {
           buffer = await applyPluginChain(buffer, masterPlugins, sampleRate, {
@@ -1025,6 +1030,7 @@ export async function renderTracksToUrl(
       duration,
       sampleRate,
       mood,
+      bpm,
     );
     const blob = interleaveToWavBlob(interleaved, sampleRate);
     return createTrackedBlob(blob);
@@ -1221,6 +1227,10 @@ export async function renderTrackStem(
     }
 
     const buffer = await ctx.startRendering();
+    const oac = ctx as { close?: () => Promise<void> };
+    if (typeof oac.close === "function") {
+      oac.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
+    }
     return buffer;
   } catch (e) {
     console.warn("renderTrackStem failed:", e);
@@ -1297,7 +1307,12 @@ async function renderTrackBuffer(
     }
   }
 
-  return ctx2.startRendering();
+  const buffer = await ctx2.startRendering();
+  const oac2 = ctx2 as { close?: () => Promise<void> };
+  if (typeof oac2.close === "function") {
+    oac2.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
+  }
+  return buffer;
 }
 
 export function midiNoteToName(pitch: number): string {

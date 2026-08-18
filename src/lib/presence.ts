@@ -52,8 +52,8 @@ function loadCachedCursors(projectId: string): Map<string, PresenceCursor> {
       const parsed = JSON.parse(raw) as PresenceCursor[];
       return new Map(parsed.map((c) => [c.userId, c]));
     }
-  } catch {
-    // ignore corrupt cache
+  } catch (e) {
+    console.warn("Failed to load cached cursors:", e);
   }
   return new Map();
 }
@@ -62,8 +62,8 @@ function saveCursorsToCache(projectId: string, cursors: Map<string, PresenceCurs
   try {
     const entries = Array.from(cursors.values());
     localStorage.setItem(presenceCacheKey(projectId), JSON.stringify(entries));
-  } catch {
-    // ignore storage write failures
+  } catch (e) {
+    console.warn("Failed to cache cursors:", e);
   }
 }
 
@@ -110,6 +110,7 @@ export function usePresence({
   const eventSourceRef = useRef<EventSource | null>(null);
   const cleanupFnRef = useRef<(() => void) | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const connectingRef = useRef(false);
   const backoffMsRef = useRef(1000);
   const maxBackoffMs = 30000;
   const reconnectOnLineRef = useRef<(() => void) | null>(null);
@@ -138,6 +139,12 @@ export function usePresence({
 
   const connect = useCallback(() => {
     if (!projectId) return;
+    if (connectingRef.current) return;
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    connectingRef.current = true;
 
     const url = getEventSourceUrl(serverUrl, projectId, userId, userName);
     let es: EventSource;
@@ -148,6 +155,7 @@ export function usePresence({
       es.onopen = () => {
         setIsConnected(true);
         backoffMsRef.current = 1000;
+        connectingRef.current = false;
       };
 
       es.onmessage = (event: MessageEvent) => {
@@ -165,7 +173,12 @@ export function usePresence({
         setIsConnected(false);
         es.close();
         eventSourceRef.current = null;
+        connectingRef.current = false;
 
+        if (reconnectTimerRef.current) {
+          clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = null;
+        }
         const delay = Math.min(backoffMsRef.current, maxBackoffMs);
         backoffMsRef.current = Math.min(backoffMsRef.current * 2, maxBackoffMs);
 
@@ -189,8 +202,8 @@ export function usePresence({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId }),
           keepalive: true,
-        }).catch(() => {
-          // best-effort leave
+        }).catch((e) => {
+          console.warn("Failed to send leave presence:", e);
         });
 
         es.close();

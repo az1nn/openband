@@ -4,6 +4,14 @@ export interface Transient {
   index: number;
 }
 
+let sharedBufferContext: OfflineAudioContext | null = null;
+function createBufferSafe(numChannels: number, length: number, sampleRate: number): AudioBuffer {
+  if (!sharedBufferContext || sharedBufferContext.sampleRate !== (sampleRate || 44100)) {
+    sharedBufferContext = new OfflineAudioContext(numChannels, 1, sampleRate || 44100);
+  }
+  return sharedBufferContext.createBuffer(numChannels, length, sampleRate);
+}
+
 export function detectTransients(
   buffer: AudioBuffer,
   threshold: number = 0.3,
@@ -82,11 +90,7 @@ export function sliceAudioBuffer(
 
     if (length <= 0) continue;
 
-    const sliceBuffer = new OfflineAudioContext(
-      numChannels,
-      length,
-      sampleRate,
-    ).createBuffer(numChannels, length, sampleRate);
+    const sliceBuffer = createBufferSafe(numChannels, length, sampleRate);
 
     for (let ch = 0; ch < numChannels; ch++) {
       const chData = buffer.getChannelData(ch);

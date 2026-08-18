@@ -5,6 +5,7 @@ import { upload } from "../middleware/upload";
 import { runDemucs, checkDemucsInstalled } from "../services/demucs";
 import { runMock } from "../services/mock";
 import { getJob, subscribeToJob, addJob } from "../services/queue";
+import { requireAuth, type AuthenticatedRequest } from "../middleware/authMiddleware";
 import type { ExtractResponse, ErrorResponse } from "../types";
 
 const router = Router();
@@ -28,12 +29,12 @@ const MP3_SAMPLE_RATES: Record<string, number[]> = {
 };
 
 async function getAudioDuration(filePath: string): Promise<number> {
+  let fd: fs.promises.FileHandle | undefined;
   try {
     const stat = await fs.promises.stat(filePath);
-    const fd = await fs.promises.open(filePath, "r");
+    fd = await fs.promises.open(filePath, "r");
     const head = Buffer.alloc(65536);
     const { bytesRead } = await fd.read(head, 0, 65536, 0);
-    await fd.close();
     const buf = head.subarray(0, bytesRead);
 
     if (
@@ -75,8 +76,17 @@ async function getAudioDuration(filePath: string): Promise<number> {
     }
 
     return 0;
-  } catch {
+  } catch (e) {
+    console.error("getAudioDuration error:", e);
     return 0;
+  } finally {
+    if (fd) {
+      try {
+        await fd.close();
+      } catch (e) {
+        console.error("getAudioDuration fd close error:", e);
+      }
+    }
   }
 }
 
@@ -193,7 +203,7 @@ router.post("/extract", (req: Request, res: Response) => {
   });
 });
 
-router.get("/stems/:filename", (req: Request, res: Response) => {
+router.get("/stems/:filename", requireAuth, (req: AuthenticatedRequest, res: Response) => {
   const filename = req.params.filename as string;
   if (
     filename.includes("/") ||

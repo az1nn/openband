@@ -89,14 +89,22 @@ export function buildBusRouteGraph(
 
   const cleanup = () => {
     for (const bus of busNodes.values()) {
-      try { bus.inputGain.disconnect(); } catch {}
-      try { bus.outputGain.disconnect(); } catch {}
+      try { bus.inputGain.disconnect(); } catch (e) {
+        console.warn("busRouter input disconnect failed:", e);
+      }
+      try { bus.outputGain.disconnect(); } catch (e) {
+        console.warn("busRouter output disconnect failed:", e);
+      }
     }
     for (const node of trackOutputs.values()) {
-      try { node.disconnect(); } catch {}
+      try { node.disconnect(); } catch (e) {
+        console.warn("busRouter track disconnect failed:", e);
+      }
     }
     for (const sendGain of sendGainNodes) {
-      try { sendGain.disconnect(); } catch {}
+      try { sendGain.disconnect(); } catch (e) {
+        console.warn("busRouter send disconnect failed:", e);
+      }
     }
   };
 

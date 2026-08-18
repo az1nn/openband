@@ -1,4 +1,5 @@
-import { Router, Request, Response } from "express";
+import { Router, Response } from "express";
+import { requireAuth, requireAuthQuery, type AuthenticatedRequest } from "../middleware/authMiddleware";
 
 interface ClientEntry {
   id: string;
@@ -103,7 +104,8 @@ const router = Router();
 
 router.get(
   "/api/presence/:projectId/subscribe",
-  (req: Request, res: Response) => {
+  requireAuthQuery,
+  (req: AuthenticatedRequest, res: Response) => {
     const { projectId } = req.params as { projectId: string };
 
     if (!isValidKey(projectId)) {
@@ -195,7 +197,8 @@ router.get(
 
 router.post(
   "/api/presence/:projectId/cursor",
-  (req: Request, res: Response) => {
+  requireAuth,
+  (req: AuthenticatedRequest, res: Response) => {
     const { projectId } = req.params as { projectId: string };
 
     if (!isValidKey(projectId)) {
@@ -244,7 +247,8 @@ router.post(
 
 router.post(
   "/api/presence/:projectId/leave",
-  (req: Request, res: Response) => {
+  requireAuth,
+  (req: AuthenticatedRequest, res: Response) => {
     const { projectId } = req.params as { projectId: string };
 
     if (!isValidKey(projectId)) {

@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import { upload } from "../middleware/upload";
+import { requireAuth, type AuthenticatedRequest } from "../middleware/authMiddleware";
 
 function safeJsonParse(s: unknown): unknown {
   if (typeof s !== "string" || !s) return undefined;
@@ -95,10 +96,14 @@ router.post(
       const filePath = req.file.path;
 
       const headFd = await fs.promises.open(filePath, "r");
-      const headBuf = Buffer.alloc(65536);
-      const { bytesRead } = await headFd.read(headBuf, 0, 65536, 0);
-      await headFd.close();
-      const header = parseAudioHeader(headBuf.subarray(0, bytesRead));
+      let header: { format: string; sampleRate: number | null; bitDepth: number | null };
+      try {
+        const headBuf = Buffer.alloc(65536);
+        const { bytesRead } = await headFd.read(headBuf, 0, 65536, 0);
+        header = parseAudioHeader(headBuf.subarray(0, bytesRead));
+      } finally {
+        await headFd.close();
+      }
 
       const outputFormat = header.format === "mp3" ? "mp3" : "wav";
       const outputFilename = `master_${Date.now()}.${outputFormat}`;
@@ -164,7 +169,7 @@ router.post(
   },
 );
 
-router.get("/master/download/:filename", (req: Request, res: Response) => {
+router.get("/master/download/:filename", requireAuth, (req: AuthenticatedRequest, res: Response) => {
   const filename = req.params.filename as string;
   if (
     filename.includes("/") ||

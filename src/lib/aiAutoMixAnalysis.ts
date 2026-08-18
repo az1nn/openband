@@ -69,6 +69,21 @@ export function analyzeBuffer(
   trackId: string,
   trackName: string,
 ): StemAnalysis {
+  if (buffer.numberOfChannels === 0 || buffer.length === 0) {
+    return {
+      trackId,
+      trackName,
+      role: "other",
+      lufs: 0,
+      peakDb: 0,
+      dynamicRange: 0,
+      spectralBalance: { low: 0.33, mid: 0.34, high: 0.33 },
+      transientDensity: 0,
+      stereoWidth: 0,
+      rmsLevel: 0,
+      crestFactor: 0,
+    };
+  }
   const sampleRate = buffer.sampleRate;
   const channelData = buffer.getChannelData(0);
   const length = channelData.length;

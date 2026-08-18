@@ -260,9 +260,9 @@ export function createUnifiedInstrumentEngine(
   };
 }
 
-export function createWasmInstrumentWorkletNode(
+export async function createWasmInstrumentWorkletNode(
   ctx: AudioContext,
-): AudioWorkletNode {
+): Promise<AudioWorkletNode> {
   const code = `
     class WasmInstrumentProcessor extends AudioWorkletProcessor {
       constructor() {
@@ -367,11 +367,18 @@ export function createWasmInstrumentWorkletNode(
 
   const blob = new Blob([code], { type: "application/javascript" });
   const url = URL.createObjectURL(blob);
-  const node = new AudioWorkletNode(ctx, "wasm-instrument-processor", {
-    numberOfInputs: 0,
-    numberOfOutputs: 1,
-    outputChannelCount: [2],
-  });
-  URL.revokeObjectURL(url);
+  let node: AudioWorkletNode;
+  try {
+    if (ctx.audioWorklet && typeof ctx.audioWorklet.addModule === "function") {
+      await ctx.audioWorklet.addModule(url);
+    }
+    node = new AudioWorkletNode(ctx, "wasm-instrument-processor", {
+      numberOfInputs: 0,
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+    });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
   return node;
 }

@@ -46,15 +46,23 @@ const ONBOARDING_KEY = "openband_onboarding";
 const pendingBridgeSaves = new Map<string, ProjectData>();
 let bridgeAvailable: boolean | null = null;
 
-/** Callback fired after a successful local save — used for cloud sync auto-push. */
-let onProjectSaved: ((id: string, project: ProjectData) => void) | null = null;
+/** Listeners fired after a successful local save — used for cloud sync auto-push. */
+const onProjectSavedListeners = new Set<
+  (id: string, project: ProjectData) => void
+>();
 
 /**
  * Register a callback to be invoked after every project save.
  * Use this for cloud sync auto-push, analytics, etc.
  */
-export function setOnProjectSaved(cb: ((id: string, project: ProjectData) => void) | null): void {
-  onProjectSaved = cb;
+export function setOnProjectSaved(
+  cb: ((id: string, project: ProjectData) => void) | null,
+): void {
+  if (cb === null) {
+    onProjectSavedListeners.clear();
+    return;
+  }
+  onProjectSavedListeners.add(cb);
 }
 
 async function checkBridge(): Promise<boolean> {
@@ -84,6 +92,7 @@ async function flushPendingBridgeSaves(): Promise<void> {
 }
 
 function queueBridgeSave(id: string, project: ProjectData): void {
+  if (bridgeAvailable === false) return;
   pendingBridgeSaves.set(id, project);
   flushPendingBridgeSaves().catch((e: unknown) => {
     console.warn("Bridge flush failed, save queued:", e);
@@ -144,7 +153,7 @@ export function saveProject(
         parentProjectId: data.parentProjectId,
       };
       storage.setItem(INDEX_KEY, JSON.stringify(index));
-      onProjectSaved?.(id, project);
+      onProjectSavedListeners.forEach((cb) => cb(id, project));
     } catch (e) {
       console.warn("Project save failed:", e);
       return false;
@@ -372,7 +381,8 @@ export function getFavoriteProjects(): string[] {
   if (!raw) return [];
   try {
     return JSON.parse(raw);
-  } catch {
+  } catch (e) {
+    console.warn("[projectStore] favorites parse failed:", e);
     return [];
   }
 }
@@ -393,7 +403,8 @@ export function getOnboardingState(): OnboardingState {
     if (!raw) return { completed: false };
     const parsed = JSON.parse(raw) as Partial<OnboardingState>;
     return { completed: parsed.completed === true };
-  } catch {
+  } catch (e) {
+    console.warn("[projectStore] onboarding parse failed:", e);
     return { completed: false };
   }
 }

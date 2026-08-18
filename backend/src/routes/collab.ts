@@ -1,4 +1,5 @@
-import { Router, Request, Response } from "express";
+import { Router, Response } from "express";
+import { requireAuth, requireAuthQuery, type AuthenticatedRequest } from "../middleware/authMiddleware";
 
 interface ClientEntry {
   id: string;
@@ -117,7 +118,8 @@ const router = Router();
 
 router.get(
   "/api/collab/:projectId/subscribe",
-  (req: Request, res: Response) => {
+  requireAuthQuery,
+  (req: AuthenticatedRequest, res: Response) => {
     const { projectId } = req.params as { projectId: string };
     if (!isValidKey(projectId)) {
       res.status(400).json({ error: "Invalid projectId" });
@@ -199,7 +201,8 @@ router.get(
 
 router.post(
   "/api/collab/:projectId/operation",
-  (req: Request, res: Response) => {
+  requireAuth,
+  (req: AuthenticatedRequest, res: Response) => {
     const { projectId } = req.params as { projectId: string };
     if (!isValidKey(projectId)) {
       res.status(400).json({ error: "Invalid projectId" });

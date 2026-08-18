@@ -62,6 +62,7 @@ function parseKey(raw: string): { root: string; isMinor: boolean } {
 }
 
 router.post("/generate-midi", (req: Request, res: Response) => {
+  try {
   const { bpm, key, timeSignature, userPrompt } = req.body ?? {};
   const safeBpm = typeof bpm === "number" && bpm > 0 ? bpm : 120;
   const safeTimeSig = timeSignature || "4/4";
@@ -72,14 +73,14 @@ router.post("/generate-midi", (req: Request, res: Response) => {
   const scaleType = isMinor ? "natural_minor" : "major";
 
   const genreHint = (userPrompt || "").toLowerCase();
-  let patternId = GENRE_PATTERNS.pop;
-  let drumPattern = DRUM_PATTERNS.pop;
+  let patternId = GENRE_PATTERNS["pop"];
+  let drumPattern = DRUM_PATTERNS["pop"];
   let bars = 4;
 
   for (const [genre, p] of Object.entries(GENRE_PATTERNS)) {
     if (genreHint.includes(genre.toLowerCase())) {
       patternId = p;
-      drumPattern = DRUM_PATTERNS[genre] || DRUM_PATTERNS.pop;
+      drumPattern = DRUM_PATTERNS[genre] || DRUM_PATTERNS["pop"];
       bars = 8;
       break;
     }
@@ -139,6 +140,10 @@ router.post("/generate-midi", (req: Request, res: Response) => {
     totalNotes: midiData.length,
     midiData,
   });
+  } catch (e) {
+    console.error("generate-midi error:", e);
+    res.status(500).json({ error: "Generation failed" });
+  }
 });
 
 export default router;

@@ -677,7 +677,12 @@ async function applySinglePlugin(
   }
 
   source.start(0);
-  return ctx.startRendering();
+  const rendered = await ctx.startRendering();
+  const oac = ctx as { close?: () => Promise<void> };
+  if (typeof oac.close === "function") {
+    oac.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
+  }
+  return rendered;
 }
 
 export function buildAutoPitchNode(
@@ -778,7 +783,12 @@ async function applyAutoPitch(
   wetGain.connect(ctx2.destination);
   srcDry.start(0);
   srcWet.start(0);
-  return ctx2.startRendering();
+  const rendered = await ctx2.startRendering();
+  const oac2 = ctx2 as { close?: () => Promise<void> };
+  if (typeof oac2.close === "function") {
+    oac2.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
+  }
+  return rendered;
 }
 
 export function serializePlugin(plugin: Plugin): string {

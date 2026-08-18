@@ -43,13 +43,37 @@ export interface Job<T = unknown> {
   completedAt?: number;
   result?: unknown;
   error?: string;
+  writtenFiles?: string[];
 }
 
 const jobs = new Map<string, Job>();
 const jobListeners = new Map<string, Set<(job: Job) => void>>();
 const PROCESSING_DELAY_MS = 2000;
+const MAX_JOBS = 1000;
 
 let jobCounter = 0;
+
+function pruneJobs(): void {
+  const completed = Array.from(jobs.entries()).filter(
+    ([, j]) => j.status === "completed" || j.status === "failed",
+  );
+  if (completed.length <= MAX_JOBS) return;
+  completed.sort(
+    (a, b) =>
+      (a[1].completedAt ?? a[1].createdAt) - (b[1].completedAt ?? b[1].createdAt),
+  );
+  const toRemove = completed.length - MAX_JOBS;
+  for (let i = 0; i < toRemove; i++) {
+    const id = completed[i][0];
+    const job = completed[i][1];
+    for (const f of job.writtenFiles ?? []) {
+      fs.unlink(f, (err) => {
+        if (err) console.error("queue artifact prune error:", err);
+      });
+    }
+    jobs.delete(id);
+  }
+}
 
 export function addJob<T>(type: string, data: T): string {
   const id = `job_${Date.now()}_${++jobCounter}`;
@@ -116,6 +140,8 @@ async function processJobAsync(id: string): Promise<void> {
   job.progress = 10;
   notifyJobListeners(job);
 
+  const writtenFiles: string[] = [];
+
   try {
     await new Promise<void>((resolve) => setTimeout(resolve, PROCESSING_DELAY_MS / 3));
     job.progress = 40;
@@ -138,6 +164,7 @@ async function processJobAsync(id: string): Promise<void> {
       stems.map(async (s) => {
         const filePath = path.join(STEMS_DIR, `mock_${id}_${s.key}.wav`);
         await writeSilentWav(filePath, 30);
+        writtenFiles.push(filePath);
         const size = (await fs.promises.stat(filePath)).size;
         return {
           name: s.name,
@@ -152,11 +179,14 @@ async function processJobAsync(id: string): Promise<void> {
     job.progress = 100;
     job.result = { stems: written };
     job.completedAt = Date.now();
+    job.writtenFiles = writtenFiles;
     notifyJobListeners(job);
   } catch (e: unknown) {
     job.status = "failed";
     job.progress = 100;
     job.error = e instanceof Error ? e.message : "Unknown error";
     notifyJobListeners(job);
+  } finally {
+    pruneJobs();
   }
 }

@@ -28,6 +28,7 @@ self.onmessage = function(e) {
 }
 
 let workerInstance: Worker | null = null;
+let workerBlobUrl: string | null = null;
 let rafId: number | null = null;
 let intervalId: number | null = null;
 let isRunning = false;
@@ -57,8 +58,8 @@ function startWorkerClock(ctx: AudioContext, intervalMs: number): void {
   try {
     const blob = new Blob([createWorkerBlob()], { type: "application/javascript" });
     const url = URL.createObjectURL(blob);
+    workerBlobUrl = url;
     workerInstance = new Worker(url);
-    URL.revokeObjectURL(url);
 
     workerInstance.onmessage = (e: MessageEvent<{ type: string; time: number }>) => {
       if (e.data.type === "tick") {
@@ -68,6 +69,10 @@ function startWorkerClock(ctx: AudioContext, intervalMs: number): void {
 
     workerInstance.onerror = (e) => {
       console.warn("Clock worker error:", e.message);
+      if (workerBlobUrl) {
+        URL.revokeObjectURL(workerBlobUrl);
+        workerBlobUrl = null;
+      }
     };
 
     workerInstance.postMessage({ type: "start", interval: intervalMs });
@@ -119,6 +124,10 @@ export function stopClock(): void {
     workerInstance.postMessage({ type: "stop" });
     workerInstance.terminate();
     workerInstance = null;
+    if (workerBlobUrl) {
+      URL.revokeObjectURL(workerBlobUrl);
+      workerBlobUrl = null;
+    }
   }
   if (rafId !== null) {
     cancelAnimationFrame(rafId);

@@ -24,7 +24,7 @@ import {
 } from "../lib/settingsStore";
 import { API_BASE_URL } from "../lib/apiUrl";
 import { getSupabase } from "../lib/supabase";
-import { OpenBandNative } from "../bridge";
+import { OpenBandNative, isElectron } from "../bridge";
 
 interface GenerateCoverModalProps {
   visible: boolean;
@@ -265,8 +265,7 @@ export function GenerateCoverModal({
   const handleDownload = async () => {
     if (!resultDataUrl) return;
     const filename = `${sanitizeCoverFilename(projectTitle)}.png`;
-    const isDesktopElectron =
-      typeof window !== "undefined" && !!window.electronAPI;
+    const isDesktopElectron = isElectron;
     try {
       if (isDesktopElectron || Platform.OS !== "web") {
         const path = await OpenBandNative.showSaveDialog({

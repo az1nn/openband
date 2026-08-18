@@ -344,9 +344,9 @@ export async function wsolaTimeStretch(
   return output;
 }
 
-export function createTimeStretchNode(
+export async function createTimeStretchNode(
   ctx: AudioContext,
-): AudioWorkletNode {
+): Promise<AudioWorkletNode> {
   const code = `
     class TimeStretchProcessor extends AudioWorkletProcessor {
       constructor() {
@@ -434,12 +434,19 @@ export function createTimeStretchNode(
   const blob = new Blob([code], { type: "application/javascript" });
   const url = URL.createObjectURL(blob);
 
-  const node = new AudioWorkletNode(ctx, "time-stretch-processor", {
-    numberOfInputs: 0,
-    numberOfOutputs: 1,
-    outputChannelCount: [2],
-  });
+  let node: AudioWorkletNode;
+  try {
+    if (ctx.audioWorklet && typeof ctx.audioWorklet.addModule === "function") {
+      await ctx.audioWorklet.addModule(url);
+    }
+    node = new AudioWorkletNode(ctx, "time-stretch-processor", {
+      numberOfInputs: 0,
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+    });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 
-  URL.revokeObjectURL(url);
   return node;
 }

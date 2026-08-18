@@ -1,8 +1,9 @@
 # Proposal: code-review-hardening — Fix HIGH + MED Repo-Wide Findings
 
-> **Status: PROPOSED.** Not yet approved or implemented. Writing task only — no
-> source edits, no test runs. LOW-severity convention nits (comment removal,
-> `any`-sprawl) are explicitly OUT of scope.
+> **Status: SHIPPED.** All HIGH + MED code-review findings were implemented across
+> the AUDIO, STATE, UI/3D, and BACKEND domains and verified green (tsc, vitest,
+> legacy node:test, graph:ci, production build). LOW-severity convention nits
+> (comment removal, `any`-sprawl) remain explicitly OUT of scope.
 
 ## Context
 

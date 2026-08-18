@@ -432,6 +432,10 @@ class UniversalAudioSystem {
     _buses?: any[],
   ): Promise<Blob> {
     void _buses;
+    if (!(duration > 0)) {
+      onProgress?.(100);
+      return this.float32ToWavBlob(new Float32Array(0), new Float32Array(0), sampleRate, 24);
+    }
     onProgress?.(10);
 
     const anySolo = tracks.some((t) => t.solo);

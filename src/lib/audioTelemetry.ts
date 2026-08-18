@@ -43,6 +43,7 @@ let frameCount = 0;
 let underrunCount = 0;
 let droppedFrameCount = 0;
 let maxCpu = 0;
+let peakCpuTrue = 0;
 let reportCallback: ((metrics: AudioMetrics) => void) | null = null;
 let reportTimer: ReturnType<typeof setInterval> | null = null;
 let isRunning = false;
@@ -86,10 +87,10 @@ export function getAverageMetrics(count: number = 10): AudioMetrics | null {
     avg.underruns += m.underruns;
     avg.droppedFrames += m.droppedFrames;
     avg.cpuLoad += m.cpuLoad;
-    if (m.cpuLoad > avg.peakCpu) avg.peakCpu = m.cpuLoad;
   }
 
-  avg.cpuLoad /= history.length;
+   avg.cpuLoad /= history.length;
+  avg.peakCpu = peakCpuTrue;
   avg.underruns = Math.round(avg.underruns / history.length);
   avg.droppedFrames = Math.round(avg.droppedFrames / history.length);
 
@@ -117,6 +118,7 @@ export function recordUnderrun(): void {
 
 export function recordCpuLoad(loadPercent: number): void {
   if (loadPercent > maxCpu) maxCpu = loadPercent;
+  if (loadPercent > peakCpuTrue) peakCpuTrue = loadPercent;
 }
 
 function collectMetrics(): AudioMetrics {
@@ -124,7 +126,7 @@ function collectMetrics(): AudioMetrics {
     underruns: underrunCount,
     droppedFrames: droppedFrameCount,
     cpuLoad: maxCpu,
-    peakCpu: maxCpu,
+    peakCpu: peakCpuTrue,
     sampleRate: typeof AudioContext !== "undefined" ? 44100 : 0,
     bufferDuration: 0,
     timestamp: Date.now(),
@@ -160,6 +162,7 @@ export function startTelemetry(
   underrunCount = 0;
   droppedFrameCount = 0;
   maxCpu = 0;
+  peakCpuTrue = 0;
 
   ringBuffer = {
     data: new Array(config.ringBufferSize).fill(null),

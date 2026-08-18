@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, Platform } from "react-native";
 import { useRouter } from "expo-router";
-import { addSceneBulb, addRGBStrip } from "../src/lib/sceneLighting";
+import { addSceneBulb, addRGBStrip, disposeScene } from "../src/lib/sceneLighting";
 import LightControls from "../src/components/LightControls";
 import { Screen3DFallback } from "../src/components/Screen3DFallback";
 import { loadThree } from "../src/lib/loadThree";
@@ -447,13 +447,21 @@ export default function AcousticsLab() {
         renderer.domElement.removeEventListener("touchmove", onTouchMove);
         renderer.domElement.removeEventListener("touchend", onTouchEnd);
         if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
-        renderer.dispose();
+        disposeScene(THREE, scene, renderer);
       };
     }
 
     let cleanup: (() => void) | undefined;
-    init().then(fn => { cleanup = fn; });
-    return () => { cleanup?.(); };
+    init()
+      .then((fn) => {
+        if (cancelled) {
+          if (fn) { try { fn(); } catch (e) { console.warn("scene cleanup failed", e); } }
+        } else {
+          cleanup = fn;
+        }
+      })
+      .catch((err) => { if (!cancelled) console.warn("3D scene init failed", err); });
+    return () => { cancelled = true; cleanup?.(); };
   }, []);
 
   if (Platform.OS !== "web") {

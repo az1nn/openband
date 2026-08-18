@@ -44,7 +44,8 @@ async function openQueueDb(): Promise<IDBDatabase | null> {
       };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => resolve(null);
-    } catch {
+    } catch (e) {
+      console.warn("Failed to open collaboration queue DB:", e);
       resolve(null);
     }
   });
@@ -72,7 +73,8 @@ async function enqueueOperation(
       });
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
-    } catch {
+    } catch (e) {
+      console.warn("Failed to enqueue operation:", e);
       resolve();
     }
   });
@@ -120,7 +122,8 @@ async function dequeueAll(projectId: string): Promise<
         resolve(items);
       };
       tx.onerror = () => resolve(items);
-    } catch {
+    } catch (e) {
+      console.warn("Failed to dequeue operations:", e);
       resolve(items);
     }
   });
@@ -141,6 +144,7 @@ export function useCollaboration({
   const eventSourceRef = useRef<EventSource | null>(null);
   const operationsRef = useRef<CrdtOperation[]>([]);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const connectingRef = useRef(false);
   const backoffMsRef = useRef(1000);
   const maxBackoffMs = 30000;
 
@@ -169,6 +173,12 @@ export function useCollaboration({
 
   const connect = useCallback(() => {
     if (!projectId) return;
+    if (connectingRef.current) return;
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    connectingRef.current = true;
 
     const key = getStoreKey();
     if (!OPERATION_STORE.has(key)) {
@@ -187,6 +197,7 @@ export function useCollaboration({
       es.onopen = () => {
         setIsOnline(true);
         backoffMsRef.current = 1000;
+        connectingRef.current = false;
         flushQueue();
       };
 
@@ -234,7 +245,12 @@ export function useCollaboration({
         setIsOnline(false);
         es.close();
         eventSourceRef.current = null;
+        connectingRef.current = false;
 
+        if (reconnectTimerRef.current) {
+          clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = null;
+        }
         const delay = Math.min(backoffMsRef.current, maxBackoffMs);
         backoffMsRef.current = Math.min(backoffMsRef.current * 2, maxBackoffMs);
 
@@ -247,6 +263,7 @@ export function useCollaboration({
     } catch (e) {
       console.warn("Failed to connect to collab server:", e);
       setIsOnline(false);
+      connectingRef.current = false;
     }
   }, [projectId, userId, userName, serverUrl, getStoreKey, flushQueue]);
 
@@ -317,9 +334,11 @@ export function useCollaboration({
           await enqueueOperation(projectId, op, userId, userName || userId);
         });
       } else {
-        enqueueOperation(projectId, op, userId, userName || userId).catch(() => {
-          // best-effort queue
-        });
+        enqueueOperation(projectId, op, userId, userName || userId).catch(
+          (e) => {
+            console.warn("Failed to queue offline operation:", e);
+          },
+        );
       }
     },
     [projectId, userId, userName, serverUrl, getStoreKey],

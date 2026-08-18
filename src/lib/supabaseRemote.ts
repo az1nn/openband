@@ -199,6 +199,75 @@ export async function pullState(
   }
 }
 
+function mergeStateValues(local: unknown, remote: unknown, conflicts?: { count: number }): unknown {
+  if (Array.isArray(local) && Array.isArray(remote)) {
+    const remoteById = new Map<string, unknown>();
+    for (const item of remote) {
+      if (item && typeof item === "object" && "id" in (item as object)) {
+        remoteById.set((item as { id: unknown }).id as string, item);
+      }
+    }
+    const result: unknown[] = [];
+    const localById = new Set<string>();
+    for (const item of local) {
+      if (item && typeof item === "object" && "id" in (item as object)) {
+        const id = (item as { id: unknown }).id as string;
+        localById.add(id);
+        const r = remoteById.get(id);
+        result.push(r ? mergeStateValues(item, r, conflicts) : item);
+      } else {
+        result.push(item);
+      }
+    }
+    for (const item of remote) {
+      if (item && typeof item === "object" && "id" in (item as object)) {
+        if (!localById.has((item as { id: unknown }).id as string)) {
+          result.push(item);
+        }
+      } else if (!local.includes(item)) {
+        result.push(item);
+      }
+    }
+    return result;
+  }
+  if (
+    local &&
+    typeof local === "object" &&
+    !Array.isArray(local) &&
+    remote &&
+    typeof remote === "object" &&
+    !Array.isArray(remote)
+  ) {
+    const out: Record<string, unknown> = {
+      ...(remote as Record<string, unknown>),
+    };
+    for (const [k, v] of Object.entries(local as Record<string, unknown>)) {
+      out[k] = k in out ? mergeStateValues(v, out[k], conflicts) : v;
+    }
+    return out;
+  }
+  const localDefined = local !== undefined && local !== null;
+  const remoteDefined = remote !== undefined && remote !== null;
+  if (localDefined && remoteDefined && local !== remote) {
+    if (conflicts) conflicts.count++;
+    return remote;
+  }
+  return localDefined ? local : remote;
+}
+
+function rebaseLocalOnRemote(localStateJson: string, remoteStateJson: string): { json: string; conflicts: number } {
+  try {
+    const local = JSON.parse(localStateJson);
+    const remote = JSON.parse(remoteStateJson);
+    const conflicts = { count: 0 };
+    const merged = mergeStateValues(local, remote, conflicts);
+    return { json: JSON.stringify(merged), conflicts: conflicts.count };
+  } catch (e) {
+    console.warn("State rebase failed, falling back to remote:", e);
+    return { json: remoteStateJson, conflicts: 0 };
+  }
+}
+
 export async function syncProject(
   projectId: string,
   localStateJson: string,
@@ -220,7 +289,11 @@ export async function syncProject(
       await pushState(projectId, localStateJson, localCommitId, branch);
       result.pushed = 1;
     } else {
-      result.conflicts = 1;
+      const { json: mergedJson, conflicts } = rebaseLocalOnRemote(localStateJson, remote.stateJson);
+      await pushState(projectId, mergedJson, `${localCommitId}-merged`, branch);
+      result.pushed = 1;
+      result.pulled = 1;
+      result.conflicts = conflicts;
     }
   } catch (e) {
     console.warn("Sync failed:", e);

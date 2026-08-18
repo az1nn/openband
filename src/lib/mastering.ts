@@ -288,7 +288,12 @@ async function applyEq(
   node.connect(master);
   master.connect(ctx.destination);
   source.start(0);
-  return ctx.startRendering();
+  const rendered = await ctx.startRendering();
+  const oac = ctx as { close?: () => Promise<void> };
+  if (typeof oac.close === "function") {
+    oac.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
+  }
+  return rendered;
 }
 
 async function applyCompressor(
@@ -313,7 +318,12 @@ async function applyCompressor(
   comp.connect(makeup);
   makeup.connect(ctx.destination);
   source.start(0);
-  return ctx.startRendering();
+  const rendered = await ctx.startRendering();
+  const oac = ctx as { close?: () => Promise<void> };
+  if (typeof oac.close === "function") {
+    oac.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
+  }
+  return rendered;
 }
 
 async function applyLimiter(
@@ -338,7 +348,12 @@ async function applyLimiter(
   comp.connect(waveShaper);
   waveShaper.connect(ctx.destination);
   source.start(0);
-  return ctx.startRendering();
+  const rendered = await ctx.startRendering();
+  const oac = ctx as { close?: () => Promise<void> };
+  if (typeof oac.close === "function") {
+    oac.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
+  }
+  return rendered;
 }
 
 async function applyTruePeakLimiter(
@@ -383,6 +398,10 @@ async function applyTruePeakLimiter(
   waveShaper.connect(osCtx.destination);
   src.start(0);
   const rendered = await osCtx.startRendering();
+  const oacOs = osCtx as { close?: () => Promise<void> };
+  if (typeof oacOs.close === "function") {
+    oacOs.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
+  }
   const factor = oversample;
   const outCtx = new OfflineAudioContext(numCh, bufLen, sampleRate);
   const out = outCtx.createBuffer(numCh, bufLen, sampleRate);
@@ -392,6 +411,10 @@ async function applyTruePeakLimiter(
     for (let i = 0; i < bufLen; i++) {
       d[i] = r[Math.min(r.length - 1, Math.floor(i * factor))];
     }
+  }
+  const oacOut = outCtx as { close?: () => Promise<void> };
+  if (typeof oacOut.close === "function") {
+    oacOut.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
   }
   return out;
 }
@@ -449,6 +472,10 @@ async function applyMultiband(
     makeup.connect(ctx.destination);
     source.start(0);
     const bandBuf = await ctx.startRendering();
+    const oac = ctx as { close?: () => Promise<void> };
+  if (typeof oac.close === "function") {
+    oac.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
+  }
     for (let c = 0; c < numCh; c++) {
       const d = bandBuf.getChannelData(c);
       const o = outCh[c];
@@ -458,6 +485,10 @@ async function applyMultiband(
   const outCtx = new OfflineAudioContext(numCh, len, sampleRate);
   const out = outCtx.createBuffer(numCh, len, sampleRate);
   for (let c = 0; c < numCh; c++) out.getChannelData(c).set(outCh[c]);
+  const oacOut = outCtx as { close?: () => Promise<void> };
+  if (typeof oacOut.close === "function") {
+    oacOut.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
+  }
   return out;
 }
 
@@ -474,7 +505,12 @@ async function applyStereoImager(
   if (numCh < 2) {
     source.connect(ctx.destination);
     source.start(0);
-    return ctx.startRendering();
+    const rendered = await ctx.startRendering();
+    const oac = ctx as { close?: () => Promise<void> };
+  if (typeof oac.close === "function") {
+    oac.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
+  }
+    return rendered;
   }
   const width = ((p.width ?? 100) as number) / 100;
   const midGainDb = (p.midGain ?? 0) as number;
@@ -530,7 +566,12 @@ async function applyStereoImager(
     outR.connect(ctx.destination);
   }
   source.start(0);
-  return ctx.startRendering();
+  const rendered = await ctx.startRendering();
+  const oac = ctx as { close?: () => Promise<void> };
+  if (typeof oac.close === "function") {
+    oac.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
+  }
+  return rendered;
 }
 
 async function applyTapeSaturator(
@@ -596,7 +637,12 @@ async function applyTapeSaturator(
     noiseSrc.start(0);
   }
   source.start(0);
-  return ctx.startRendering();
+  const rendered = await ctx.startRendering();
+  const oac = ctx as { close?: () => Promise<void> };
+  if (typeof oac.close === "function") {
+    oac.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
+  }
+  return rendered;
 }
 
 async function applyDeesser(
@@ -647,5 +693,10 @@ async function applyDeesser(
     wideGain.connect(ctx.destination);
   }
   source.start(0);
-  return ctx.startRendering();
+  const rendered = await ctx.startRendering();
+  const oac = ctx as { close?: () => Promise<void> };
+  if (typeof oac.close === "function") {
+    oac.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
+  }
+  return rendered;
 }

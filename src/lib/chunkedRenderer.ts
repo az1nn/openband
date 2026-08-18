@@ -4,6 +4,14 @@ import type { Mood } from "./projectTemplates";
 import { MOODS } from "./projectTemplates";
 import { audioBufferToWavBlob } from "./audio";
 
+let sharedBufferContext: OfflineAudioContext | null = null;
+function createBufferSafe(numChannels: number, length: number, sampleRate: number): AudioBuffer {
+  if (!sharedBufferContext || sharedBufferContext.sampleRate !== (sampleRate || 44100)) {
+    sharedBufferContext = new OfflineAudioContext(2, 1, sampleRate || 44100);
+  }
+  return sharedBufferContext.createBuffer(numChannels, length, sampleRate);
+}
+
 const NOTE_FREQS: number[] = [];
 for (let i = 0; i < 128; i++) {
   NOTE_FREQS[i] = 440 * Math.pow(2, (i - 69) / 12);
@@ -271,7 +279,7 @@ export class ChunkedRenderer {
       offset += chunkSamples;
     }
 
-    const buffer = new OfflineAudioContext(2, numSamples, sampleRate).createBuffer(2, numSamples, sampleRate);
+    const buffer = createBufferSafe(2, numSamples, sampleRate);
     buffer.getChannelData(0).set(mergedLeft);
     buffer.getChannelData(1).set(mergedRight);
 

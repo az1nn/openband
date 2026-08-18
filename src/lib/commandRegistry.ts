@@ -37,10 +37,11 @@ let registryState: CommandRegistryState = {
 };
 
 let keydownHandler: ((e: KeyboardEvent) => void) | null = null;
-let stateCallback: ((state: CommandRegistryState) => void) | null = null;
+const stateListeners = new Set<(state: CommandRegistryState) => void>();
 
 function emitState(): void {
-  if (stateCallback) stateCallback({ ...registryState });
+  const snapshot = { ...registryState };
+  for (const cb of stateListeners) cb(snapshot);
 }
 
 function parseShortcut(shortcut: string): KeyBinding | null {
@@ -241,9 +242,9 @@ export function isPaletteOpen(): boolean {
 export function onRegistryStateChange(
   callback: (state: CommandRegistryState) => void,
 ): () => void {
-  stateCallback = callback;
+  stateListeners.add(callback);
   return () => {
-    stateCallback = null;
+    stateListeners.delete(callback);
   };
 }
 

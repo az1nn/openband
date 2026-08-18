@@ -102,3 +102,25 @@ export function addRGBStrip(
 
   return { stripMat, dotMat };
 }
+
+export function disposeScene(_THREE: ThreeAny, scene: ThreeAny, renderer: ThreeAny) {
+  if (!scene || !renderer) return;
+
+  scene.traverse((obj: ThreeAny) => {
+    if (obj.geometry) obj.geometry.dispose();
+    const material = obj.material;
+    if (material) {
+      const materials = Array.isArray(material) ? material : [material];
+      for (const m of materials) {
+        for (const key of Object.keys(m)) {
+          const val = m[key];
+          if (val && val.isTexture) val.dispose();
+        }
+        if (typeof m.dispose === "function") m.dispose();
+      }
+    }
+  });
+
+  if (typeof renderer.dispose === "function") renderer.dispose();
+  if (typeof renderer.forceContextLoss === "function") renderer.forceContextLoss();
+}

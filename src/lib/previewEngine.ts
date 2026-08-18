@@ -238,6 +238,10 @@ export async function generateThumbnail(
     source.start();
 
     const rendered = await offlineCtx.startRendering();
+    const oac = offlineCtx as { close?: () => Promise<void> };
+    if (typeof oac.close === "function") {
+      oac.close().catch((e) => console.warn("OfflineAudioContext close failed", e));
+    }
     const wavBytes = audioBufferToWav(rendered);
     return new Blob([wavBytes], { type: "audio/wav" });
   } catch (e) {

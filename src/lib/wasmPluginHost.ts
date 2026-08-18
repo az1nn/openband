@@ -223,15 +223,21 @@ export async function loadPlugin(
 
   const url = buildPluginUrl(descriptor.id, wasmBytes);
 
-  const workletNode = new AudioWorkletNode(ctx as unknown as globalThis.AudioContext, `${descriptor.id}-processor`, {
-    numberOfInputs: 1,
-    numberOfOutputs: 1,
-    channelCount: descriptor.inputChannels,
-    channelCountMode: "explicit",
-    outputChannelCount: [descriptor.outputChannels],
-  });
-
-  URL.revokeObjectURL(url);
+  let workletNode: AudioWorkletNode;
+  try {
+    if (ctx.audioWorklet && typeof ctx.audioWorklet.addModule === "function") {
+      await ctx.audioWorklet.addModule(url);
+    }
+    workletNode = new AudioWorkletNode(ctx as unknown as globalThis.AudioContext, `${descriptor.id}-processor`, {
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      channelCount: descriptor.inputChannels,
+      channelCountMode: "explicit",
+      outputChannelCount: [descriptor.outputChannels],
+    });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 
   const port = workletNode.port;
 
