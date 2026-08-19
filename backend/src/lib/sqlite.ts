@@ -1,6 +1,17 @@
-import Database from "better-sqlite3"
 import path from "path"
 import fs from "fs"
+
+interface Statement {
+  run(...params: unknown[]): { changes: number; lastInsertRowid: number }
+  get(...params: unknown[]): unknown
+  all(...params: unknown[]): unknown[]
+}
+
+interface DatabaseLike {
+  prepare(sql: string): Statement
+  exec(sql: string): void
+  pragma(sql: string): unknown
+}
 
 type Operator = "=" | "!="
 
@@ -47,24 +58,43 @@ interface DatabaseConfig {
   foreignKeys?: boolean
 }
 
-function createDatabaseConnection(config: DatabaseConfig = {}): Database.Database {
-  const dbPath = config.path || path.join(process.cwd(), "data", "openband.sqlite")
-
-  const dataDir = path.dirname(dbPath)
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true })
+function createNoopAdapter(): DatabaseLike {
+  const stmt: Statement = {
+    run: () => ({ changes: 0, lastInsertRowid: 0 }),
+    get: () => null,
+    all: () => [],
   }
-
-  const db = new Database(dbPath)
-
-  if (config.walMode !== false) {
-    db.pragma("journal_mode = WAL")
+  return {
+    prepare: () => stmt,
+    exec: () => {},
+    pragma: () => undefined,
   }
-  if (config.foreignKeys !== false) {
-    db.pragma("foreign_keys = ON")
-  }
+}
 
-  return db
+function createDatabaseConnection(config: DatabaseConfig = {}): DatabaseLike {
+  try {
+    const Sqlite = require("better-sqlite3")
+    const dbPath = config.path || path.join(process.cwd(), "data", "openband.sqlite")
+
+    const dataDir = path.dirname(dbPath)
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true })
+    }
+
+    const db: DatabaseLike = new Sqlite(dbPath)
+
+    if (config.walMode !== false) {
+      db.pragma("journal_mode = WAL")
+    }
+    if (config.foreignKeys !== false) {
+      db.pragma("foreign_keys = ON")
+    }
+
+    return db
+  } catch (err) {
+    console.warn("[sqlite] better-sqlite3 unavailable; using in-memory no-op adapter", err)
+    return createNoopAdapter()
+  }
 }
 
 interface QueryBuilderConfig {
@@ -89,7 +119,7 @@ class QueryBuilder {
   private orderBy: OrderBy | null
   private limitVal: number | null
   private offsetVal: number | null
-  private db: Database.Database
+  private db: DatabaseLike
 
   constructor(config: QueryBuilderConfig) {
     this.table = config.table
@@ -231,11 +261,12 @@ function buildWhereClauses(
   return parts
 }
 
-let dbInstance: Database.Database | null = null
+let dbInstance: DatabaseLike | null = null
 
-function getDb(): Database.Database {
+function getDb(): DatabaseLike {
   if (!dbInstance) {
     dbInstance = createDatabaseConnection()
+    initializeSchema()
   }
   return dbInstance
 }
@@ -479,7 +510,5 @@ function migratePostLikesColumns(): void {
     }
   }
 }
-
-initializeSchema()
 
 export { getDb as db }
