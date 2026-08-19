@@ -93,8 +93,10 @@ describe("backend-api: in-memory job queue", () => {
   });
 });
 
-describe("auth: tier gating helper (backend express not resolvable in root vitest)", () => {
-  it("documents that backend/src/middleware/tierGuard imports express, which is absent from the root node_modules, so it cannot be imported by vitest at the project root", () => {
-    expect(() => require("express")).toThrow();
+describe("auth: tier gating helper (backend express resolvable in root vitest)", () => {
+  it("verifies express is resolvable from the project root so backend middleware can be imported by vitest", () => {
+    const express = require("express");
+    expect(express).toBeDefined();
+    expect(typeof express.Router).toBe("function");
   });
 });
