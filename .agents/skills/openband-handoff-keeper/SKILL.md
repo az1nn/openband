@@ -18,21 +18,21 @@ Keeps `docs/chatgpt-handoff.md` (and its companion `docs/chatgpt-handoff-HOWTO.m
 2. **Staleness checklist** (run in WSL, all via `wsl -e bash -lc` — vitest/tsc cannot run from the Windows UNC mount):
    - `npx tsc --noEmit` (frontend) and `cd backend && npx tsc --noEmit` — 0 errors each.
    - `npx vitest run | tail -3` — record pass/total; update §6.
-   - `grep -n "1479\|83 files" docs/chatgpt-handoff.md` — the only acceptable hit is the intentional "1479 → 1650" delta in §6; anything else is stale.
-   - `ls src/lib/*.ts 2>/dev/null | wc -l` — update §3 "modules" number (currently 93).
-   - `ls src/components/*.tsx 2>/dev/null | wc -l` and `grep -c '^export' src/components/index.ts` — update §3 components number (currently 71).
+   - `grep -nE "1479|83 files|93 modules|71 components|1650|91 files|~1650|~91" docs/chatgpt-handoff.md` — must be clean (no stale figures). The doc should state 1680 tests / 117 files, 94 modules, 72 components; any older token is stale.
+   - `ls src/lib/*.ts 2>/dev/null | wc -l` — update §3 "modules" number (currently 94).
+   - `ls src/components/*.tsx 2>/dev/null | wc -l` and `grep -c '^export' src/components/index.ts` — update §3 components number (currently 72).
    - `ls src/bridge/` — confirm §4 impls (electron/tauri/browser).
    - `ls openspec/archive | wc -l` — reflect shipped-changes count in §7/§8.
-   - `ls openspec/changes/next-product-design/` — reconcile §8 next-steps backlog + entry points.
-3. **Refresh** `docs/chatgpt-handoff.md` in place (edit, do not fork): update §3 counts, §6 totals/commands, §7 hardened commit hashes + domains, §8 next-steps + entry-point files. Keep the "Feed this to ChatGPT" intro block; preserve the intentional `1479 → 1650` delta.
+   - `ls openspec/changes/` — reconcile §8 next-steps backlog against the real in-flight specs.
+3. **Refresh** `docs/chatgpt-handoff.md` in place (edit, do not fork): update §3 counts, §6 totals/commands, §7 archived-spec count, §8 next-steps + entry-point files (verify each path with `ls`). Keep the "Feed this to ChatGPT" intro block.
 4. **Commit flow** (always branch `docs/chatgpt-handoff`; never a feature branch):
-   - `git add docs/chatgpt-handoff.md`
+   - `git add docs/chatgpt-handoff.md docs/chatgpt-handoff-HOWTO.md`
    - `git commit -m "docs(handoff): keep current with <brief reason>" -m "<touched areas>"`
-   - `git push` — Draft PR #13 auto-updates.
+   - Push → open a Draft PR via `gh pr create` from `docs/chatgpt-handoff` (refresh the same PR on future updates).
 5. **Handoff** — after a green push, copy `docs/chatgpt-handoff.md` contents into the ChatGPT project session.
 
 ## Gate
-After editing, re-run the §2 staleness checklist: counts must match `tsc`/`vitest`, and `grep "1479\|83 files"` must be clean (only the intentional delta). PR #13 CI must stay green.
+After editing, re-run the §2 staleness checklist: counts must match `tsc`/`vitest`, and `grep -nE "1479|83 files|93 modules|71 components|1650|91 files" docs/chatgpt-handoff.md` must be clean. The PR from `docs/chatgpt-handoff` (CI) must stay green.
 
 ## Note
-opencode loads skills at startup. This new skill file is picked up from `.agents/skills/openband-handoff-keeper/` (project convention — already in `available_skills`), so a fresh opencode session will surface it.
+opencode loads skills at startup. This skill lives at `.agents/skills/openband-handoff-keeper/SKILL.md` (project convention shared by the other OpenBand skills), so a fresh opencode session will surface it.
