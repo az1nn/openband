@@ -511,6 +511,9 @@ Post-implementation stabilization across six archived changes (see `openspec/arc
 
 Operational notes: `metro.config.js` keeps an `Expo.fx` stub; asset module types live in `src/declarations.d.ts` (do NOT add `src/react-native.d.ts`); verification runs `tsc` → backend `tsc` → `vitest` → legacy → `graph:ci` → `build`.
 
+## Round-2 Hardening
+Full-repo code review hardening shipped in commit `0f3a45b` (HIGH+MED+LOW across audio/DSP, state/collab, UI/3D, lib, backend auth/IDOR). Verified by the regression suites at `tests/regression-round2-{audio,state,ui,lib,backend}.test.ts`.
+
 ## Roadmap Features (Latest)
 
 ### Genre Templates — Trap, House, Dance Hall
