@@ -1,7 +1,7 @@
 # ChatGPT Handoff — OpenBand Architecture Planning
 
 > **Maintaining this doc:** this file is live. Before each planning session, refresh it
-> using `docs/chatgpt-handoff-HOWTO.md` (commit to the `docs/chatgpt-handoff` branch — PR #13).
+> using `docs/chatgpt-handoff-HOWTO.md` (commit to the `docs/chatgpt-handoff` branch and open a Draft PR via `gh pr create`).
 > Stale counts are the #1 cause of obsolete ChatGPT planning.
 
 > **Feed this to ChatGPT.** Copy this file's contents into a ChatGPT project session and ask it to plan/architect the next development phase. It contains everything ChatGPT needs: product scope, the 5-domain architecture, key libraries with exact file paths, the desktop-bridge and 3D scene patterns, the verification & convention harness, the round-2 hardening already completed, and a prioritized next-steps backlog with entry-point files. Do **not** ask ChatGPT to edit code until it has read `AGENTS.md` (linked in §11).
@@ -65,7 +65,6 @@ OpenBand is organized around five domain-boundary agent specializations (see `AG
 | `src/lib/modulationMatrix.ts` | LFO/envelope/macro modulation routing (11 sources × 11 targets); `computeModulation`. |
 | `src/lib/snapshotManager.ts` | CRDT snapshot compaction + state management; full snapshot lifecycle. |
 | `src/lib/collaboration.ts` | Real-time collaboration hook with CRDT sync; SSE broadcast; offline-op queue. |
-| `src/lib/yjsCRDT.ts` | Legacy CRDT (operation-based, WebSocket sync) — superseded by `crdt.ts`; scheduled for deletion. |
 | `src/lib/timeStretchVocoded.ts` | Phase Vocoder / WSOLA time-stretch AudioWorklet with FFT (2048 frame, 512 hop). |
 | `src/lib/timeStretch.ts` | Pitch-independent time-stretch via granular synthesis (2048 grain, 512 hop, Hann window). |
 | `src/lib/stateAssetSeparation.ts` | OpenBandManifest v2 with S3 URL pointers, SHA-256 commit hashing. |
@@ -122,7 +121,7 @@ const path = await OpenBandNative.showOpenDialog({ filters: [...] });
 Every change follows three phases — **never skip or reorder:**
 1. **Spec** — create `openspec/changes/<name>/{proposal,design,tasks}.md` (docs-only), commit & push *before* any code.
 2. **Implement + test + code-review** — implement per `tasks.md`, write/update tests, run full verification matrix, pass `code-review` subagent. Commit separately.
-3. **Archive + commit** — move specs to `openspec/archive/` with `## Status: SHIPPED` marker, commit.
+3. **Archive + commit** — prepend `## Status: SHIPPED` to `openspec/changes/<name>/proposal.md`, then `git mv openspec/changes/<name> openspec/archive/<name>`. Commit separately.
 
 ### Verification Matrix (run in this order)
 
@@ -150,17 +149,15 @@ npm run build
 
 ### Test counts (trust these)
 
-- **Vitest:** ~1650 tests across ~91 files (current pre-regression-lock-in: 1479 across 83; the in-flight `regression-tests-round2` change adds 5 new guard suites targeting the HIGH/MED/LOW fixes from commit `0f3a45b`).
-- **Legacy `node:test`:** 24 tests across 2 files (`tests/presets.test.ts` — 12, `tests/types.test.ts` — 12) via `npm run test:legacy` with `ok-reporter.ts` + `setup.ts`.
+- **Vitest:** 1650 tests — run `npx vitest run` (green, exit 0). Node-only test files are excluded from the root run (see §Exclusions).
+- **Legacy `node:test`:** 24 tests across 2 files (`tests/presets.test.ts` — 12, `tests/types.test.ts` — 12) via `npm run test:legacy` (24/24 pass).
 - **Playwright E2E:** `e2e/` + `playwright.config.ts`.
-- **Storybook:** `stories/*.stories.tsx` (run: `npx storybook dev -p 6006`).
+- **Storybook:** `stories/*.stories.tsx` — 50 stories covering all 71 components (run: `npx storybook dev -p 6006`).
 
-### Regression suites & exclusions
+### Exclusions
 
-- **`tests/backend-routes.test.ts`** — **excluded from root vitest run** because it imports `express` (Node-only). The in-flight `regression-tests-round2` change will mock `express` in-process so it collects; until then, treat backend route tests separately. Run backend verification with `cd backend && npx tsc --noEmit` + manual `npm run dev` testing.
-- **`tests/futureRoadmap.test.ts`** — currently uses `node:test` imports, not collected by vitest; `regression-tests-round2` will swap to vitest imports.
-- **`tests/regression-round2-{audio,state,ui,backend,lib}.test.ts`** — new guard suites (in-flight) asserting post-fix behavior for each finding from commit `0f3a45b`.
-- Rendering-only UI fixes (spatial-audio listener removal, emissive material, waveform resize, CommandPalette nav) are type-checked only — no exportable pure-logic helper for vitest.
+- Test files importing Node-only modules (e.g. `express`) are **excluded from the root vitest run** and verified via `cd backend && npx tsc --noEmit` + manual `npm run dev`. The root run is 1650 tests.
+- Rendering-only UI fixes are type-checked only — no exportable pure-logic helper for vitest.
 
 ### Test output format
 
@@ -196,9 +193,9 @@ Commit `0f3a45b` ("fix: code-review-round2") closed all HIGH/MED/scoped-LOW find
 
 ## 8. Next Steps Backlog (Planned & Aspirational)
 
-### ✅ Shipped next-product pillars (all marked complete in `openspec/archive/next-product-design/tasks.md`)
+### ✅ Shipped features (specs archived in `openspec/archive/` — currently 129 shipped specs; see `docs/features-implementation.md`)
 
-These are **already implemented** — verify they work, don't re-implement:
+These pillars are already implemented — verify they work, don't re-implement:
 
 | Pillar | Entry-point files | Status |
 |---|---|---|
@@ -210,26 +207,32 @@ These are **already implemented** — verify they work, don't re-implement:
 
 ### ⚠️ In-flight (specs in `openspec/changes/` — pick up next)
 
+Status reflects `master` plus in-flight specs in `openspec/changes/`; the project-starter live-preview work tracks `agent/v9-01-project-starter-preview` (commit a0e78cd) and is **not merged to master** — do not re-plan it. Read each spec file in `openspec/changes/<name>/` before planning.
+
 | Item | Entry-point files | Status |
 |---|---|---|
-| **Regression test lock-in** (`regression-tests-round2`) | `tests/regression-round2-{audio,state,ui,backend,lib}.test.ts` (NEW) + edit `tests/backend-routes.test.ts` (mock `express`) + edit `tests/futureRoadmap.test.ts` (vitest imports) | PROPOSED — writing tests only |
-| **Round-2 round-A governance** (`v8-round-a-governance`) | CI reconciliation, spec hygiene | PROPOSED |
+| **Project starter live preview** (`project-starter-live-preview`) | `app/studio/[id].tsx`, `src/lib/projectStarter.ts` | Implemented on `agent/v9-01-project-starter-preview` (commit a0e78cd) — **not merged to master**. |
+| **Project starter seeded variations** (`project-starter-seeded-variations`) | `openspec/changes/project-starter-seeded-variations/` | In-flight (uncommitted) — spec.md+tasks.md only; needs proposal.md + design.md + tests. |
+| **Project starter arrangement preview** (`project-starter-arrangement-preview`) | `openspec/changes/project-starter-arrangement-preview/` | In-flight (uncommitted) — spec.md+tasks.md only; needs proposal.md + design.md + tests. |
+| **Project starter approved snapshot promotion** (`project-starter-approved-snapshot-promotion`) | `openspec/changes/project-starter-approved-snapshot-promotion/` | In-flight (uncommitted) — spec.md+tasks.md only; needs proposal.md + design.md + tests. |
+| **Round-A governance & CI reconciliation** (`v8-round-a-governance`) | `openspec/changes/v8-round-a-governance/` | PROPOSED |
+| **Round-B native builds & recording** (`v8-round-b-native`) | `openspec/changes/v8-round-b-native/` | PROPOSED |
 
 ### 🔮 Aspirational (no spec / stubs only)
 
 | Item | Entry-point files | Status |
 |---|---|---|
-| **Web playback pipeline** (`web-player-studio-audio`) | `useUniversalAudio.ts`, `universalAudio.ts`, `app/studio/[id].tsx`, `app/tabs/index.tsx` (feed playback) | Known bugs: audio-region silence on web, pitch-shift not applied, blob URL leaks, beat drift (clock reads different AudioContext than `<audio>` element) |
-| **Real plugin DSP** (`real-plugin-dsp`) | `src/lib/pluginChain.ts`, `src/lib/mastering.ts`, `src/lib/pedalboardDsp.ts`, `wasmPluginHost.ts` | 19 plugin types are stubbed; need correct Web Audio graphs + canonical param IDs (`PLUGIN_SPECS`) |
-| **Real LUFS meter** (`real-lufs-meter`) | `src/lib/lufs.ts` (BS.1770 K-weighting, true peak), `src/components/LufsMeter.tsx` | Not yet implemented |
-| **Modulation matrix wiring** (`wire-modulation-matrix`) | `src/lib/modulationMatrix.ts` (`computeModulation`), `src/components/PluginEditor.tsx`, `src/components/OneKnob.tsx` | Math done; not applied at playback time |
-| **Native hardware I/O wiring** (`hardware-io-native`, `mount-patchbay`) | `src/lib/hardwareIO.ts`, `electron/main.js` (IPC handlers), `src/bridge/interface.ts` (6 new methods), `src/components/Patchbay.tsx` | Bridge methods added; need IPC + UI wiring |
-| **Presence avatar sync** (`wire-collab-presence`) | `src/lib/presence.ts` (SSE), `app/virtual-studio.tsx`, `app/studio/[id].tsx` | `presence.ts` SSE not connected to 3D scene or DAW editor cursors |
-| **First-run onboarding** (`first-run-onboarding`) | `src/components/OnboardingFlow.tsx`, `src/lib/projectStarter.ts`, `app/_layout.tsx` | Component created; persistence helpers pending |
-| **i18n completeness** (`i18n-completeness`) | `src/lib/i18n.ts`, `src/locales/{en,es,pt}.json` | pt-BR default + namespace extensions pending |
-| **CI pipeline** (`ci-pipeline`) | `.github/workflows/ci.yml` | Config written in design.md; not yet created |
+| **Web playback pipeline** (`web-player-studio-audio`) | `src/hooks/useUniversalAudio.ts`, `src/lib/universalAudio.ts`, `app/studio/[id].tsx`, `app/tabs/index.tsx` (feed playback) | Known bugs: audio-region silence on web, pitch-shift not applied, blob URL leaks, beat drift (clock reads different AudioContext than `<audio>` element) |
+| **Real plugin DSP** (`real-plugin-dsp`) | `src/lib/pluginChain.ts`, `src/lib/mastering.ts`, `src/lib/pedalboardDsp.ts`, `wasmPluginHost.ts` | Implemented — real Web Audio graphs for all 19 plugin types via `PLUGIN_SPECS`; see `applyPluginChain` tests |
+| **Real LUFS meter** (`real-lufs-meter`) | `src/lib/lufs.ts` (BS.1770 K-weighting, true peak), `src/components/LufsMeter.tsx` | Implemented — `measureLUFS` + true-peak verified in tests |
+| **Modulation matrix wiring** (`wire-modulation-matrix`) | `src/lib/modulationMatrix.ts` (`computeModulation`), `src/components/PluginEditor.tsx`, `src/components/OneKnob.tsx` | Implemented — modulation applied at playback time; see `applyPluginChain` modulation tests |
+| **Native hardware I/O wiring** (`hardware-io-native`, `mount-patchbay`) | `src/lib/hardwareIO.ts`, `electron/main.js`, `src/bridge/interface.ts`, `src/components/Patchbay.tsx` | Web path + native bridge delegation implemented; Patchbay routes live — verify Electron IPC handlers in `electron/main.js` |
+| **Presence avatar sync** (`wire-collab-presence`) | `src/lib/presence.ts` (SSE), `app/virtual-studio.tsx`, `app/studio/[id].tsx` | SSE cursor broadcast exists; NOT yet connected to the 3D scene or DAW editor cursors |
+| **First-run onboarding** (`first-run-onboarding`) | `src/components/OnboardingFlow.tsx`, `src/lib/projectStarter.ts`, `app/_layout.tsx` | Implemented — onboarding flag persists across reloads (see `projectStore` onboarding tests) |
+| **i18n completeness** (`i18n-completeness`) | `src/lib/i18n.ts`, `src/locales/{en,es,pt}.json` | en/pt/es key parity verified in tests; pt-BR default + namespaces |
+| **CI pipeline** (`ci-pipeline`) | `.github/workflows/ci.yml` | Config present — `.github/workflows/ci.yml` |
 | **AUv3 plugin support** | iOS-only native extension | Explicitly out of scope (mobile-irrelevant) |
-| **Delete `yjsCRDT.ts`** (`remove-dead-yjscrdt`) | `src/lib/yjsCRDT.ts` | Dead code, superseded by `crdt.ts`; scheduled for deletion |
+| **Delete `yjsCRDT.ts`** (`remove-dead-yjscrdt`) | `src/lib/yjsCRDT.ts` | Completed — file deleted; superseded by `crdt.ts` |
 
 ---
 
@@ -262,7 +265,7 @@ These are **already implemented** — verify they work, don't re-implement:
 - **Force-push allowed** on your own Draft branches (not on `master` or others' branches).
 - **Spec commits separate from implementation commits** — each phase must be independently reviewable.
 - **Always run `code-review` subagent before every commit.**
-- **Active branches** (as of this writing): `docs/chatgpt-handoff` (this work), `docs/verification-sync`, `agent/v9-01-project-starter-preview`, `feature/vercel-fixes`, `master`.
+- **Branches** (verified via `git branch -r`): `docs/chatgpt-handoff` (this live doc), `docs/verification-sync`, `agent/v9-01-project-starter-preview` (current dev), `master` (production), plus transient `copilot/*` and `worktree-*` branches. Feature work branches off `master`; doc refreshes commit to `docs/chatgpt-handoff`.
 - **Vercel deploy:** `git push` auto-deploys on push to `master`. For clean deploy (no cache): `npx vercel deploy --prod --force`.
 
 ### Session recovery
@@ -275,7 +278,8 @@ If a session goes bad: `git stash` (keep wanted work) → `git reset --hard HEAD
 
 | Doc | Purpose |
 |---|---|
-| `AGENTS.md` | **Mandatory first read.** Full SDD loop, design-system reference (71 components with props), desktop bridge, 3D/Three.js rules, audio system, verification matrix, WSL execution notes, architecture quick-reference tree, domain-driven agent architecture. (~535 lines) |
+| `AGENTS.md` | **Mandatory first read.** Full SDD loop, design-system reference (71 components with props table), desktop bridge, 3D/Three.js rules, audio system, verification matrix, WSL execution notes, architecture quick-reference tree, domain-driven agent architecture. (~535 lines) |
+| `docs/chatgpt-handoff-HOWTO.md` | This file's maintainer guide — staleness checklist, refresh map, commit flow. |
 | `docs/HY3-HANDOFF.md` | Previous handoff document (~260 lines) — complementary but drifts; this file supersedes it for ChatGPT planning. |
 | `docs/roadmap.md` | Feature inventory (41 shipped, Phase 1 polish items, Phase 2–3 expansion, what NOT to work on). |
 | `docs/features-implementation.md` | Build plan with phase-by-phase task breakdown, playback improvements, startup perf, studio audio/DSP correctness, hardening notes. (~527 lines) |
@@ -284,8 +288,8 @@ If a session goes bad: `git stash` (keep wanted work) → `git reset --hard HEAD
 | `docs/testing-mocks.md` | Vitest mock patterns, RNW type mismatches, common pitfalls, `importOriginal` safety rules. |
 | `docs/graph-engineer.html` | Interactive architecture-graph visual developer guide. |
 | `openspec/changes/` | In-flight specs (read `proposal.md` + `tasks.md` for active work). |
-| `openspec/archive/` | Shipped specs (reference for conventions, conventions adopted, what's already hardened). |
+| `openspec/archive/` | Shipped specs (129 entries) — reference for conventions, conventions adopted, what's already hardened. |
 | `CLAUDE.md` | Alias for `AGENTS.md`. |
-| `stories/` | Storybook for all 71 components — run: `npx storybook dev -p 6006`. |
+| `stories/` | Storybook for all 71 components (50 stories) — run: `npx storybook dev -p 6006`. |
 | `backend/src/index.ts` + `backend/src/routes/*` + `backend/src/services/*` | Express backend — stem extraction, mastering bounce, SSE presence/collab, MIDI generation. |
 | `electron/main.js` + `electron/preload.js` | Electron main process — IPC handlers, context bridge. |
