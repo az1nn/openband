@@ -50,6 +50,7 @@ jobs:
           node-version: 22.x
           cache: 'npm'
       - run: npm ci
+      - run: cd backend && npm ci
       - run: npx vitest run
 
   legacy-tests:
