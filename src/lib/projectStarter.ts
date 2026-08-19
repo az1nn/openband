@@ -86,3 +86,14 @@ export function setupProjectStarter(
     tracks,
   };
 }
+
+export {
+  contentHash,
+  computeStale,
+  createPromotionGate,
+  normalizedRecipe,
+  type ApprovedStarterSnapshot,
+  type GeneratedStarterSnapshot,
+  type PromoteResult,
+  type Recipe,
+} from "./snapshotPromotion";
