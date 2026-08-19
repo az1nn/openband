@@ -117,7 +117,7 @@ function simpleFilter(input: number, cutoff: number, _resonance: number, state: 
   return Math.max(-1, Math.min(1, output));
 }
 
-function detectSampleRate(): number {
+export function detectSampleRate(): number {
   const w = globalThis as unknown as {
     AudioContext?: new () => { sampleRate: number; close: () => Promise<void> | void };
     webkitAudioContext?: new () => { sampleRate: number; close: () => Promise<void> | void };

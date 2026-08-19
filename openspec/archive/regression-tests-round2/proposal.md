@@ -1,4 +1,6 @@
-## Status: PROPOSED
+## Status: SHIPPED
+> Regression tests locking in code-review-round2 fixes + 2 broken test files repaired.
+
 > Regression-test lock-in for the second full-repo code review (`code-review-round2`).
 > WRITING task ONLY — create new vitest test files; do NOT modify source or existing test files.
 
