@@ -1,10 +1,9 @@
-import { Router, Request, Response } from "express";
+import { Router, Response } from "express";
 import path from "path";
 import fs from "fs";
 import { upload } from "../middleware/upload";
 import { runDemucs, checkDemucsInstalled } from "../services/demucs";
 import { runMock } from "../services/mock";
-import { getJob, subscribeToJob } from "../services/queue";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/authMiddleware";
 import type { ExtractResponse, ErrorResponse } from "../types";
 
@@ -96,36 +95,6 @@ function cleanup(filePath: string | undefined): void {
     if (err) console.error("cleanup error:", err);
   });
 }
-
-router.get("/extract/progress/:jobId", (req: Request, res: Response) => {
-  const jobId = req.params.jobId as string;
-  const job = getJob(jobId);
-  if (!job) {
-    return res.status(404).json({ error: "Job not found" });
-  }
-
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders?.();
-
-  res.write(`data: ${JSON.stringify(job)}\n\n`);
-
-  if (job.status === "completed" || job.status === "failed") {
-    return res.end();
-  }
-
-  const unsubscribe = subscribeToJob(jobId, (updatedJob) => {
-    res.write(`data: ${JSON.stringify(updatedJob)}\n\n`);
-    if (updatedJob.status === "completed" || updatedJob.status === "failed") {
-      res.end();
-    }
-  });
-
-  req.on("close", () => {
-    unsubscribe();
-  });
-});
 
 router.post("/extract", requireAuth, (req: AuthenticatedRequest, res: Response) => {
   upload.single("audio")(req, res, async (err) => {
