@@ -84,7 +84,7 @@ export function mergeOperations(
       }
     } else {
       const conflictIdx = merged.findIndex(
-        (e) => e.path === op.path && e.type === op.type && e.userId !== op.userId,
+        (e) => e.path === op.path && e.type === op.type,
       );
 
       if (conflictIdx >= 0) {
