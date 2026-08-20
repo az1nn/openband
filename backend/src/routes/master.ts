@@ -46,6 +46,35 @@ function parseAudioHeader(
   return { format: "unknown", sampleRate: null, bitDepth: null };
 }
 
+export function composeBounceResult(opts: {
+  userId: string;
+  outputFilename: string;
+  format: string;
+  bitDepth: number | null;
+  sampleRate: number | null;
+  size: number;
+  pluginStates: unknown;
+}) {
+  return {
+    jobId: `${Date.now()}`,
+    filename: opts.outputFilename,
+    url: `/api/master/download/${opts.outputFilename}`,
+    format: opts.format,
+    bitDepth: opts.bitDepth,
+    sampleRate: opts.sampleRate,
+    size: opts.size,
+    applied: false,
+    warning:
+      "Server-side mastering chain is not implemented; pluginStates were not applied. Master client-side in MasteringSuite.",
+    pluginStates: opts.pluginStates,
+    jobParams: {
+      bitDepth: opts.bitDepth,
+      sampleRate: opts.sampleRate,
+      format: opts.format,
+    },
+  };
+}
+
 const router = Router();
 
 const MASTER_DIR = process.env.VERCEL
@@ -139,21 +168,17 @@ router.post(
         });
       });
 
-      res.json({
-        jobId: `${Date.now()}`,
-        filename: outputFilename,
-        url: `/api/master/download/${outputFilename}`,
-        format: header.format,
-        bitDepth: header.bitDepth,
-        sampleRate: header.sampleRate,
-        size: (await fs.promises.stat(outputPath)).size,
-        pluginStates: pluginStates ? safeJsonParse(pluginStates) : undefined,
-        jobParams: {
+      res.json(
+        composeBounceResult({
+          userId,
+          outputFilename,
+          format: header.format,
           bitDepth: header.bitDepth,
           sampleRate: header.sampleRate,
-          format: header.format,
-        },
-      });
+          size: (await fs.promises.stat(outputPath)).size,
+          pluginStates: pluginStates ? safeJsonParse(pluginStates) : undefined,
+        }),
+      );
     } catch (e) {
       const message = e instanceof Error ? e.message : "Erro desconhecido";
       console.error("Master bounce error:", message);
