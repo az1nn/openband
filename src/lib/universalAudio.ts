@@ -368,6 +368,7 @@ class UniversalAudioSystem {
       onProgress?.(100);
       const rendered = await ctx.startRendering();
       cleanup();
+      if (typeof (ctx as unknown as AudioContext).close === "function") await (ctx as unknown as AudioContext).close().catch(() => {});
       return this.audioBufferToWavBlob(rendered, 24);
     }
     let processed = 0;
@@ -415,6 +416,7 @@ class UniversalAudioSystem {
     onProgress?.(65);
     const rendered = await ctx.startRendering();
     cleanup();
+    if (typeof (ctx as unknown as AudioContext).close === "function") await (ctx as unknown as AudioContext).close().catch(() => {});
     for (const u of resolvedBlobUrls) {
       if (u.startsWith("blob:")) URL.revokeObjectURL(u);
     }
@@ -763,6 +765,7 @@ class UniversalAudioSystem {
     osc.start(0);
     osc.stop(duration);
     const rendered = await ctx.startRendering();
+    if (typeof (ctx as unknown as AudioContext).close === "function") await (ctx as unknown as AudioContext).close().catch(() => {});
     return this.audioBufferToWavBlob(rendered, 16);
   }
 
