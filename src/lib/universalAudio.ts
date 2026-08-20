@@ -96,6 +96,43 @@ export function disposeAllAudio(): void {
   audioSystem.dispose();
 }
 
+export function buildSilentWavBlob(
+  duration: number,
+  sampleRate: number,
+  bitDepth = 16,
+): Blob {
+  const safeDuration = duration > 0 ? duration : 1;
+  const numSamples = Math.max(1, Math.ceil(sampleRate * safeDuration));
+  const numChannels = 1;
+  const bytesPerSample = bitDepth / 8;
+  const blockAlign = numChannels * bytesPerSample;
+  const dataSize = numSamples * blockAlign;
+  const headerSize = 44;
+  const totalSize = headerSize + dataSize;
+  const ab = new ArrayBuffer(totalSize);
+  const view = new DataView(ab);
+
+  const ws = (o: number, str: string) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(o + i, str.charCodeAt(i));
+  };
+
+  ws(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  ws(8, "WAVE");
+  ws(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitDepth, true);
+  ws(36, "data");
+  view.setUint32(40, dataSize, true);
+
+  return new Blob([ab], { type: "audio/wav" });
+}
+
 class UniversalAudioSystem {
   private static instance: UniversalAudioSystem;
   private isInitialized = false;
@@ -745,7 +782,7 @@ class UniversalAudioSystem {
     frequency: number,
   ): Promise<Blob> {
     if (Platform.OS !== "web") {
-      return new Blob([new ArrayBuffer(44)], { type: "audio/wav" });
+      return buildSilentWavBlob(duration, sampleRate);
     }
     const safeDuration = duration > 0 ? duration : 1;
     const numSamples = Math.max(1, Math.ceil(sampleRate * safeDuration));
