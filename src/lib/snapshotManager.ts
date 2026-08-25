@@ -7,6 +7,7 @@ export interface SnapshotData {
   state: Record<string, unknown>;
   operationCount: number;
   version: number;
+  maxIncludedTimestamp: number;
 }
 
 export interface SnapshotConfig {
@@ -33,6 +34,7 @@ export function createSnapshot(
   state: Record<string, unknown>,
   operationCount: number,
   version: number,
+  maxIncludedTimestamp = 0,
 ): SnapshotData {
   const snapshot: SnapshotData = {
     id: generateSnapshotId(),
@@ -41,6 +43,7 @@ export function createSnapshot(
     state: JSON.parse(JSON.stringify(state)),
     operationCount,
     version,
+    maxIncludedTimestamp,
   };
 
   if (!SNAPSHOT_STORE.has(projectId)) {
@@ -110,7 +113,9 @@ export function compactOperations(
   operations: CrdtOperation[],
   snapshot: SnapshotData,
 ): CrdtOperation[] {
-  return operations.filter((op) => op.timestamp > snapshot.version);
+  return operations.filter(
+    (op) => op.timestamp > (snapshot.maxIncludedTimestamp ?? 0),
+  );
 }
 
 export function mergeSnapshotIntoState(
