@@ -6,6 +6,7 @@ export interface CrdtOperation {
   path: string;
   value: unknown;
   clientId: string;
+  deps?: string[];
 }
 
 export interface CrdtState {
@@ -62,11 +63,14 @@ export function mergeOperations(
   existing: CrdtOperation[],
   incoming: CrdtOperation[],
 ): CrdtOperation[] {
-  const merged = [...existing];
+  const merged: CrdtOperation[] = [...existing];
+  const queue: CrdtOperation[] = [...incoming];
 
-  for (const op of incoming) {
+  const present = (id: string) => merged.some((m) => m.id === id);
+
+  const tryAdd = (op: CrdtOperation): boolean => {
     const existingIdx = merged.findIndex((e) => e.id === op.id);
-    if (existingIdx >= 0) continue;
+    if (existingIdx >= 0) return true;
 
     if (isAddType(op.type)) {
       const vid = getValueId(op.value);
@@ -79,26 +83,43 @@ export function mergeOperations(
       );
       if (dupIdx >= 0) {
         if (compareLamport(op, merged[dupIdx]) > 0) merged[dupIdx] = op;
-      } else {
-        merged.push(op);
+        return true;
       }
     } else {
       const conflictIdx = merged.findIndex(
         (e) => e.path === op.path && e.type === op.type && e.userId !== op.userId,
       );
-
       if (conflictIdx >= 0) {
-        if (compareLamport(op, merged[conflictIdx]) > 0) {
-          merged[conflictIdx] = op;
-        }
-      } else {
-        merged.push(op);
+        if (compareLamport(op, merged[conflictIdx]) > 0) merged[conflictIdx] = op;
+        return true;
       }
     }
 
-    if (op.timestamp > localClock) {
-      localClock = op.timestamp;
+    if (op.deps && op.deps.length > 0) {
+      const missing = op.deps.filter((d) => !present(d));
+      if (missing.length > 0) return false;
     }
+
+    merged.push(op);
+    if (op.timestamp > localClock) localClock = op.timestamp;
+    return true;
+  };
+
+  let changed = true;
+  let passes = 0;
+  while (changed && passes <= queue.length + 1) {
+    changed = false;
+    for (let i = queue.length - 1; i >= 0; i--) {
+      if (tryAdd(queue[i])) {
+        queue.splice(i, 1);
+        changed = true;
+      }
+    }
+    passes++;
+  }
+
+  for (const op of queue) {
+    console.warn("mergeOperations: dropping op with unmet deps", op.id, op.deps);
   }
 
   let maxClock = localClock;
