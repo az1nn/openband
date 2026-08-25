@@ -245,11 +245,11 @@ function filterBranchOps(
 ): CrdtOperation[] {
   if (!hasSelection) return [...ops];
   return ops.filter((op) => {
-    if (op.type.startsWith("track")) {
+    if (op.type === "track.add") {
       const id = (op.value as { id?: string } | undefined)?.id;
       return id == null || acceptedTracks.has(id);
     }
-    if (op.type.startsWith("bus")) {
+    if (op.type === "bus.add") {
       const id = (op.value as { id?: string } | undefined)?.id;
       return id == null || acceptedBuses.has(id);
     }
@@ -265,9 +265,6 @@ export function mergeBranch(
   const main = projectState.branches.get("main");
   if (!branch || !main || branch.parentBranchId !== "main") return null;
 
-  const diff = diffBranches(branchId, "main");
-  if (!diff) return null;
-
   const acceptedTracks = new Set(
     (acceptChanges ?? [])
       .filter((c) => c.startsWith("track:"))
@@ -281,60 +278,27 @@ export function mergeBranch(
 
   const hasSelection = acceptChanges != null && acceptChanges.length > 0;
 
-  const merged: BranchState = JSON.parse(JSON.stringify(main.state));
-
-  const applyTrackChanges = (trackId: string) => {
-    const modTrack = diff.modifiedTracks.find((m) => m.trackId === trackId);
-    if (!modTrack) return;
-    const branchTrack = branch.state.tracks.find((t) => t.id === trackId);
-    const mainTrack = merged.tracks.find((t) => t.id === trackId);
-    if (!branchTrack || !mainTrack) return;
-    for (const change of modTrack.changes) {
-      (mainTrack as unknown as Record<string, unknown>)[change.field] = (
-        branchTrack as unknown as Record<string, unknown>
-      )[change.field];
-    }
-  };
-
-  for (const addedTrackId of diff.addedTracks) {
-    if (hasSelection && !acceptedTracks.has(addedTrackId)) continue;
-    const branchTrack = branch.state.tracks.find((t) => t.id === addedTrackId);
-    if (branchTrack) merged.tracks.push(JSON.parse(JSON.stringify(branchTrack)));
-  }
-
-  for (const addedBusId of diff.addedBuses) {
-    if (hasSelection && !acceptedBuses.has(addedBusId)) continue;
-    const branchBus = branch.state.buses.find((b) => b.id === addedBusId);
-    if (branchBus) merged.buses.push(JSON.parse(JSON.stringify(branchBus)));
-  }
-
-  for (const modTrack of diff.modifiedTracks) {
-    applyTrackChanges(modTrack.trackId);
-  }
-
-  const applyBusChanges = (busId: string) => {
-    const modBus = diff.modifiedBuses.find((m) => m.busId === busId);
-    if (!modBus) return;
-    const branchBus = branch.state.buses.find((b) => b.id === busId);
-    const mainBus = merged.buses.find((b) => b.id === busId);
-    if (!branchBus || !mainBus) return;
-    for (const change of modBus.changes) {
-      (mainBus as unknown as Record<string, unknown>)[change.field] = (
-        branchBus as unknown as Record<string, unknown>
-      )[change.field];
-    }
-  };
-
-  for (const modBus of diff.modifiedBuses) {
-    applyBusChanges(modBus.busId);
-  }
-
-  const branchOpsToMerge = filterBranchOps(branch.state.crdtOperations, hasSelection, acceptedTracks, acceptedBuses);
-  merged.crdtOperations = mergeOperations(
-    merged.crdtOperations,
-    branchOpsToMerge,
+  const branchOpsToMerge = filterBranchOps(
+    branch.state.crdtOperations,
+    hasSelection,
+    acceptedTracks,
+    acceptedBuses,
   );
-  main.state = merged;
+
+  const mergedOps = mergeOperations(main.state.crdtOperations, branchOpsToMerge);
+  const deltaOps = mergedOps.filter(
+    (op) => !main.state.crdtOperations.some((m) => m.id === op.id),
+  );
+
+  const base = JSON.parse(JSON.stringify(main.state)) as unknown as Record<string, unknown>;
+  let replayed = base;
+  for (const op of deltaOps) {
+    replayed = applyOperation(replayed, op);
+  }
+  const mergedState = replayed as unknown as BranchState;
+  mergedState.crdtOperations = mergedOps;
+
+  main.state = mergedState;
   branch.merged = true;
   branch.mergeTimestamp = new Date().toISOString();
 
