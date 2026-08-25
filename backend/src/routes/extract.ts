@@ -157,7 +157,7 @@ router.post("/extract", requireAuth, (req: AuthenticatedRequest, res: Response) 
             })
           : await runMock(req.file.path, STEMS_DIR, userId);
 
-        if (req.file) cleanup(req.file.path);
+        cleanup(req.file.path);
 
         const body: ExtractResponse = {
           jobId,
