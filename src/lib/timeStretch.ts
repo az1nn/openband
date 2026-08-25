@@ -17,11 +17,11 @@ export async function pitchShift(
 
   const grainSize = 2048;
   const hopSize = Math.floor(grainSize / 4);
-  const overlap = 3;
 
   for (let ch = 0; ch < channels; ch++) {
     const input = buffer.getChannelData(ch);
     const out = output.getChannelData(ch);
+    const norm = new Float32Array(newLength);
     const window = new Float32Array(grainSize);
 
     for (let i = 0; i < grainSize; i++) {
@@ -41,16 +41,14 @@ export async function pitchShift(
 
         const sample = input[srcIdx] * window[i];
         out[dstIdx] += sample;
-
-        for (let o = 1; o <= overlap; o++) {
-          const nextDst = dstIdx + o * hopSize;
-          if (nextDst < newLength) {
-            out[nextDst] += sample * 0.5;
-          }
-        }
+        norm[dstIdx] += window[i];
       }
 
       readPos.current += hopSize;
+    }
+
+    for (let i = 0; i < newLength; i++) {
+      out[i] = norm[i] > 0 ? out[i] / norm[i] : 0;
     }
   }
 
@@ -77,6 +75,7 @@ export async function timeStretch(
   for (let ch = 0; ch < channels; ch++) {
     const input = buffer.getChannelData(ch);
     const out = output.getChannelData(ch);
+    const norm = new Float32Array(newLength);
     const window = new Float32Array(grainSize);
 
     for (let i = 0; i < grainSize; i++) {
@@ -95,9 +94,14 @@ export async function timeStretch(
         if (srcIdx >= input.length || dstIdx >= newLength) break;
 
         out[dstIdx] += input[srcIdx] * window[i];
+        norm[dstIdx] += window[i];
       }
 
       readPos += hopSize;
+    }
+
+    for (let i = 0; i < newLength; i++) {
+      out[i] = norm[i] > 0 ? out[i] / norm[i] : 0;
     }
   }
 
