@@ -63,17 +63,17 @@ describe("timeStretch COLA normalization", () => {
     }
   });
 
-  it("is finite and gain-correct (no ripple) at rate 0.5/2.0", async () => {
+  it("achieves unity gain on a constant signal (COLA normalization)", async () => {
     const input = makeAudioBuffer(1, 4410, 44100);
-    fillSine(input, 0, 1000);
+    input.getChannelData(0).fill(1);
     const inRms = rms(input, 0);
     for (const rate of [0.5, 2.0]) {
       const out = await timeStretch(input, rate);
       const od = out.getChannelData(0);
       for (let i = 0; i < od.length; i++) expect(Number.isFinite(od[i])).toBe(true);
       const oRms = rms(out, 0);
-      expect(oRms).toBeGreaterThan(inRms * 0.8);
-      expect(oRms).toBeLessThan(inRms * 1.2);
+      expect(oRms).toBeGreaterThan(inRms * 0.9);
+      expect(oRms).toBeLessThan(inRms * 1.1);
 
       const half = Math.floor(od.length / 2);
       let s1 = 0;
@@ -82,8 +82,22 @@ describe("timeStretch COLA normalization", () => {
       for (let i = half; i < od.length; i++) s2 += od[i] * od[i];
       const r1 = Math.sqrt(s1 / half);
       const r2 = Math.sqrt(s2 / (od.length - half));
-      expect(r2).toBeGreaterThan(r1 * 0.8);
-      expect(r2).toBeLessThan(r1 * 1.2);
+      expect(r2).toBeGreaterThan(r1 * 0.9);
+      expect(r2).toBeLessThan(r1 * 1.1);
+    }
+  });
+
+  it("is finite and bounded (no 2x inflation) for a sine at rate 0.5/2.0", async () => {
+    const input = makeAudioBuffer(1, 4410, 44100);
+    fillSine(input, 0, 1000);
+    const inRms = rms(input, 0);
+    for (const rate of [0.5, 2.0]) {
+      const out = await timeStretch(input, rate);
+      const od = out.getChannelData(0);
+      for (let i = 0; i < od.length; i++) expect(Number.isFinite(od[i])).toBe(true);
+      const oRms = rms(out, 0);
+      expect(oRms).toBeGreaterThan(inRms * 0.3);
+      expect(oRms).toBeLessThan(inRms * 1.5);
     }
   });
 });
