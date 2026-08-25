@@ -58,7 +58,7 @@ export function peekRedo(stack: UndoStack): UndoCommand | null {
 export function executeUndo(
   stack: UndoStack,
   currentState: Record<string, unknown>,
-): { stack: UndoStack; state: Record<string, unknown>; applied: boolean } {
+): { stack: UndoStack; state: Record<string, unknown>; applied: boolean; error?: string } {
   const command = peekUndo(stack);
   if (!command) return { stack, state: currentState, applied: false };
 
@@ -67,7 +67,7 @@ export function executeUndo(
       ...stack,
       undoStack: stack.undoStack.slice(0, -1),
     };
-    return { stack: newStack, state: currentState, applied: false };
+    return { stack: newStack, state: currentState, applied: false, error: "Command validation failed" };
   }
 
   const newState = command.inverse(currentState);
@@ -86,7 +86,7 @@ export function executeUndo(
 export function executeRedo(
   stack: UndoStack,
   currentState: Record<string, unknown>,
-): { stack: UndoStack; state: Record<string, unknown>; applied: boolean } {
+): { stack: UndoStack; state: Record<string, unknown>; applied: boolean; error?: string } {
   const command = peekRedo(stack);
   if (!command) return { stack, state: currentState, applied: false };
 
@@ -95,7 +95,7 @@ export function executeRedo(
       ...stack,
       redoStack: stack.redoStack.slice(0, -1),
     };
-    return { stack: newStack, state: currentState, applied: false };
+    return { stack: newStack, state: currentState, applied: false, error: "Command validation failed" };
   }
 
   const newState = command.execute(currentState);

@@ -4,12 +4,11 @@ export interface Transient {
   index: number;
 }
 
-let sharedBufferContext: OfflineAudioContext | null = null;
 function createBufferSafe(numChannels: number, length: number, sampleRate: number): AudioBuffer {
-  if (!sharedBufferContext || sharedBufferContext.sampleRate !== (sampleRate || 44100)) {
-    sharedBufferContext = new OfflineAudioContext(numChannels, 1, sampleRate || 44100);
-  }
-  return sharedBufferContext.createBuffer(numChannels, length, sampleRate);
+  const ctx = new OfflineAudioContext(numChannels, 1, sampleRate || 44100);
+  const buffer = ctx.createBuffer(numChannels, length, sampleRate);
+  void (ctx as unknown as { close?: () => Promise<void> }).close?.();
+  return buffer;
 }
 
 export function detectTransients(
