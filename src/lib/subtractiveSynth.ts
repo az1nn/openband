@@ -210,9 +210,9 @@ function noteOff(id: string, config: SubtractiveSynthConfig): void {
 
   const ctx = getAudioContext();
   if (!ctx) {
-    try { voice.osc1.stop(); } catch {}
-    try { voice.osc2.stop(); } catch {}
-    if (voice.lfoNode) try { voice.lfoNode.stop(); } catch {}
+    try { voice.osc1.stop(); } catch (e) { console.warn("subtractiveSynth noteOff osc1 stop failed", e); }
+    try { voice.osc2.stop(); } catch (e) { console.warn("subtractiveSynth noteOff osc2 stop failed", e); }
+    if (voice.lfoNode) try { voice.lfoNode.stop(); } catch (e) { console.warn("subtractiveSynth noteOff lfo stop failed", e); }
     voices.delete(id);
     return;
   }
