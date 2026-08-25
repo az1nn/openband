@@ -245,11 +245,11 @@ function filterBranchOps(
 ): CrdtOperation[] {
   if (!hasSelection) return [...ops];
   return ops.filter((op) => {
-    if (op.type.startsWith("track")) {
+    if (op.type === "track.add") {
       const id = (op.value as { id?: string } | undefined)?.id;
       return id == null || acceptedTracks.has(id);
     }
-    if (op.type.startsWith("bus")) {
+    if (op.type === "bus.add") {
       const id = (op.value as { id?: string } | undefined)?.id;
       return id == null || acceptedBuses.has(id);
     }
