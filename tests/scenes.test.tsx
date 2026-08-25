@@ -16,6 +16,10 @@ vi.mock("../src/lib/sceneLighting", () => ({
   addRGBStrip: vi.fn(() => ({ stripMat: { color: { setHex: vi.fn() }, emissive: { setHex: vi.fn() } }, dotMat: { color: { setHex: vi.fn() } } })),
 }));
 
+vi.mock("../src/lib/loadThree", () => ({
+  loadThree: vi.fn().mockRejectedValue(new Error("Failed to load Three.js (CDN unavailable)")),
+}));
+
 describe("Live Room", () => {
   beforeEach(() => vi.clearAllMocks());
 
