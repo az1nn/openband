@@ -149,7 +149,9 @@ export function useCollaboration({
     connectedUsers: [],
     isHost: true,
   });
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== "undefined" ? navigator.onLine : true,
+  );
   const eventSourceRef = useRef<EventSource | null>(null);
   const operationsRef = useRef<CrdtOperation[]>([]);
   const appliedOpIdsRef = useRef<Set<string>>(new Set());
@@ -276,7 +278,7 @@ export function useCollaboration({
         backoffMsRef.current = Math.min(backoffMsRef.current * 2, maxBackoffMs);
 
         reconnectTimerRef.current = setTimeout(() => {
-          if (navigator.onLine) {
+          if (typeof navigator !== "undefined" && navigator.onLine) {
             connect();
           }
         }, delay);
@@ -339,7 +341,7 @@ export function useCollaboration({
         operations: [...operationsRef.current],
       }));
 
-      if (navigator.onLine) {
+      if (typeof navigator !== "undefined" && navigator.onLine) {
         const baseUrl = serverUrl.replace(/\/+$/, "");
         const url = `${baseUrl}/api/collab/${encodeURIComponent(projectId)}/operation`;
         fetch(url, {
