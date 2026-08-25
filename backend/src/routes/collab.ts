@@ -6,6 +6,7 @@ interface ClientEntry {
   res: Response;
   userId: string;
   userName: string;
+  keepAliveTimer?: ReturnType<typeof setInterval>;
 }
 
 interface CollabOperation {
@@ -85,6 +86,7 @@ function broadcastUserList(projectId: string): void {
 }
 
 function cleanupClient(projectId: string, clientEntry: ClientEntry): void {
+  if (clientEntry.keepAliveTimer) clearInterval(clientEntry.keepAliveTimer);
   const clients = getProjectClients(projectId);
   clients.delete(clientEntry.id);
   broadcastUserList(projectId);
@@ -127,16 +129,13 @@ router.get(
       return;
     }
 
-    const userId = sanitizeString(
-      req.userTokenData?.userId ||
-        (req.query.userId as string) ||
-        `anon-${Date.now()}`,
-      MAX_KEY_LENGTH,
-    );
-    const userName = sanitizeString(
-      (req.query.userName as string) || userId,
-      MAX_USERNAME_LENGTH,
-    );
+    const authUserId = req.userTokenData?.userId;
+    if (!authUserId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    const userId = sanitizeString(authUserId, MAX_KEY_LENGTH);
+    const userName = sanitizeString(authUserId, MAX_USERNAME_LENGTH);
 
     const clients = getProjectClients(projectId);
     const existingForUser = Array.from(clients.values()).filter(
@@ -190,14 +189,13 @@ router.get(
         clearInterval(keepAlive);
       }
     }, 15000);
+    clientEntry.keepAliveTimer = keepAlive;
 
     req.on("close", () => {
-      clearInterval(keepAlive);
       cleanupClient(projectId, clientEntry);
     });
 
     req.on("error", () => {
-      clearInterval(keepAlive);
       cleanupClient(projectId, clientEntry);
     });
   },
@@ -213,16 +211,24 @@ router.post(
       return;
     }
 
-    const { operation, userId } = req.body as {
+    const { operation } = req.body as {
       operation: CollabOperation;
-      userId: string;
+      userId?: string;
       userName?: string;
     };
 
-    if (!userId || !operation || !operation.id) {
+    const authUserId = req.userTokenData?.userId;
+    if (!authUserId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    if (!operation || !operation.id) {
       res.status(400).json({ error: "Invalid operation" });
       return;
     }
+
+    operation.userId = authUserId;
 
     const ops = getProjectOps(projectId);
     if (!ops.find((o) => o.id === operation.id)) {
@@ -235,7 +241,7 @@ router.post(
     broadcastToProject(
       projectId,
       { type: "operations", operations: [operation] },
-      userId,
+      authUserId,
     );
 
     res.json({ ok: true });

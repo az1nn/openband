@@ -6,6 +6,7 @@ interface ClientEntry {
   res: Response;
   userId: string;
   userName: string;
+  keepAliveTimer?: ReturnType<typeof setInterval>;
 }
 
 interface PresenceData {
@@ -72,6 +73,7 @@ function broadcastToProject(
 }
 
 function cleanupClient(projectId: string, clientEntry: ClientEntry): void {
+  if (clientEntry.keepAliveTimer) clearInterval(clientEntry.keepAliveTimer);
   const clients = getProjectClients(projectId);
   clients.delete(clientEntry.id);
 
@@ -114,16 +116,13 @@ router.get(
       return;
     }
 
-    const userId = sanitizeString(
-      req.userTokenData?.userId ||
-        (req.query.userId as string) ||
-        `anon-${Date.now()}`,
-      MAX_KEY_LENGTH,
-    );
-    const userName = sanitizeString(
-      (req.query.userName as string) || userId,
-      MAX_USERNAME_LENGTH,
-    );
+    const authUserId = req.userTokenData?.userId;
+    if (!authUserId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    const userId = sanitizeString(authUserId, MAX_KEY_LENGTH);
+    const userName = sanitizeString(authUserId, MAX_USERNAME_LENGTH);
 
     const clients = getProjectClients(projectId);
     const existingForUser = Array.from(clients.values()).filter((c) => c.userId === userId);
@@ -186,14 +185,13 @@ router.get(
         clearInterval(keepAlive);
       }
     }, 15000);
+    clientEntry.keepAliveTimer = keepAlive;
 
     req.on("close", () => {
-      clearInterval(keepAlive);
       cleanupClient(projectId, clientEntry);
     });
 
     req.on("error", () => {
-      clearInterval(keepAlive);
       cleanupClient(projectId, clientEntry);
     });
   },
@@ -210,17 +208,18 @@ router.post(
       return;
     }
 
-    const { userId, userName, cursorX, activeTrackId, playheadPosition } =
+    const { userName, cursorX, activeTrackId, playheadPosition } =
       req.body as {
-        userId: string;
+        userId?: string;
         userName?: string;
         cursorX: number;
         activeTrackId: string | null;
         playheadPosition: number;
       };
 
-    if (!userId || userId.length > MAX_KEY_LENGTH) {
-      res.status(400).json({ error: "userId is required" });
+    const authUserId = req.userTokenData?.userId;
+    if (!authUserId) {
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
 
@@ -229,10 +228,12 @@ router.post(
       return;
     }
 
+    const displayName = sanitizeString(userName || authUserId, MAX_USERNAME_LENGTH);
+
     const presence = getUserPresence(projectId);
-    presence.set(userId, {
-      userId,
-      userName: sanitizeString(userName || userId, MAX_USERNAME_LENGTH),
+    presence.set(authUserId, {
+      userId: authUserId,
+      userName: displayName,
       cursorX,
       activeTrackId,
       playheadPosition,
@@ -241,8 +242,8 @@ router.post(
 
     broadcastToProject(
       projectId,
-      { userId, userName: sanitizeString(userName || userId, MAX_USERNAME_LENGTH), cursorX, activeTrackId, playheadPosition },
-      userId,
+      { userId: authUserId, userName: displayName, cursorX, activeTrackId, playheadPosition },
+      authUserId,
     );
 
     res.json({ ok: true });
@@ -260,15 +261,15 @@ router.post(
       return;
     }
 
-    const { userId } = req.body as { userId: string };
-    if (!userId || userId.length > MAX_KEY_LENGTH) {
-      res.status(400).json({ error: "userId is required" });
+    const authUserId = req.userTokenData?.userId;
+    if (!authUserId) {
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
 
     const clients = getProjectClients(projectId);
     for (const [, client] of clients) {
-      if (client.userId === userId) {
+      if (client.userId === authUserId) {
         cleanupClient(projectId, client);
         break;
       }
