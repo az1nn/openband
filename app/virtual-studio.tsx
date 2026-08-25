@@ -65,6 +65,22 @@ function makeSprite(THREE: ThreeAny, text: string, fontSize: number, y: number, 
   return sprite;
 }
 
+export interface HitNode {
+  userData?: { furnitureId?: string };
+  parent?: HitNode | null;
+}
+
+export function resolveFurnitureIdFromHit(object: HitNode | null): string | undefined {
+  let node: HitNode | null = object;
+  while (node) {
+    if (node.userData && node.userData.furnitureId) {
+      return node.userData.furnitureId;
+    }
+    node = node.parent ?? null;
+  }
+  return undefined;
+}
+
 export default function VirtualStudio() {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -217,10 +233,12 @@ export default function VirtualStudio() {
         mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
         raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(furnitureMeshes, false);
+        const intersects = raycaster.intersectObjects(furnitureGroup.children, true);
         if (intersects.length > 0) {
-          const hit = intersects[0].object as { userData: { furnitureId: string } };
-          const found = FURNITURE.find(f => f.id === hit.userData.furnitureId);
+          const furnitureId = resolveFurnitureIdFromHit(intersects[0].object as unknown as HitNode);
+          const found = furnitureId
+            ? FURNITURE.find((f) => f.id === furnitureId)
+            : undefined;
           setSelectedFurniture(found ?? null);
         } else {
           setSelectedFurniture(null);
