@@ -6,10 +6,10 @@
 M1) flagged the resampling as a correctness risk. Root-cause analysis (subagent) found:
 
 - `timeStretch` sums windowed grains but never divides by the accumulated window
-  (no COLA/overlap-add normalization). At `rate=1` the periodic-Hann window sums to
-  ~2 across the 4x overlap, so output amplitude is ~2x the input; at `rate!=1` the
-  overlap factor changes and the window no longer satisfies COLA, producing amplitude
-  ripple/beating and rate-dependent gain error.
+  (no COLA/overlap-add normalization). At `rate!=1` the periodic-Hann window over the
+  4x overlap no longer sums to a constant, so the output has rate-dependent gain error
+  and amplitude ripple/beating. (Note: `timeStretch` early-returns the input unchanged
+  at `rate===1`, so that path is unaffected.)
 - `pitchShift` mis-positions identical-length grains by a ratio-scaled offset instead
   of intra-grain resampling, so it never changes pitch; for `ratio>1` it truncates and
   drops most of the signal, for `ratio<1` it leaves a silent tail. It also adds

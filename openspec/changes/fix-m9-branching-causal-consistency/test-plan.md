@@ -7,8 +7,9 @@
 ## Cases
 1. **Convergence invariant** — two branches off a common base; branch B applies
    `t1.update@L7` then `t1.add@L5`, main applies `t1.update@L6`. Merge B into main.
-   Assert merged materialized `tracks` equals `replay(merged.crdtOperations)` from base
-   (single-source-of-truth invariant).
+   Assert merged materialized `tracks` equals `replay(deltaOps onto main.state)` where
+   `deltaOps = merged.crdtOperations \ main.crdtOperations` (single-source-of-truth,
+   no double-apply of main's ops).
 2. **Causal hold** — assert no op is applied whose entity-`add` predecessor is absent
    (the `add@L5` must be present before `update` referencing it).
 3. **Idempotent re-merge** — merging twice (or a second client replaying only

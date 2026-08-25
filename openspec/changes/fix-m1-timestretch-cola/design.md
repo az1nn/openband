@@ -1,5 +1,11 @@
 # Design — M1: Granular Time-Stretch COLA Normalization
 
+## Real signatures (verified)
+- `timeStretch(buffer: AudioBuffer, rate: number): Promise<AudioBuffer>` — **early-returns the input buffer unchanged when `rate === 1`** (line 64). So the COLA bug manifests only at `rate !== 1`.
+- `pitchShift(buffer: AudioBuffer, semitones: number): Promise<AudioBuffer>` — `ratio = 2^(semitones/12)`, output length == input length.
+
+Both build an `OfflineAudioContext` + `createBuffer` and write channels via `getChannelData(ch)`. No `opts` parameter exists. Window is a periodic-Hann of `grainSize=2048`, `hopSize=512` (4x overlap → gain ~4x without normalization).
+
 ## `timeStretch` (src/lib/timeStretch.ts)
 Add a normalization accumulator aligned with the output:
 
@@ -29,7 +35,7 @@ and the ripple/beating at other rates. The output length contract
 - Output length stays equal to input length.
 
 ## Signatures
-`timeStretch(input, rate, opts?)` and `pitchShift(input, ratio, opts?)` — unchanged.
+`timeStretch(buffer, rate)` and `pitchShift(buffer, semitones)` — unchanged (async, AudioBuffer in/out).
 
 ## Dependencies
 None. Pure DSP; no new imports, no config changes.

@@ -25,8 +25,13 @@ derive from the applied op log it replays). Default `0` if unknown.
 // before
 return operations.filter((op) => op.timestamp > snapshot.version);
 // after
-return operations.filter((op) => op.timestamp > snapshot.maxIncludedTimestamp);
+return operations.filter((op) => op.timestamp > (snapshot.maxIncludedTimestamp ?? 0));
 ```
+
+The `?? 0` guard is required: existing/old snapshots may not yet carry the new field, and
+`op.timestamp > undefined` evaluates to `false` for every op, which would drop the entire
+log. Defaulting to `0` keeps pre-existing snapshots compacting correctly (all ops
+timestamped > 0 are kept).
 
 `version` retains its sequence-number meaning; no change to `getLatestSnapshot` /
 `getSnapshotHistory` consumers.
