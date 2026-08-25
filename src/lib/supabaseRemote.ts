@@ -67,7 +67,7 @@ export async function checkAssetExists(hash: string): Promise<boolean> {
   if (assetHashCache.has(hash)) return true;
 
   try {
-    const url = `${getBaseUrl()}/rest/v1/assets?hash=eq.${hash}&select=id`;
+    const url = `${getBaseUrl()}/rest/v1/assets?hash=eq.${encodeURIComponent(hash)}&select=id`;
     const resp = await fetch(url, { headers });
     if (!resp.ok) return false;
     const data = await resp.json() as { id: string }[];
@@ -96,7 +96,7 @@ export async function uploadAsset(
     const cachedId = assetHashCache.get(hash)!;
     return {
       assetId: cachedId,
-      url: `${getBaseUrl()}/storage/v1/object/public/${config.bucketName}/${cachedId}`,
+      url: `${getBaseUrl()}/storage/v1/object/public/${encodeURIComponent(config.bucketName)}/${encodeURIComponent(cachedId)}`,
       hash,
       size: data.byteLength,
       duplicated: true,
@@ -110,8 +110,8 @@ export async function uploadAsset(
 
   const publicUrl =
     storage.kind === "mock"
-      ? `mock://${config.bucketName}/${presign.key}`
-      : `${getBaseUrl()}/storage/v1/object/public/${config.bucketName}/${presign.key}`;
+      ? `mock://${encodeURIComponent(config.bucketName)}/${encodeURIComponent(presign.key)}`
+      : `${getBaseUrl()}/storage/v1/object/public/${encodeURIComponent(config.bucketName)}/${encodeURIComponent(presign.key)}`;
 
   try {
     const dbUrl = `${getBaseUrl()}/rest/v1/assets`;
@@ -177,7 +177,7 @@ export async function pullState(
 ): Promise<{ stateJson: string; commitId: string } | null> {
   if (!config) throw new Error("Remote not configured");
 
-  const dbUrl = `${getBaseUrl()}/rest/v1/project_states?project_id=eq.${projectId}&branch=eq.${branch}&order=created_at.desc&limit=1`;
+  const dbUrl = `${getBaseUrl()}/rest/v1/project_states?project_id=eq.${encodeURIComponent(projectId)}&branch=eq.${encodeURIComponent(branch)}&order=created_at.desc&limit=1`;
 
   try {
     const resp = await fetch(dbUrl, { headers });
