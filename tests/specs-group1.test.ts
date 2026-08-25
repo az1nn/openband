@@ -212,6 +212,7 @@ describe("project-branching: snapshot compaction", () => {
       state: {},
       operationCount: 0,
       version: 5,
+      maxIncludedTimestamp: 5,
     });
     expect(compacted.map((o) => o.id)).toEqual(["o2", "o3"]);
     clearSnapshotStore("proj-x");

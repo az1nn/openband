@@ -87,7 +87,7 @@ describe("snapshotManager", () => {
   });
 
   it("compactOperations filters operations older than snapshot version", () => {
-    const snapshot = createSnapshot(projectId, sampleState, 0, 10);
+    const snapshot = createSnapshot(projectId, sampleState, 0, 10, 10);
     const operations = [
       { type: "track.add" as const, path: "tracks", value: { id: "t1" }, timestamp: 5, id: "op-1", userId: "local", clientId: "client-1" },
       { type: "track.add" as const, path: "tracks", value: { id: "t2" }, timestamp: 11, id: "op-2", userId: "local", clientId: "client-1" },
@@ -97,6 +97,36 @@ describe("snapshotManager", () => {
     expect(compacted).toHaveLength(2);
     expect(compacted[0].timestamp).toBe(11);
     expect(compacted[1].timestamp).toBe(15);
+  });
+
+  it("compactOperations uses Lamport cutoff independent of version sequence", () => {
+    const snapshot = createSnapshot(projectId, sampleState, 0, 3, 5);
+    const operations = Array.from({ length: 10 }, (_, i) => ({
+      type: "track.add" as const,
+      path: "tracks",
+      value: { id: `t${i + 1}` },
+      timestamp: i + 1,
+      id: `op-${i + 1}`,
+      userId: "local",
+      clientId: "client-1",
+    }));
+    const compacted = compactOperations(operations, snapshot);
+    expect(compacted.map((o) => o.timestamp)).toEqual([6, 7, 8, 9, 10]);
+  });
+
+  it("compactOperations drops all ops when cutoff exceeds every timestamp", () => {
+    const snapshot = createSnapshot(projectId, sampleState, 0, 3, 50);
+    const operations = Array.from({ length: 10 }, (_, i) => ({
+      type: "track.add" as const,
+      path: "tracks",
+      value: { id: `t${i + 1}` },
+      timestamp: i + 1,
+      id: `op-${i + 1}`,
+      userId: "local",
+      clientId: "client-1",
+    }));
+    const compacted = compactOperations(operations, snapshot);
+    expect(compacted).toHaveLength(0);
   });
 
   it("mergeSnapshotIntoState applies operations", () => {
