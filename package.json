@@ -87,7 +87,8 @@
     "graph:render": "node graph/cli.mjs render",
     "graph:ci": "node graph/cli.mjs ci",
     "graph:doc": "node graph/cli.mjs doc",
-    "graph:report": "node graph/cli.mjs report"
+    "graph:report": "node graph/cli.mjs report",
+    "graph:test": "node --test tests/graph-engineer.test.mjs tests/graph-engineer-v2.test.mjs tests/graph-engineer-v3.test.mjs tests/graph-ci-regression.test.mjs"
   },
   "engines": {
     "node": ">=22"
