@@ -1,5 +1,5 @@
 import { renderHook, act } from "@testing-library/react";
-import { vi } from "vitest";
+import { vi, describe, it, expect, beforeEach } from "vitest";
 
 const h = vi.hoisted(() => ({
   useAudioPlayer: vi.fn(),
