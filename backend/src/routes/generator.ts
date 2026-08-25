@@ -90,7 +90,9 @@ router.post("/generate-midi", (req: Request, res: Response) => {
   const progression = resolveProgression(degrees, rootNote, scaleType);
 
   const midiData: { note: number; start: number; duration: number; velocity: number }[] = [];
-  const beatsPerBar = parseInt(safeTimeSig.split("/")[0]) || 4;
+  const timeSigParts = String(safeTimeSig).split("/");
+  const parsedBeatsPerBar = parseInt(timeSigParts[0], 10);
+  const beatsPerBar = Number.isFinite(parsedBeatsPerBar) && parsedBeatsPerBar > 0 ? parsedBeatsPerBar : 4;
   const beatsPerChord = bars > 4 ? 2 : 1;
 
   for (let bar = 0; bar < bars; bar++) {

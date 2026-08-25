@@ -4,12 +4,11 @@ import type { Mood } from "./projectTemplates";
 import { MOODS } from "./projectTemplates";
 import { audioBufferToWavBlob } from "./audio";
 
-let sharedBufferContext: OfflineAudioContext | null = null;
 function createBufferSafe(numChannels: number, length: number, sampleRate: number): AudioBuffer {
-  if (!sharedBufferContext || sharedBufferContext.sampleRate !== (sampleRate || 44100)) {
-    sharedBufferContext = new OfflineAudioContext(2, 1, sampleRate || 44100);
-  }
-  return sharedBufferContext.createBuffer(numChannels, length, sampleRate);
+  const ctx = new OfflineAudioContext(2, 1, sampleRate || 44100);
+  const buffer = ctx.createBuffer(numChannels, length, sampleRate);
+  void (ctx as unknown as { close?: () => Promise<void> }).close?.();
+  return buffer;
 }
 
 const NOTE_FREQS: number[] = [];
