@@ -7,7 +7,7 @@ export function useUniversalAudio(source: string | number | null) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const player = useAudioPlayer(source ?? "");
+  const player = useAudioPlayer(source || null);
   const status = useAudioPlayerStatus(player);
 
   useEffect(() => {
