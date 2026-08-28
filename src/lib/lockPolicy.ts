@@ -20,7 +20,7 @@ export function normalizeTrackContent(track: TrackDef) {
   };
 }
 
-export type LockRole = "rhythm" | "bass" | "harmony" | "melody" | "fx";
+export type LockRole = "rhythm" | "bass" | "harmony" | "melody" | "fx" | "unknown";
 
 const TRACK_TYPE_TO_ROLE: Record<string, LockRole> = {
   drums: "rhythm", percussion: "rhythm",
@@ -32,7 +32,7 @@ const TRACK_TYPE_TO_ROLE: Record<string, LockRole> = {
 
 export function roleForTrackType(trackType: string | undefined): LockRole {
   if (trackType && TRACK_TYPE_TO_ROLE[trackType]) return TRACK_TYPE_TO_ROLE[trackType];
-  return "harmony";
+  return "unknown";
 }
 
 function hashString(str: string): string {
@@ -48,7 +48,7 @@ function trackRole(track: TrackDef, genreId: string, index: number): LockRole {
 }
 
 export function computeRoleHashes(result: ProjectStarterResult, genreId: string): Record<LockRole, string> {
-  const acc: Record<LockRole, string[]> = { rhythm: [], bass: [], harmony: [], melody: [], fx: [] };
+  const acc: Record<LockRole, string[]> = { rhythm: [], bass: [], harmony: [], melody: [], fx: [], unknown: [] };
   result.tracks.forEach((track, i) => {
     const role = trackRole(track, genreId, i);
     acc[role].push(hashString(JSON.stringify(normalizeTrackContent(track))));
@@ -66,7 +66,7 @@ export function applyLocks(
   locks: Partial<Record<LockRole, boolean>>,
   genreId: string,
 ): ProjectStarterResult {
-  const prevByRole: Record<LockRole, TrackDef[]> = { rhythm: [], bass: [], harmony: [], melody: [], fx: [] };
+  const prevByRole: Record<LockRole, TrackDef[]> = { rhythm: [], bass: [], harmony: [], melody: [], fx: [], unknown: [] };
   prev.tracks.forEach((t, i) => prevByRole[trackRole(t, genreId, i)].push(t));
 
   const nextTracks = next.tracks.map((track, i) => {

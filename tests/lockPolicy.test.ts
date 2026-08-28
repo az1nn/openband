@@ -8,6 +8,7 @@ import {
   detectIncompatibleLocks,
   evaluateBpmChange,
   evaluateKeyChange,
+  roleForTrackType,
   type LockRole,
 } from "../src/lib/lockPolicy";
 import { GENRES, getTrackType } from "../src/lib/projectTemplates";
@@ -175,5 +176,28 @@ describe("lockPolicy", () => {
     );
     expect(incompatible.sort()).toEqual(expected.sort());
     expect(incompatible.length).toBe(expected.length);
+  });
+
+  it("LK01 unknown track type resolves to explicit 'unknown', not 'harmony'", () => {
+    expect(roleForTrackType("other")).toBe("unknown");
+    expect(roleForTrackType("weirdtype")).toBe("unknown");
+    expect(roleForTrackType(undefined)).toBe("unknown");
+    expect(roleForTrackType("")).toBe("unknown");
+  });
+
+  it("LK01 unmapped track lands in 'unknown' bucket, never 'harmony'", () => {
+    const result = rockPrev();
+    const unknownTrack = {
+      ...result.tracks[0],
+      id: "unknown-track",
+      name: "zzz-ambient-noise",
+    };
+    const withUnknown = {
+      ...result,
+      tracks: [...result.tracks, unknownTrack],
+    };
+    const hashes = computeRoleHashes(withUnknown, "rock");
+    expect(hashes.unknown).not.toBe("");
+    expect(hashes.harmony).toBe(computeRoleHashes(result, "rock").harmony);
   });
 });

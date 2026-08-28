@@ -36,6 +36,8 @@ export interface ProjectData {
   metronome: MetronomeSettings;
   recordSettings: RecordSettings;
   lastSaved: number;
+  musicalContentHash?: string;
+  persistenceIntegrityHash?: string;
   commits?: { version: number; description: string; createdAt: number }[];
 }
 
@@ -273,6 +275,14 @@ function sanitizeProjectData(raw: unknown): ProjectData | null {
             preRoll: 0,
           },
     lastSaved: typeof data.lastSaved === "number" ? data.lastSaved : Date.now(),
+    musicalContentHash:
+      typeof data.musicalContentHash === "string"
+        ? data.musicalContentHash
+        : undefined,
+    persistenceIntegrityHash:
+      typeof data.persistenceIntegrityHash === "string"
+        ? data.persistenceIntegrityHash
+        : undefined,
   };
 }
 

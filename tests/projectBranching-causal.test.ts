@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mergeOperations, type CrdtOperation } from "../src/lib/crdt";
 import * as branching from "../src/lib/projectBranching";
-import type { TrackDef } from "../src/lib/types";
 
 function emptyState() {
   return {
@@ -13,21 +12,8 @@ function emptyState() {
   };
 }
 
-function track(id: string, name: string, volume = 75): TrackDef {
-  return {
-    id,
-    name,
-    color: "#ffffff",
-    muted: false,
-    solo: false,
-    volume,
-    pan: 0,
-    sends: {},
-    regions: [],
-    sidechainSource: null,
-    plugins: [],
-    automation: {},
-  };
+function track(id: string, name: string, volume = 75): any {
+  return { id, name, volume };
 }
 
 let clock = 0;

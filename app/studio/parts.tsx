@@ -40,6 +40,8 @@ export function buildProjectData(fields: {
   recordSettings: RecordSettings;
   sendBuses: SendBus[];
   trackAmpChains: Record<string, TrackAmpChain>;
+  musicalContentHash?: string;
+  persistenceIntegrityHash?: string;
 }): Omit<ProjectData, "id" | "lastSaved"> {
   return {
     title: fields.title,
@@ -61,6 +63,8 @@ export function buildProjectData(fields: {
     recordSettings: fields.recordSettings,
     sendBuses: fields.sendBuses,
     trackAmpChains: fields.trackAmpChains,
+    musicalContentHash: fields.musicalContentHash,
+    persistenceIntegrityHash: fields.persistenceIntegrityHash,
   };
 }
 
