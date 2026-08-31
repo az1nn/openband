@@ -20,7 +20,10 @@ export function normalizeTrackContent(track: TrackDef) {
   };
 }
 
-export type LockRole = "rhythm" | "bass" | "harmony" | "melody" | "fx";
+export type LockRole = "rhythm" | "bass" | "harmony" | "melody" | "fx" | "unknown";
+
+export type CardinalityPolicy = "strict" | "preserve";
+export const CARDINALITY_POLICY: CardinalityPolicy = "preserve";
 
 const TRACK_TYPE_TO_ROLE: Record<string, LockRole> = {
   drums: "rhythm", percussion: "rhythm",
@@ -32,7 +35,7 @@ const TRACK_TYPE_TO_ROLE: Record<string, LockRole> = {
 
 export function roleForTrackType(trackType: string | undefined): LockRole {
   if (trackType && TRACK_TYPE_TO_ROLE[trackType]) return TRACK_TYPE_TO_ROLE[trackType];
-  return "harmony";
+  return "unknown";
 }
 
 function hashString(str: string): string {
@@ -48,7 +51,7 @@ function trackRole(track: TrackDef, genreId: string, index: number): LockRole {
 }
 
 export function computeRoleHashes(result: ProjectStarterResult, genreId: string): Record<LockRole, string> {
-  const acc: Record<LockRole, string[]> = { rhythm: [], bass: [], harmony: [], melody: [], fx: [] };
+  const acc: Record<LockRole, string[]> = { rhythm: [], bass: [], harmony: [], melody: [], fx: [], unknown: [] };
   result.tracks.forEach((track, i) => {
     const role = trackRole(track, genreId, i);
     acc[role].push(hashString(JSON.stringify(normalizeTrackContent(track))));
@@ -65,20 +68,41 @@ export function applyLocks(
   next: ProjectStarterResult,
   locks: Partial<Record<LockRole, boolean>>,
   genreId: string,
+  policy: CardinalityPolicy = CARDINALITY_POLICY,
 ): ProjectStarterResult {
-  const prevByRole: Record<LockRole, TrackDef[]> = { rhythm: [], bass: [], harmony: [], melody: [], fx: [] };
+  const prevByRole: Record<LockRole, TrackDef[]> = { rhythm: [], bass: [], harmony: [], melody: [], fx: [], unknown: [] };
   prev.tracks.forEach((t, i) => prevByRole[trackRole(t, genreId, i)].push(t));
 
-  const nextTracks = next.tracks.map((track, i) => {
+  const nextTracks: TrackDef[] = [];
+  next.tracks.forEach((track, i) => {
     const role = trackRole(track, genreId, i);
     if (locks[role]) {
       const replacement = prevByRole[role].shift();
-      return replacement ? { ...replacement } : track;
+      if (replacement) {
+        nextTracks.push({ ...replacement });
+        return;
+      }
+      if (policy === "strict") throw new Error(`cardinality-mismatch:${role}`);
+      nextTracks.push(track);
+      return;
     }
-    return track;
+    nextTracks.push(track);
   });
 
   return { ...next, tracks: nextTracks };
+}
+
+export function detectCardinalityMismatch(
+  prev: ProjectStarterResult,
+  _next: ProjectStarterResult,
+  locks: Partial<Record<LockRole, boolean>>,
+  genreId: string,
+): LockRole[] {
+  const prevByRole: Record<LockRole, TrackDef[]> = { rhythm: [], bass: [], harmony: [], melody: [], fx: [], unknown: [] };
+  prev.tracks.forEach((t, i) => prevByRole[trackRole(t, genreId, i)].push(t));
+
+  const roles: LockRole[] = ["rhythm", "bass", "harmony", "melody", "fx", "unknown"];
+  return roles.filter((role) => locks[role] && prevByRole[role].length === 0);
 }
 
 export function evaluateKeyChange(

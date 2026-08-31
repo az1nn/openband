@@ -71,6 +71,8 @@ import { PLUGIN_SPECS, clampParam } from "../../src/lib/types";
 import { useResponsive } from "../../src/lib/responsive";
 import { autoMix, AUTOMIX_GENRES } from "../../src/lib/automix";
 import { generateTracksForGenre } from "../../src/lib/projectTemplates";
+import { musicalContentHash, persistenceIntegrityHash } from "../../src/lib/creativeIdentity";
+import type { ProjectStarterResult } from "../../src/lib/projectStarter";
 import type { AutomationPoint } from "../../src/lib/types";
 import { useWebAudioPlayer } from "../../src/hooks/useWebAudioPlayer";
 import { usePresence } from "../../src/lib/presence";
@@ -247,6 +249,62 @@ export default function Studio() {
 
   const trackIds = useMemo(() => tracks.map((t) => t.id), [tracks]);
 
+  const starterResultForHash = useMemo<ProjectStarterResult>(
+    () => ({
+      id,
+      name: projectTitle,
+      bpm: initialBpm,
+      numBars: initialNumBars,
+      timeSignature: projectTimeSig,
+      key: projectKey ?? "",
+      mood: projectMood,
+      genreId: genreParam || "pop",
+      tracks,
+    }),
+    [
+      id,
+      projectTitle,
+      initialBpm,
+      initialNumBars,
+      projectTimeSig,
+      projectKey,
+      projectMood,
+      genreParam,
+      tracks,
+    ],
+  );
+
+  const durableMusicalHash = useMemo(
+    () => musicalContentHash(starterResultForHash),
+    [starterResultForHash],
+  );
+
+  const durableIntegrityHash = useMemo(
+    () =>
+      persistenceIntegrityHash({
+        projectId: id,
+        musicalContentHash: durableMusicalHash,
+        approvalToken: id,
+        sourceRecipe: {
+          genreId: starterResultForHash.genreId,
+          mood: starterResultForHash.mood,
+          bpm: initialBpm,
+          key: projectKey ?? "",
+          timeSignature: projectTimeSig,
+          numBars: initialNumBars,
+        },
+      }),
+    [
+      id,
+      durableMusicalHash,
+      starterResultForHash,
+      initialBpm,
+      projectKey,
+      projectTimeSig,
+      initialNumBars,
+    ],
+  );
+
   const [metronome, setMetronome] = useState<MetronomeSettings>({
     bpm: initialBpm,
     timeSig: [4, 4],
@@ -291,6 +349,8 @@ export default function Studio() {
         recordSettings,
         sendBuses,
         trackAmpChains,
+        musicalContentHash: durableMusicalHash,
+        persistenceIntegrityHash: durableIntegrityHash,
       }),
     [
       projectTitle,
@@ -311,6 +371,8 @@ export default function Studio() {
       recordSettings,
       sendBuses,
       trackAmpChains,
+      durableMusicalHash,
+      durableIntegrityHash,
     ],
   );
 

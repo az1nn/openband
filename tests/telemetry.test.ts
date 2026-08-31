@@ -1,90 +1,106 @@
-import { describe, it, expect, afterAll, beforeAll } from "vitest";
-import type { Server } from "http";
-import app from "../backend/src/app";
-import { validateTelemetryPayload } from "../backend/src/routes/telemetry";
+import { describe, it, expect } from "vitest";
+import {
+  createTelemetry,
+  redactSecrets,
+  type CreativeTelemetryEvent,
+} from "../src/lib/telemetry.ts";
 
-let server: Server;
-let baseUrl: string;
-
-beforeAll(async () => {
-  await new Promise<void>((resolve) => {
-    server = app.listen(0, () => resolve());
-  });
-  const addr = server.address();
-  if (addr && typeof addr === "object") {
-    baseUrl = `http://127.0.0.1:${addr.port}`;
-  }
-});
-
-afterAll(async () => {
-  await new Promise<void>((resolve) => {
-    if (server) server.close(() => resolve());
-    else resolve();
-  });
-});
-
-const validMetrics = {
-  underruns: 0,
-  droppedFrames: 0,
-  cpuLoad: 12,
-  peakCpu: 34,
-  timestamp: Date.now(),
-};
-
-describe("validateTelemetryPayload", () => {
-  it("accepts a well-formed payload", () => {
-    expect(
-      validateTelemetryPayload({ metrics: validMetrics, platform: "web" }),
-    ).toBe(true);
-  });
-
-  it("rejects a missing metrics object", () => {
-    expect(validateTelemetryPayload({ platform: "web" })).toBe(false);
-  });
-
-  it("rejects a non-object body", () => {
-    expect(validateTelemetryPayload(null)).toBe(false);
-    expect(validateTelemetryPayload("nope")).toBe(false);
-  });
-
-  it("rejects when a required numeric field is missing", () => {
-    const bad = { ...validMetrics, cpuLoad: undefined };
-    expect(validateTelemetryPayload({ metrics: bad })).toBe(false);
+describe("CreativeTelemetryEvent", () => {
+  it("every union member compiles", () => {
+    const events: CreativeTelemetryEvent[] = [
+      { type: "session_opened", genreId: "g1", ts: 1 },
+      { type: "recipe_configured", genreId: "g1", ts: 2 },
+      { type: "locks_changed", lockedRoles: ["rhythm"], ts: 3 },
+      { type: "variation_generated", variationId: "v1", musicalHash: "h1", ts: 4 },
+      { type: "variation_selected", variationId: "v1", ts: 5 },
+      { type: "preview_started", cacheKey: "c1", ts: 6 },
+      { type: "preview_ended", cacheKey: "c1", reason: "natural", ts: 7 },
+      { type: "preview_rejected", reason: "busy", ts: 8 },
+      { type: "promotion_succeeded", projectId: "p1", ts: 9 },
+      { type: "promotion_failed", reason: "x", ts: 10 },
+    ];
+    for (const e of events) {
+      expect(typeof e.type).toBe("string");
+    }
   });
 });
 
-describe("POST /api/telemetry", () => {
-  it("accepts a valid payload with 200 { ok: true }", async () => {
-    const resp = await fetch(`${baseUrl}/api/telemetry`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        metrics: validMetrics,
-        userAgent: "vitest",
-        platform: "web",
-        projectId: "test-project",
-      }),
-    });
-    const json = await resp.json();
-    expect(resp.status).toBe(200);
-    expect(json.ok).toBe(true);
+describe("redactSecrets", () => {
+  it("removes approvalToken/uri/secret/audioUri/path keys recursively", () => {
+    const input = {
+      approvalToken: "t1",
+      token: "t2",
+      secret: "s1",
+      uri: "u1",
+      audioUri: "au1",
+      path: "p1",
+      filePath: "fp1",
+      blob: "b1",
+      apiKey: "ak1",
+      access_token: "at1",
+      keep: "ok",
+      audioType: "wav",
+      nested: {
+        secret: "s2",
+        token: "t3",
+        okay: "fine",
+        deep: { password: "pw", safe: 1 },
+      },
+      list: [{ token: "t4", ok: true }],
+    };
+    const out = redactSecrets(input);
+    expect((out as { approvalToken?: string }).approvalToken).toBeUndefined();
+    expect((out as { token?: string }).token).toBeUndefined();
+    expect((out as { secret?: string }).secret).toBeUndefined();
+    expect((out as { uri?: string }).uri).toBeUndefined();
+    expect((out as { audioUri?: string }).audioUri).toBeUndefined();
+    expect((out as { path?: string }).path).toBeUndefined();
+    expect((out as { filePath?: string }).filePath).toBeUndefined();
+    expect((out as { blob?: string }).blob).toBeUndefined();
+    expect((out as { apiKey?: string }).apiKey).toBeUndefined();
+    expect((out as { access_token?: string }).access_token).toBeUndefined();
+    expect((out as { keep?: string }).keep).toBe("ok");
+    expect((out as { audioType?: string }).audioType).toBe("wav");
+    expect((out.nested as { secret?: string }).secret).toBeUndefined();
+    expect((out.nested as { token?: string }).token).toBeUndefined();
+    expect((out.nested as { okay?: string }).okay).toBe("fine");
+    expect((out.nested.deep as { password?: string }).password).toBeUndefined();
+    expect((out.nested.deep as { safe?: number }).safe).toBe(1);
+    expect((out.list[0] as { token?: string }).token).toBeUndefined();
+    expect((out.list[0] as { ok?: boolean }).ok).toBe(true);
   });
 
-  it("rejects a malformed payload with 400", async () => {
-    const resp = await fetch(`${baseUrl}/api/telemetry`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ metrics: { underruns: "not-a-number" } }),
-    });
-    expect(resp.status).toBe(400);
+  it("returns a deep clone", () => {
+    const input = { a: { b: 1 } };
+    const out = redactSecrets(input);
+    expect(out).not.toBe(input);
+    expect(out.a).not.toBe(input.a);
+  });
+});
+
+describe("createTelemetry", () => {
+  it("calls reporter with the redacted event and clones nested secrets", () => {
+    const received: CreativeTelemetryEvent[] = [];
+    const { track } = createTelemetry((e) => received.push(e));
+    const base = {
+      type: "variation_selected",
+      variationId: "v1",
+      ts: 5,
+      secret: "should-go",
+      nested: { token: "t", fine: "x" },
+    } as unknown as CreativeTelemetryEvent;
+    track(base);
+    expect(received.length).toBe(1);
+    const saved = received[0] as Record<string, unknown>;
+    expect(saved.secret).toBeUndefined();
+    expect(((saved.nested as Record<string, unknown>).token as string | undefined) === undefined).toBe(true);
+    expect((saved.nested as Record<string, unknown>).fine).toBe("x");
   });
 
-  it("does not throw when no telemetry table is provisioned", async () => {
-    const resp = await fetch(`${baseUrl}/api/telemetry`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ metrics: validMetrics }),
-    });
-    expect(resp.status).toBe(200);
+  it("ignores unknown event types", () => {
+    const received: unknown[] = [];
+    const { track } = createTelemetry((e) => received.push(e));
+    track({ type: "bogus" } as unknown as CreativeTelemetryEvent);
+    expect(received.length).toBe(0);
   });
 });

@@ -23,6 +23,9 @@ export type GeneratedStarterSnapshot = {
 export type ApprovedStarterSnapshot = GeneratedStarterSnapshot & {
   approvalToken: string;
   approvedAt: number;
+  recipeFingerprint?: string;
+  approvedMusicalHash?: string;
+  persistenceIntegrityHash?: string;
 };
 
 export type PromoteResult = { promoted: boolean; projectId?: string };

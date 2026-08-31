@@ -15,6 +15,11 @@ import {
   MUSICAL_KEYS,
   generateTracksForGenre,
 } from "./projectTemplates";
+import {
+  musicalContentHash,
+  recipeFingerprint,
+  persistenceIntegrityHash,
+} from "./creativeIdentity";
 
 export interface ProjectStarterConfig {
   name: string;
@@ -123,6 +128,29 @@ export function buildApprovedSnapshot(
     approved: true,
   });
 
+  const recipeFp = recipeFingerprint({
+    genreId: result.genreId,
+    mood: result.mood,
+    bpm: result.bpm,
+    key: result.key,
+    timeSignature: result.timeSignature,
+    numBars: result.numBars,
+  });
+  const approvedMusicalHash = musicalContentHash(result);
+  const persistenceIntegrity = persistenceIntegrityHash({
+    projectId: result.id,
+    musicalContentHash: approvedMusicalHash,
+    approvalToken,
+    sourceRecipe: {
+      genreId: result.genreId,
+      mood: result.mood,
+      bpm: result.bpm,
+      key: result.key,
+      timeSignature: result.timeSignature,
+      numBars: result.numBars,
+    },
+  });
+
   return {
     revision: 1,
     recipe,
@@ -132,6 +160,9 @@ export function buildApprovedSnapshot(
     approved: true,
     approvalToken,
     approvedAt: Date.now(),
+    recipeFingerprint: recipeFp,
+    approvedMusicalHash,
+    persistenceIntegrityHash: persistenceIntegrity,
   };
 }
 
