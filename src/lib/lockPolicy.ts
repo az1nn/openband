@@ -22,7 +22,7 @@ export function normalizeTrackContent(track: TrackDef) {
 
 export type LockRole = "rhythm" | "bass" | "harmony" | "melody" | "fx" | "unknown";
 
-export type CardinalityPolicy = "strict" | "preserve" | "drop";
+export type CardinalityPolicy = "strict" | "preserve";
 export const CARDINALITY_POLICY: CardinalityPolicy = "preserve";
 
 const TRACK_TYPE_TO_ROLE: Record<string, LockRole> = {
@@ -83,7 +83,6 @@ export function applyLocks(
         return;
       }
       if (policy === "strict") throw new Error(`cardinality-mismatch:${role}`);
-      if (policy === "drop") return;
       nextTracks.push(track);
       return;
     }

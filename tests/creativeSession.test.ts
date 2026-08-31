@@ -165,11 +165,11 @@ describe("CardinalityPolicy", () => {
     expect(mismatch).toContain("rhythm");
   });
 
-  it("applyLocks drop removes locked track with no prev", () => {
+  it("applyLocks preserve keeps locked track with no prev (indices never shift)", () => {
     const prev = setupProjectStarter({ name: "p", genreId: "rock", bpm: 120, numBars: 8, timeSignature: "4/4", key: "C", startFromScratch: true });
     const next = setupProjectStarter({ name: "n", genreId: "rock", bpm: 120, numBars: 8, timeSignature: "4/4", key: "C" });
-    const dropped = applyLocks(prev, next, { rhythm: true }, "rock", "drop");
-    expect(dropped.tracks.length).toBe(next.tracks.length - 1);
+    const kept = applyLocks(prev, next, { rhythm: true }, "rock");
+    expect(kept.tracks.length).toBe(next.tracks.length);
   });
 
   it("applyLocks strict throws on locked role with no prev", () => {

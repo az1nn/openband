@@ -87,6 +87,7 @@ export interface CreativeSession {
   ): Promise<PromotionOutcome>;
   getHistory(): readonly CreativeVariation[];
   visibleCount: number;
+  resetPromotion(): void;
   close(): void;
 }
 
@@ -140,8 +141,12 @@ export function createCreativeSession(opts?: {
     variations: [],
   };
 
-  const promotion = createPromotionSession();
+  let promotion = createPromotionSession();
   let operationCounter = 0;
+
+  function resetPromotion(): void {
+    promotion = createPromotionSession();
+  }
 
   function buildVariation(op: GenerationOperation): CreativeVariation {
     const base = setupProjectStarter({
@@ -267,6 +272,9 @@ export function createCreativeSession(opts?: {
     },
     getHistory() {
       return state.variations.slice(-storageCapacity);
+    },
+    resetPromotion() {
+      resetPromotion();
     },
     close() {
       state.lifecycle = "closed";

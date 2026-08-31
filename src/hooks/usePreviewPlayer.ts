@@ -4,7 +4,7 @@ import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import type { ProjectStarterResult } from "../lib/projectStarter";
 import { previewCacheKeyFor } from "../lib/previewBudget";
 import { PreviewPlayback, type PreviewStatus } from "../lib/previewLifecycle";
-import { audioSystem } from "../lib/universalAudio";
+import { audioSystem, revokeTrackedBlob } from "../lib/universalAudio";
 
 export function usePreviewPlayer(): {
   play: (args: {
@@ -18,6 +18,7 @@ export function usePreviewPlayer(): {
 } {
   const playbackRef = useRef<PreviewPlayback>(new PreviewPlayback());
   const busyRef = useRef(false);
+  const uriRef = useRef<string | null>(null);
   const [status, setStatus] = useState<PreviewStatus>("stopped");
   const [cacheKey, setCacheKey] = useState<string | null>(null);
 
@@ -38,12 +39,30 @@ export function usePreviewPlayer(): {
     }
   }, [playerStatus.playing, playerStatus.isLoaded, playerStatus.didJustFinish]);
 
+  const lastDidJustFinishRef = useRef(playerStatus.didJustFinish);
+  useEffect(() => {
+    const prev = lastDidJustFinishRef.current;
+    lastDidJustFinishRef.current = playerStatus.didJustFinish;
+    if (playerStatus.didJustFinish && !prev) {
+      const pb = playbackRef.current;
+      if (pb.status === "playing") {
+        busyRef.current = false;
+        pb.end();
+        setStatus("stopped");
+      }
+    }
+  }, [playerStatus.didJustFinish]);
+
   useEffect(() => {
     return () => {
       try {
         player.pause();
       } catch {
         console.error("Preview pause-on-unmount error");
+      }
+      if (uriRef.current) {
+        revokeTrackedBlob(uriRef.current);
+        uriRef.current = null;
       }
       playbackRef.current.stop();
     };
@@ -58,10 +77,19 @@ export function usePreviewPlayer(): {
     const key = previewCacheKeyFor(args.musicalHash, args.result);
 
     if (!args.uri) {
+      if (uriRef.current) {
+        revokeTrackedBlob(uriRef.current);
+        uriRef.current = null;
+      }
       setCacheKey(key);
       setStatus("stopped");
       return;
     }
+
+    if (uriRef.current && uriRef.current !== args.uri) {
+      revokeTrackedBlob(uriRef.current);
+    }
+    uriRef.current = args.uri;
 
     const outcome = pb.play();
     if (!outcome.accepted) {
@@ -80,7 +108,13 @@ export function usePreviewPlayer(): {
 
     try {
       if (Platform.OS === "web") {
-        await audioSystem.ensureContext();
+        const ctx = await audioSystem.ensureContext();
+        if (!ctx) {
+          busyRef.current = false;
+          pb.stop();
+          setStatus("failed");
+          return;
+        }
       }
       await player.replace(args.uri);
       await player.play();

@@ -1,6 +1,6 @@
 # OpenBand V11 Handoff — Creative Loop
 
-**Status:** IMPLEMENTED (core modules) / READY FOR REVIEW  
+**Status:** IMPLEMENTED — all open fixes closed (see docs/v11-open-fixes.md) / READY FOR REVIEW  
 **Target:** V11 Creative Loop  
 **Baseline:** V10 Creative Iteration
 
@@ -151,7 +151,7 @@ Payloads tipados e allowlisted. Nunca enviar recipe inteira, áudio bruto, camin
 10. V10 + V11 regressions verdes.
 
 ## Implementation status (PR #37)
-Core domain modules implemented and verified (full matrix green: tsc, backend tsc, vitest 1807, legacy 24, graph:ci, build):
+Core domain modules implemented and verified (full matrix green: tsc, backend tsc, vitest 1817, legacy 24, graph:ci, build):
 
 - `src/lib/creativeSession.ts` — session state machine (lifecycle/generation/promotion/playback, freezeGeneration deep-copy, generate/regenerate, selectVariation, approveSelected, async promote w/ durable approvalToken dedupe, capped readonly history).
 - `src/lib/previewBudget.ts` — zero-based half-open bars, hard preview budget (>=1 first window), previewCacheKeyFor, invalidatedBySource.

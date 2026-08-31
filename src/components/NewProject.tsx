@@ -7,7 +7,8 @@ import { setupProjectStarter, buildApprovedSnapshot, type ProjectStarterResult, 
 import { createPromotionGate } from "../lib/snapshotPromotion";
 import { createCreativeSession, type RoleLocks, type CreativeVariation } from "../lib/creativeSession";
 import { roleForTrackType, detectIncompatibleLocks, type LockRole } from "../lib/lockPolicy";
-import { musicalContentHash } from "../lib/creativeIdentity";
+import { renderTracksToUrl } from "../lib/midiSynth";
+import { persistCreativeDecision } from "../lib/creativePersistence";
 import { usePreviewPlayer } from "../hooks/usePreviewPlayer";
 import { Divider } from "./Divider";
 import { CreativeRecipeControls } from "./CreativeRecipeControls";
@@ -61,6 +62,7 @@ export function NewProject({
     resultRef.current = null;
     snapshotRef.current = null;
     gateRef.current = createPromotionGate();
+    sessionRef.current.resetPromotion();
   }, [visible]);
 
   const [name, setName] = useState(initialTitle ?? "");
@@ -144,20 +146,16 @@ export function NewProject({
   }, [selectedGenre, selectedMood, bpm, selectedKey, timeSignature, numBars, locks, refreshVariations]);
 
   const handlePreviewPlay = useCallback(() => {
-    if (!resultRef.current) {
-      resultRef.current = setupProjectStarter({
-        name: name.trim() || `${selectedGenre.name} - ${t("newProject.defaultName", "Novo Projeto")}`,
-        genreId: selectedGenre.id,
-        mood: selectedMood,
-        bpm,
-        numBars,
-        timeSignature,
-        key: selectedKey,
+    const variation = selectedVariationId
+      ? sessionRef.current.getHistory().find((v) => v.variationId === selectedVariationId)
+      : undefined;
+    if (!variation) return;
+    void renderTracksToUrl(variation.result.tracks, variation.result.bpm, variation.result.mood)
+      .then((uri) => {
+        if (!uri) return;
+        return preview.play({ uri, musicalHash: variation.musicalContentHash, result: variation.result });
       });
-    }
-    const musicalHash = musicalContentHash(resultRef.current);
-    preview.play({ uri: "", musicalHash, result: resultRef.current });
-  }, [name, selectedGenre, selectedKey, bpm, selectedMood, numBars, timeSignature, preview, t]);
+  }, [selectedVariationId, preview]);
 
   const handlePreviewStop = useCallback(() => {
     preview.stop();
@@ -180,7 +178,46 @@ export function NewProject({
     setStep("details");
   }, [selectedGenre.defaultBpm]);
 
+  const resetAfterCreate = useCallback(() => {
+    setName("");
+    setSelectedGenre(GENRES[0]);
+    setBpm(GENRES[0].defaultBpm);
+    setSelectedKey(GENRES[0].defaultKey);
+    setSelectedMood(undefined);
+    setNumBars(8);
+    setTimeSignature("4/4");
+    setStep("genre");
+    resultRef.current = null;
+    snapshotRef.current = null;
+    sessionRef.current.close();
+    sessionRef.current.resetPromotion();
+    setLocks({});
+    setSelectedVariationId(null);
+  }, []);
+
   const handleCreate = useCallback(() => {
+    const variation = selectedVariationId
+      ? sessionRef.current.getHistory().find((v) => v.variationId === selectedVariationId)
+      : undefined;
+    if (variation) {
+      const snapshot = buildApprovedSnapshot(variation.result);
+      void sessionRef.current.promote(snapshot, {
+        persist: (projectId, recipe, previewUri) =>
+          persistCreativeDecision(projectId, recipe, previewUri, variation.result),
+      })
+        .then((outcome) => {
+          if (!outcome.promoted) {
+            console.error("Creative promote rejected:", outcome.reason);
+            return;
+          }
+          onCreate(variation.result);
+          resetAfterCreate();
+        })
+        .catch((err) => {
+          console.error("Creative promote failed:", err);
+        });
+      return;
+    }
     const finalName = name.trim() || `${selectedGenre.name} - ${t("newProject.defaultName", "Novo Projeto")}`;
     if (!resultRef.current) {
       resultRef.current = setupProjectStarter({
@@ -199,21 +236,9 @@ export function NewProject({
     const outcome = gateRef.current!.promote(snapshotRef.current);
     if (outcome.promoted) {
       onCreate(resultRef.current);
-      setName("");
-      setSelectedGenre(GENRES[0]);
-      setBpm(GENRES[0].defaultBpm);
-      setSelectedKey(GENRES[0].defaultKey);
-      setSelectedMood(undefined);
-      setNumBars(8);
-      setTimeSignature("4/4");
-      setStep("genre");
-      resultRef.current = null;
-      snapshotRef.current = null;
-      sessionRef.current.close();
-      setLocks({});
-      setSelectedVariationId(null);
+      resetAfterCreate();
     }
-  }, [name, selectedGenre, selectedKey, bpm, selectedMood, numBars, timeSignature, onCreate]);
+  }, [name, selectedGenre, selectedKey, bpm, selectedMood, numBars, timeSignature, onCreate, selectedVariationId, resetAfterCreate]);
 
   const handleClose = useCallback(() => {
     setName("");

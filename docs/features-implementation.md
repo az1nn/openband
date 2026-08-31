@@ -144,12 +144,12 @@ OpenBand uses Web Audio `ConvolverNode` for convolution-based effects. Impulse r
 - `src/lib/previewBudget.ts` — zero-based half-open bars, hard preview budget (>=1 first window), `previewCacheKeyFor`, `invalidatedBySource`
 - `src/lib/previewLifecycle.ts` + `src/hooks/usePreviewPlayer.ts` — `PreviewPlayback` ownership manager (busy-rejection + natural-end release) + expo-audio hook with web autoplay `ensureContext`
 - `src/lib/telemetry.ts` — typed allowlisted `CreativeTelemetryEvent` union + recursive secret redaction (never recipe/audio/path/token)
-- `src/lib/creativePersistence.ts` — `PersistenceScope`, always-ephemeral session store, `redactForDurable` (no preview handles persisted), `recursiveSecretRedaction`, `persistProjectDurable` (redacts before save)
-- `src/lib/lockPolicy.ts` — `CardinalityPolicy` (`preserve`/`drop`/`strict`) + `detectCardinalityMismatch`, explicit `unknown` role (no silent `harmony` fallback)
+- `src/lib/creativePersistence.ts` — `PersistenceScope`, always-ephemeral session store, `redactForDurable` (no preview handles persisted), `recursiveSecretRedaction`, `persistProjectDurable` (redacts before save), `persistCreativeDecision` (durable approve/promote persist)
+- `src/lib/lockPolicy.ts` — `CardinalityPolicy` (`preserve`/`strict`, removed index-corrupting `drop`) + `detectCardinalityMismatch`, explicit `unknown` role (no silent `harmony` fallback)
 - UI: `CreativeRecipeControls`, `CreativeRoleLocks`, `CreativeVariationSwitcher`, `CreativePreviewPlayer` (exported via `src/components/index.ts`), wired into `NewProject` creative-loop section with a working generate action
-- Tests: `tests/creativeSession|previewBudget|previewLifecycle|telemetry|creativePersistence|creativeIdentity*.test.ts`, `tests/components/creative*``
+- Tests: `tests/creativeSession|previewBudget|previewLifecycle|telemetry|creativePersistence|creativeIdentity*.test.ts`, `tests/components/creative*`, `tests/creativeLoopStress.test.ts`
 
-> Remaining for full loop: production preview audio source (empty-uri play is a safe no-op) and long-session/remount stress suites — see `openspec/changes/v11-creative-loop(-hardening)/tasks.md`.
+> All open fixes closed (real preview audio via `renderTracksToUrl`, session approve/promote driven in Create + durable persist, long-session/remount/restart stress suites) — see `docs/v11-open-fixes.md`.
 
 ---
 

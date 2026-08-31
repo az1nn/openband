@@ -7,5 +7,8 @@
 - [x] run external history mutation protection suite (getHistory readonly copy)
 - [x] run async audio rejection cleanup suite (previewLifecycle)
 - [x] run natural-ended cleanup suite (previewLifecycle)
-- [x] re-run V10/V11 regressions (full vitest 1807 + legacy 24 green)
-- [ ] update final handoff with actual counts
+- [x] run long-session stress suite (creativeLoopStress, 120 generations)
+- [x] run remount idempotency suite (creativeLoopStress deterministic hash)
+- [x] run restart-like idempotency suite (creativeLoopStress dedupe + ownership release)
+- [x] re-run V10/V11 regressions (full vitest 1817 + legacy 24 green)
+- [x] update final handoff with actual counts
