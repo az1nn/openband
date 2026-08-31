@@ -1,63 +1,63 @@
 # Tasks — V11 Creative Loop
 
 ## Spec correction gate
-- [ ] Confirm identity taxonomy.
-- [ ] Confirm stable role model.
-- [ ] Confirm preview bar convention.
-- [ ] Confirm generation/promotion separation.
-- [ ] Confirm persistence scope model.
-- [ ] Confirm durable approval-token idempotency.
-- [ ] Confirm audio async lifecycle.
+- [x] Confirm identity taxonomy (ADRs V11-02/03).
+- [x] Confirm stable role model (ADR V11-03 + creativeIdentity.resolveStableRole).
+- [x] Confirm preview bar convention (ADR V11-05 + previewBudget).
+- [x] Confirm generation/promotion separation (ADR V11-01).
+- [x] Confirm persistence scope model (ADR V11-06 + creativePersistence).
+- [x] Confirm durable approval-token idempotency (ADR V11-02 + snapshotPromotion).
+- [x] Confirm audio async lifecycle (ADR V11-08 + previewLifecycle).
 
 ## Domain
-- [ ] implement/reuse recipeFingerprint.
-- [ ] implement musicalContentHash.
-- [ ] implement persistenceIntegrityHash separately.
-- [ ] implement previewCacheKey from musical hash.
-- [ ] introduce stable track role metadata/sidecar.
-- [ ] remove unknown->harmony silent fallback.
-- [ ] define cardinality mismatch policy.
+- [x] implement/reuse recipeFingerprint.
+- [x] implement musicalContentHash.
+- [x] implement persistenceIntegrityHash separately.
+- [x] implement previewCacheKey from musical hash.
+- [x] introduce stable track role metadata/sidecar.
+- [x] remove unknown->harmony silent fallback.
+- [x] define cardinality mismatch policy.
 
 ## Session
-- [ ] implement orthogonal lifecycle/generation/promotion/playback states.
-- [ ] freeze generation operation inputs.
-- [ ] selected variation independent from latest.
-- [ ] history readonly externally.
-- [ ] storage capacity and visible count explicit.
+- [x] implement orthogonal lifecycle/generation/promotion/playback states.
+- [x] freeze generation operation inputs.
+- [x] selected variation independent from latest.
+- [x] history readonly externally.
+- [x] storage capacity and visible count explicit.
 
 ## Preview
-- [ ] standardize zero-based half-open bars.
-- [ ] fix off-by-one behavior.
-- [ ] enforce hard preview budget including first window.
-- [ ] invalidate by musical source hash/settings.
-- [ ] async play rejection cleanup.
-- [ ] natural-end cleanup.
+- [x] standardize zero-based half-open bars.
+- [x] fix off-by-one behavior.
+- [x] enforce hard preview budget including first window.
+- [x] invalidate by musical source hash/settings.
+- [x] async play rejection cleanup.
+- [x] natural-end cleanup.
 
 ## Promotion
-- [ ] ApprovedSnapshot only after explicit approval.
-- [ ] no generator call on Create.
-- [ ] durable approvalToken dedupe.
-- [ ] retry returns same project.
-- [ ] selected musical hash equality verified.
+- [x] ApprovedSnapshot only after explicit approval.
+- [x] no generator call on Create.
+- [x] durable approvalToken dedupe.
+- [x] retry returns same project.
+- [x] selected musical hash equality verified.
 
 ## Persistence
-- [ ] creative-session scope always ephemeral.
-- [ ] project scope durable by policy.
-- [ ] no preview handles persisted.
-- [ ] recursive secret redaction.
+- [x] creative-session scope always ephemeral.
+- [x] project scope durable by policy.
+- [x] no preview handles persisted.
+- [x] recursive secret redaction.
 
 ## Telemetry
-- [ ] typed event union.
-- [ ] allowlisted payloads.
-- [ ] no whole recipe.
-- [ ] no raw audio/path/token/secrets.
+- [x] typed event union.
+- [x] allowlisted payloads.
+- [x] no whole recipe.
+- [x] no raw audio/path/token/secrets.
 
 ## Verification
-- [ ] frontend tsc.
-- [ ] backend tsc.
-- [ ] full vitest.
-- [ ] legacy.
-- [ ] graph:ci.
-- [ ] build.
-- [ ] V10 regression.
-- [ ] V11 regression.
+- [x] frontend tsc.
+- [x] backend tsc.
+- [x] full vitest.
+- [x] legacy.
+- [x] graph:ci.
+- [x] build.
+- [x] V10 regression.
+- [x] V11 regression.

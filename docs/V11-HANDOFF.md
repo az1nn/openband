@@ -1,6 +1,6 @@
 # OpenBand V11 Handoff — Creative Loop
 
-**Status:** REGENERATED / READY FOR REVIEW  
+**Status:** IMPLEMENTED (core modules) / READY FOR REVIEW  
 **Target:** V11 Creative Loop  
 **Baseline:** V10 Creative Iteration
 
@@ -149,3 +149,16 @@ Payloads tipados e allowlisted. Nunca enviar recipe inteira, áudio bruto, camin
 8. Preview budget é bounded.
 9. Session não persiste como project.
 10. V10 + V11 regressions verdes.
+
+## Implementation status (PR #37)
+Core domain modules implemented and verified (full matrix green: tsc, backend tsc, vitest 1807, legacy 24, graph:ci, build):
+
+- `src/lib/creativeSession.ts` — session state machine (lifecycle/generation/promotion/playback, freezeGeneration deep-copy, generate/regenerate, selectVariation, approveSelected, async promote w/ durable approvalToken dedupe, capped readonly history).
+- `src/lib/previewBudget.ts` — zero-based half-open bars, hard preview budget (>=1 first window), previewCacheKeyFor, invalidatedBySource.
+- `src/lib/previewLifecycle.ts` + `src/hooks/usePreviewPlayer.ts` — PreviewPlayback ownership (busy rejection + natural-end release), expo-audio hook with web autoplay ensureContext.
+- `src/lib/telemetry.ts` — typed allowlisted event union + recursive secret redaction.
+- `src/lib/creativePersistence.ts` — PersistenceScope, ephemeral session store, redactForDurable, recursiveSecretRedaction, persistProjectDurable (redacts before save).
+- `src/lib/lockPolicy.ts` — CardinalityPolicy (preserve/drop/strict) + detectCardinalityMismatch.
+- UI: CreativeRecipeControls, CreativeRoleLocks, CreativeVariationSwitcher, CreativePreviewPlayer (exported via `src/components/index.ts`), wired into `NewProject` creative-loop section with a working generate action.
+
+Known remaining gaps for full UI loop: preview audio has no production source yet (empty-uri play is a safe no-op); these need a real mixdown/preview source and long-session/remount stress suites.

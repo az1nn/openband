@@ -135,6 +135,24 @@ OpenBand uses Web Audio `ConvolverNode` for convolution-based effects. Impulse r
 
 ---
 
+## ✅ V11 Creative Loop (Configure → Generate → Preview → Lock → Approve → Create) — COMPLETE (core)
+
+**Effort:** High · **Impact:** High — iterate on an idea before committing to a project
+
+- `src/lib/creativeIdentity.ts` — `recipeFingerprint`, `musicalContentHash` (role-bucketed), `persistenceIntegrityHash`, `previewCacheKey`, `resolveStableRole`
+- `src/lib/creativeSession.ts` — framework-agnostic session state machine: orthogonal lifecycle/generation/promotion/playback states, `freezeGeneration` (deep-copied immutable op inputs), `generate`/`regenerate` (lock application from frozen base), `selectVariation` (independent of latest), `approveSelected` (musical-hash equality verified), async `promote` (durable approvalToken dedupe → retry returns same project, no generator call on Create), capped readonly history (`SESSION_STORAGE_CAPACITY=5`, `SESSION_VISIBLE_DEFAULT=3`)
+- `src/lib/previewBudget.ts` — zero-based half-open bars, hard preview budget (>=1 first window), `previewCacheKeyFor`, `invalidatedBySource`
+- `src/lib/previewLifecycle.ts` + `src/hooks/usePreviewPlayer.ts` — `PreviewPlayback` ownership manager (busy-rejection + natural-end release) + expo-audio hook with web autoplay `ensureContext`
+- `src/lib/telemetry.ts` — typed allowlisted `CreativeTelemetryEvent` union + recursive secret redaction (never recipe/audio/path/token)
+- `src/lib/creativePersistence.ts` — `PersistenceScope`, always-ephemeral session store, `redactForDurable` (no preview handles persisted), `recursiveSecretRedaction`, `persistProjectDurable` (redacts before save)
+- `src/lib/lockPolicy.ts` — `CardinalityPolicy` (`preserve`/`drop`/`strict`) + `detectCardinalityMismatch`, explicit `unknown` role (no silent `harmony` fallback)
+- UI: `CreativeRecipeControls`, `CreativeRoleLocks`, `CreativeVariationSwitcher`, `CreativePreviewPlayer` (exported via `src/components/index.ts`), wired into `NewProject` creative-loop section with a working generate action
+- Tests: `tests/creativeSession|previewBudget|previewLifecycle|telemetry|creativePersistence|creativeIdentity*.test.ts`, `tests/components/creative*``
+
+> Remaining for full loop: production preview audio source (empty-uri play is a safe no-op) and long-session/remount stress suites — see `openspec/changes/v11-creative-loop(-hardening)/tasks.md`.
+
+---
+
 ## Remaining Gaps (No Priority)
 
 The following feature from the original analysis is **lower priority** and not yet implemented:

@@ -1,5 +1,9 @@
 import type { TrackDef } from "./types";
-import type { ProjectStarterResult } from "./projectStarter";
+
+export type MusicalContentSource = {
+  genreId: string;
+  tracks: TrackDef[];
+};
 
 export type StableRole =
   | "rhythm"
@@ -81,7 +85,7 @@ function canonicalTrackContent(track: TrackDef): string {
   return `${track.name}|${midi}|${regions}|${plugins}`;
 }
 
-export function musicalContentHash(result: ProjectStarterResult): string {
+export function musicalContentHash(result: MusicalContentSource): string {
   const buckets: Record<string, string[]> = {};
   for (const track of result.tracks) {
     const role = resolveStableRole(track);

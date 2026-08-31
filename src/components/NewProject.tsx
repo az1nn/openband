@@ -5,6 +5,15 @@ import { GENRES, MUSICAL_KEYS, keyLabel, MOODS, TIME_SIGNATURES } from "../lib/p
 import type { GenreTemplate, Mood } from "../lib/projectTemplates";
 import { setupProjectStarter, buildApprovedSnapshot, type ProjectStarterResult, type PromotionGate, type ApprovedStarterSnapshot } from "../lib/projectStarter";
 import { createPromotionGate } from "../lib/snapshotPromotion";
+import { createCreativeSession, type RoleLocks, type CreativeVariation } from "../lib/creativeSession";
+import { roleForTrackType, detectIncompatibleLocks, type LockRole } from "../lib/lockPolicy";
+import { musicalContentHash } from "../lib/creativeIdentity";
+import { usePreviewPlayer } from "../hooks/usePreviewPlayer";
+import { Divider } from "./Divider";
+import { CreativeRecipeControls } from "./CreativeRecipeControls";
+import { CreativeRoleLocks } from "./CreativeRoleLocks";
+import { CreativeVariationSwitcher } from "./CreativeVariationSwitcher";
+import { CreativePreviewPlayer } from "./CreativePreviewPlayer";
 
 interface NewProjectProps {
   visible: boolean;
@@ -73,6 +82,87 @@ export function NewProject({
     initialMood ? "details" : initialGenre ? "mood" : "genre",
   );
 
+  const sessionRef = useRef(createCreativeSession());
+  const [locks, setLocks] = useState<RoleLocks>({});
+  const [selectedVariationId, setSelectedVariationId] = useState<string | null>(null);
+  const [variations, setVariations] = useState<readonly CreativeVariation[]>([]);
+  const preview = usePreviewPlayer();
+
+  const derivedRoles = (selectedGenre.suggestedTracks ?? [])
+    .map((t) => roleForTrackType(t.trackType))
+    .filter((role, i, arr) => arr.indexOf(role) === i);
+
+  const handleRecipePatch = useCallback(
+    (patch: Partial<{ genreId: string; mood: string; bpm: number; key: string; timeSignature: string; numBars: number }>) => {
+      if (patch.genreId !== undefined) {
+        const g = GENRES.find((x) => x.id === patch.genreId) ?? selectedGenre;
+        setSelectedGenre(g);
+        setBpm(g.defaultBpm);
+        setSelectedKey(g.defaultKey);
+      }
+      if (patch.bpm !== undefined) setBpm(patch.bpm);
+      if (patch.numBars !== undefined) setNumBars(patch.numBars);
+      if (patch.key !== undefined) setSelectedKey(patch.key);
+      if (patch.timeSignature !== undefined) setTimeSignature(patch.timeSignature);
+      if (patch.mood !== undefined) {
+        const m = MOODS.find((x) => x.id === patch.mood);
+        setSelectedMood(m ? m.id : undefined);
+      }
+    },
+    [selectedGenre],
+  );
+
+  const handleToggleLock = useCallback((role: LockRole) => {
+    setLocks((prev) => ({ ...prev, [role]: !prev[role] }));
+  }, []);
+
+  const handleSelectVariation = useCallback((id: string) => {
+    sessionRef.current.selectVariation(id);
+    setSelectedVariationId(id);
+  }, []);
+
+  const refreshVariations = useCallback(() => {
+    setVariations(sessionRef.current.getHistory());
+  }, []);
+
+  const handleGenerate = useCallback(() => {
+    sessionRef.current.configure({
+      genreId: selectedGenre.id,
+      mood: selectedMood,
+      bpm,
+      key: selectedKey,
+      timeSignature,
+      numBars,
+      seed: selectedGenre.id,
+    });
+    sessionRef.current.setLocks(locks);
+    const op = sessionRef.current.freezeGeneration();
+    const variation = sessionRef.current.generate(op);
+    sessionRef.current.selectVariation(variation.variationId);
+    setSelectedVariationId(variation.variationId);
+    refreshVariations();
+  }, [selectedGenre, selectedMood, bpm, selectedKey, timeSignature, numBars, locks, refreshVariations]);
+
+  const handlePreviewPlay = useCallback(() => {
+    if (!resultRef.current) {
+      resultRef.current = setupProjectStarter({
+        name: name.trim() || `${selectedGenre.name} - ${t("newProject.defaultName", "Novo Projeto")}`,
+        genreId: selectedGenre.id,
+        mood: selectedMood,
+        bpm,
+        numBars,
+        timeSignature,
+        key: selectedKey,
+      });
+    }
+    const musicalHash = musicalContentHash(resultRef.current);
+    preview.play({ uri: "", musicalHash, result: resultRef.current });
+  }, [name, selectedGenre, selectedKey, bpm, selectedMood, numBars, timeSignature, preview, t]);
+
+  const handlePreviewStop = useCallback(() => {
+    preview.stop();
+  }, [preview]);
+
   const handleSelectGenre = useCallback((genre: GenreTemplate) => {
     setSelectedGenre(genre);
     setBpm(genre.defaultBpm);
@@ -119,6 +209,9 @@ export function NewProject({
       setStep("genre");
       resultRef.current = null;
       snapshotRef.current = null;
+      sessionRef.current.close();
+      setLocks({});
+      setSelectedVariationId(null);
     }
   }, [name, selectedGenre, selectedKey, bpm, selectedMood, numBars, timeSignature, onCreate]);
 
@@ -133,6 +226,9 @@ export function NewProject({
     setStep("genre");
     resultRef.current = null;
     snapshotRef.current = null;
+    sessionRef.current.close();
+    setLocks({});
+    setSelectedVariationId(null);
     onClose();
   }, [onClose]);
 
@@ -490,6 +586,62 @@ export function NewProject({
                   </View>
                 ))}
               </View>
+
+              <Divider label={t("creative.loop", "Creative Loop")} className="mb-4" />
+
+              <CreativeRecipeControls
+                testID="creative-recipe-controls"
+                recipe={{
+                  genreId: selectedGenre.id,
+                  mood: selectedMood,
+                  bpm,
+                  key: selectedKey,
+                  timeSignature,
+                  numBars,
+                  seed: selectedGenre.id,
+                }}
+                onChange={handleRecipePatch}
+                genres={GENRES}
+              />
+
+              <CreativeRoleLocks
+                testID="creative-role-locks"
+                roles={derivedRoles}
+                locks={locks}
+                onToggle={handleToggleLock}
+                incompatible={detectIncompatibleLocks(selectedGenre.id, locks)}
+              />
+
+              <View className="flex-row items-center justify-between mb-2">
+                <Text className="text-gray-400 text-xs font-medium">
+                  {t("creative.variations", "Variações")}
+                </Text>
+                <Pressable
+                  testID="creative-generate"
+                  onPress={handleGenerate}
+                  className="px-3 py-1.5 rounded-lg bg-brand-accent/20 border border-brand-accent active:opacity-80"
+                >
+                  <Text className="text-brand-accent text-xs font-bold">
+                    {t("creative.generate", "Gerar")}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <CreativeVariationSwitcher
+                testID="creative-variation-switcher"
+                variations={variations}
+                selectedId={selectedVariationId}
+                onSelect={handleSelectVariation}
+              />
+
+              <CreativePreviewPlayer
+                testID="creative-preview-player"
+                cacheKey={preview.cacheKey}
+                status={preview.status}
+                onPlay={handlePreviewPlay}
+                onStop={handlePreviewStop}
+                budgetBars={numBars}
+              />
 
               <View className="flex-row gap-3 mb-6">
                 <Pressable

@@ -22,6 +22,9 @@ export function normalizeTrackContent(track: TrackDef) {
 
 export type LockRole = "rhythm" | "bass" | "harmony" | "melody" | "fx" | "unknown";
 
+export type CardinalityPolicy = "strict" | "preserve" | "drop";
+export const CARDINALITY_POLICY: CardinalityPolicy = "preserve";
+
 const TRACK_TYPE_TO_ROLE: Record<string, LockRole> = {
   drums: "rhythm", percussion: "rhythm",
   bass: "bass",
@@ -65,20 +68,42 @@ export function applyLocks(
   next: ProjectStarterResult,
   locks: Partial<Record<LockRole, boolean>>,
   genreId: string,
+  policy: CardinalityPolicy = CARDINALITY_POLICY,
 ): ProjectStarterResult {
   const prevByRole: Record<LockRole, TrackDef[]> = { rhythm: [], bass: [], harmony: [], melody: [], fx: [], unknown: [] };
   prev.tracks.forEach((t, i) => prevByRole[trackRole(t, genreId, i)].push(t));
 
-  const nextTracks = next.tracks.map((track, i) => {
+  const nextTracks: TrackDef[] = [];
+  next.tracks.forEach((track, i) => {
     const role = trackRole(track, genreId, i);
     if (locks[role]) {
       const replacement = prevByRole[role].shift();
-      return replacement ? { ...replacement } : track;
+      if (replacement) {
+        nextTracks.push({ ...replacement });
+        return;
+      }
+      if (policy === "strict") throw new Error(`cardinality-mismatch:${role}`);
+      if (policy === "drop") return;
+      nextTracks.push(track);
+      return;
     }
-    return track;
+    nextTracks.push(track);
   });
 
   return { ...next, tracks: nextTracks };
+}
+
+export function detectCardinalityMismatch(
+  prev: ProjectStarterResult,
+  _next: ProjectStarterResult,
+  locks: Partial<Record<LockRole, boolean>>,
+  genreId: string,
+): LockRole[] {
+  const prevByRole: Record<LockRole, TrackDef[]> = { rhythm: [], bass: [], harmony: [], melody: [], fx: [], unknown: [] };
+  prev.tracks.forEach((t, i) => prevByRole[trackRole(t, genreId, i)].push(t));
+
+  const roles: LockRole[] = ["rhythm", "bass", "harmony", "melody", "fx", "unknown"];
+  return roles.filter((role) => locks[role] && prevByRole[role].length === 0);
 }
 
 export function evaluateKeyChange(
