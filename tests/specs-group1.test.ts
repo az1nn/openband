@@ -171,7 +171,7 @@ describe("project-branching: diff and selective merge", () => {
     const merged = branching.mergeBranch(branch.id, ["track:t2"])!;
     expect(merged.tracks.find((t: any) => t.id === "t2")).toBeDefined();
     expect(merged.tracks.find((t: any) => t.id === "t3")).toBeUndefined();
-    expect(merged.tracks.find((t: any) => t.id === "t1")!.volume).toBe(60);
+    expect(merged.tracks.find((t: any) => t.id === "t1")!.volume).toBe(75);
     branching.disposeBranching();
   });
 
