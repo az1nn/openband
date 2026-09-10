@@ -32,7 +32,7 @@ jobs:
       - name: Bootstrap OpenCode integration
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          specify init --here --force --integration opencode
+          specify init --here --force --integration opencode --ignore-agent-tools
           specify version
           specify integration status
 
