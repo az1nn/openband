@@ -65,13 +65,16 @@ jobs:
               'specs/20260910-183500-openspec-cutover/',
               'openspec/',
           )
+          allowed_files = {'.github/workflows/precutover-checkpoint-temp.yml'}
           ignored_parts = {'.git', 'node_modules', '.openband'}
           bad = []
           for path in Path('.').rglob('*'):
               if not path.is_file() or any(part in ignored_parts for part in path.parts):
                   continue
-              rel = path.as_posix().lstrip('./')
-              if rel.startswith(allowed_prefixes):
+              rel = path.as_posix()
+              if rel.startswith('./'):
+                  rel = rel[2:]
+              if rel in allowed_files or rel.startswith(allowed_prefixes):
                   continue
               try:
                   text = path.read_text(errors='ignore')
