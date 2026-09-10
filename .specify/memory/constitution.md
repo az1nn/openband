@@ -1,50 +1,31 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# OpenBand Constitution
 
-## Core Principles
+## I. Single SDD Authority
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+GitHub Spec Kit is the sole SDD lifecycle framework. OpenSpec is legacy evidence during migration and MUST NOT receive new changes. Feature history is flow-forward; merged feature specs are not rewritten to describe later behavior.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+## II. Human-Friendly Documentation
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+Documentation MUST be concise, precise, useful to a human reader, and free of duplicated status. GitHub owns operational status; Git owns history. Durable knowledge belongs only in architecture, ADRs, contracts, and approved feature artifacts when justified.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+## III. PR-First Governance
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+Production changes MUST flow through branches and pull requests. Agents MUST NOT push directly to `master`. T2+ changes require a human Design Gate before implementation and a human Merge Gate over the verified PR head.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## IV. Architecture Boundaries
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+Frontend code in `app/` and `src/` MUST NOT directly depend on Node filesystem, Electron, or Tauri APIs. Runtime-specific I/O crosses the OpenBand bridge (`@bridge` / `OpenBandNative`). Cross-runtime or persistence boundary changes are architectural work and require explicit design review.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## V. Evidence Over Claims
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+A change is complete only when material behavior is backed by relevant tests, checks, reviews, and documentation reconciliation. Required failures MUST NOT be masked, ignored, or reclassified as success. Security, data integrity, concurrency, and deterministic DSP changes require stronger verification proportional to risk.
+
+## VI. Least Privilege
+
+Agents and automation receive only the permissions needed for their phase. Design agents cannot edit product source. Implementation agents cannot bypass gates, CI, or `master` protections. Secrets MUST NOT appear in specs, logs, commits, handoffs, or generated documentation.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+`AGENTS.md` defines operational agent policy; this Constitution defines durable invariants. A conflict is resolved in favor of this Constitution. Material amendments require a dedicated governance PR with rationale, impact analysis, verification, and human approval.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-09-10 | **Last Amended**: 2026-09-10
