@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "tier": "T3",
+  "issue": 38,
+  "riskTriggers": ["engineering-architecture", "architecture-graph"],
+  "dependsOn": ["20260910-094400-knowledge-agents"]
+}
