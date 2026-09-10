@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
+import { afterEach, describe, it } from "node:test";
 import { createGraph, createNode, addNode, serialize } from "../graph/core.mjs";
 import { normativeSpecFiles, scanSpecs } from "../graph/specs.mjs";
 import { checkRepository } from "../scripts/sdd-policy-check.mjs";
@@ -47,7 +48,7 @@ describe("Spec Kit Architecture Graph", () => {
     write(root, "docs/random.md", "References src/ignored.ts");
 
     const rel = normativeSpecFiles(root).map((file) => path.relative(root, file).replaceAll(path.sep, "/"));
-    expect(rel).toEqual([
+    assert.deepEqual(rel, [
       "docs/adr/0001-boundary.md",
       "docs/architecture.md",
       "docs/contracts/project.md",
@@ -68,16 +69,20 @@ describe("Spec Kit Architecture Graph", () => {
     addNode(graph, createNode("src/ignored.ts", "source", "src/ignored.ts"));
     scanSpecs(root, { graph });
 
-    expect(graph.nodes.some((node) => node.id === "specs/001-feature/spec.md" && node.type === "spec")).toBe(true);
-    expect(graph.nodes.some((node) => node.id.endsWith("tasks.md"))).toBe(false);
-    expect(graph.nodes.some((node) => node.id.startsWith(".specify/"))).toBe(false);
-    expect(graph.edges).toContainEqual({
-      source: "specs/001-feature/spec.md",
-      target: "src/domain.ts",
-      type: "specifies",
-      spec: "specs/001-feature/spec.md",
-    });
-    expect(graph.edges.some((edge) => edge.target === "src/ignored.ts")).toBe(false);
+    assert.equal(graph.nodes.some((node) => node.id === "specs/001-feature/spec.md" && node.type === "spec"), true);
+    assert.equal(graph.nodes.some((node) => node.id.endsWith("tasks.md")), false);
+    assert.equal(graph.nodes.some((node) => node.id.startsWith(".specify/")), false);
+    assert.equal(
+      graph.edges.some(
+        (edge) =>
+          edge.source === "specs/001-feature/spec.md" &&
+          edge.target === "src/domain.ts" &&
+          edge.type === "specifies" &&
+          edge.spec === "specs/001-feature/spec.md"
+      ),
+      true
+    );
+    assert.equal(graph.edges.some((edge) => edge.target === "src/ignored.ts"), false);
   });
 
   it("serializes deterministically", () => {
@@ -92,7 +97,7 @@ describe("Spec Kit Architecture Graph", () => {
       return serialize(graph);
     };
 
-    expect(build()).toBe(build());
+    assert.equal(build(), build());
   });
 });
 
@@ -100,7 +105,7 @@ describe("OpenBand SDD policy", () => {
   it("accepts a valid T3 feature", () => {
     const root = tmpRoot();
     validFeature(root, "001-valid");
-    expect(checkRepository(root)).toEqual([]);
+    assert.deepEqual(checkRepository(root), []);
   });
 
   it("rejects mutable workflow state in openband.json", () => {
@@ -111,14 +116,14 @@ describe("OpenBand SDD policy", () => {
     data.status = "approved";
     fs.writeFileSync(metadata, JSON.stringify(data), "utf8");
 
-    expect(checkRepository(root).some((error) => error.includes("mutable workflow field 'status'"))).toBe(true);
+    assert.equal(checkRepository(root).some((error) => error.includes("mutable workflow field 'status'")), true);
   });
 
   it("requires adversarial and recovery planning for T4", () => {
     const root = tmpRoot();
     validFeature(root, "001-critical", "T4");
     const errors = checkRepository(root);
-    expect(errors.some((error) => error.includes("adversarial verification"))).toBe(true);
-    expect(errors.some((error) => error.includes("rollback or recovery"))).toBe(true);
+    assert.equal(errors.some((error) => error.includes("adversarial verification")), true);
+    assert.equal(errors.some((error) => error.includes("rollback or recovery")), true);
   });
 });
