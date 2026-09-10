@@ -21,6 +21,7 @@ Make Spec Kit the execution protocol for OpenBand changes without creating a sec
 - **FR-010** Agents use progressive context: governance always, impacted knowledge next, code/tests last.
 - **FR-011** `converge` is append-only; appended tasks return to `implement`.
 - **FR-012** Required verification cannot treat FAIL, BLOCKED or FLAKY as PASS.
+- **FR-013** Design and implementation run with separate OpenCode permission profiles when one workflow run cannot safely switch profiles per phase.
 
 ## Risk Rules
 
@@ -30,8 +31,9 @@ Make Spec Kit the execution protocol for OpenBand changes without creating a sec
 
 ## Acceptance
 
-1. A T2+ workflow can pause at Design Gate before implementation.
-2. The workflow includes `specify → plan → tasks → analyze → design gate → implement → converge` with optional clarification/checklist steps.
-3. Policy states that material design changes require re-analysis and renewed Design Gate.
-4. OpenCode exposes separate `plan`, `speckit` and `build` permission profiles without granting `speckit` product-source edits.
-5. No OpenSpec lifecycle rule is introduced by this feature.
+1. The design workflow runs `specify → plan → tasks → analyze → Design Gate`, with clarification/checklist only when needed.
+2. The build workflow runs `implement → converge`; appended convergence tasks return to implementation before verification.
+3. Design uses the `speckit` profile and build uses `build`; permissions are not widened to combine them.
+4. Policy states that material design changes require re-analysis and renewed Design Gate.
+5. OpenCode exposes separate `plan`, `speckit` and `build` permission profiles without granting `speckit` product-source edits.
+6. No OpenSpec lifecycle rule is introduced by this feature.
