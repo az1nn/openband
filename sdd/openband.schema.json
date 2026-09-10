@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openband.dev/schemas/openband-feature-v1.json",
+  "title": "OpenBand Feature Metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "tier", "issue", "dependsOn"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "tier": { "enum": ["T0", "T1", "T2", "T3", "T4"] },
+    "issue": { "type": "integer", "minimum": 1 },
+    "riskTriggers": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "dependsOn": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    }
+  }
+}
