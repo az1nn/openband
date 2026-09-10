@@ -16,13 +16,15 @@ const TRACKED_ROOTS = [
   "stories",
   "scripts",
   "tests",
-  "openspec",
+  "specs",
+  "docs",
 ];
 
 const IGNORE_DIRS = new Set([
   "node_modules",
   ".git",
   ".expo",
+  ".specify",
   "dist",
   "build",
   ".openband",
@@ -41,9 +43,15 @@ const IGNORE_DIRS = new Set([
   "electron/out",
 ]);
 
-function isTrackedFile(root, rel) {
-  if (root === "openspec") return rel.endsWith(".md");
-  if (root === "tests") return /\.test\.(js|ts|jsx|tsx|mjs)$/.test(rel);
+function isTrackedFile(rootName, rel) {
+  if (rootName === "specs") return /^specs\/[^/]+\/spec\.md$/.test(rel);
+  if (rootName === "docs") {
+    return (
+      rel === "docs/architecture.md" ||
+      /^docs\/(adr|contracts)\/.*\.md$/.test(rel)
+    );
+  }
+  if (rootName === "tests") return /\.test\.(js|ts|jsx|tsx|mjs)$/.test(rel);
   return /\.(ts|tsx|js|jsx|mjs)$/.test(rel) && !rel.endsWith(".d.ts");
 }
 
