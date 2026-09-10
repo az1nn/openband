@@ -1,536 +1,147 @@
-# Agent Workflow: OpenSpec SDD Loop
+# OpenBand Agent Policy
 
-> This project uses the **OpenSpec Specification-Driven Development (SDD)** loop as its default development harness. Every change goes through three phases: **Propose** (define specs and tasks in `openspec/changes/`), **Apply** (implement exactly what is specified in `tasks.md`), and **Archive** (record and move completed specs to `openspec/archive/`).
+OpenBand uses GitHub Spec Kit as its SDD lifecycle. This file defines operational agent rules; `.specify/memory/constitution.md` defines durable invariants.
 
-**PR-First Governance:** Commit changes on feature branches (`agent/<issue>-<slug>`), push branch, open a Draft PR via `gh pr create`, and await human review and merge. Never push directly to `master`.
+## Laws
 
-### Subagent-First Rule (Context Preservation)
+- Documentation must be concise, precise, human-friendly, and non-duplicative.
+- Work through branches and PRs. Never push directly to `master`.
+- Stop on decisions, not routine plumbing.
+- Direct `/speckit.*` commands may bypass `openband-ask`, never this policy.
+- Evidence beats claims: masked, blocked, or flaky required checks are not PASS.
 
-The main agent acts as the **architect/orchestrator** and MUST preserve its own context window. **ALWAYS delegate to subagents** — never do heavy work inline in the main context. This applies to:
+## Risk tiers
 
-- **Reading/exploring** — Use the `explore` (or `general`) subagent to read files, search the codebase, and gather context. Do not read large files directly in the main context.
-- **Writing/updating code** — Delegate implementation edits to a `general` subagent with a detailed task description.
-- **Code review** — Always run the `code-review` subagent before every commit (never review inline).
-- **Verification** — Delegate running tests, `tsc`, and builds to a subagent; have it return only the pass/fail summary and relevant errors.
-- **Commit & push** — Delegate the git staging/commit/push steps to a subagent.
+| Tier | Typical change | Required assurance |
+|---|---|---|
+| T0 | typo / isolated rename | focused check |
+| T1 | localized bug with known behavior | diagnosis + regression proof |
+| T2 | bounded new capability | Spec Kit + Design Gate + human Merge Gate |
+| T3 | architecture, persistence, cross-runtime contract | T2 + architecture assessment + specialist review |
+| T4 | security, corruption/loss, CRDT/concurrency, critical deterministic DSP | T3 + adversarial review + recovery + expanded verification |
 
-The main agent should only: plan, decide, dispatch subagents (in parallel when independent), and integrate their concise summaries. Keep raw file contents, test logs, and diffs inside subagents — return only what the architect needs to make the next decision.
+Minimum T3: persistence model, architecture boundary, or cross-runtime contract change. Minimum T4: security-sensitive work, possible data corruption, CRDT/concurrency correctness, or critical deterministic DSP. Architecture Graph may elevate a tier; it may not lower one.
 
-### Required Workflow Order
+## Entry and context
 
-Every change must follow this sequence — never skip or reorder:
+`openband-ask` is the preferred entrypoint. It classifies risk, gathers bounded context, and starts or resumes the appropriate lifecycle. It does not own a parallel state machine.
 
-1. **Spec** — Write `proposal.md`, `design.md`, `tasks.md` under `openspec/changes/<name>/`
-2. **Commit & push** — Commit the spec files before writing any code
-3. **Implement, test & code review** — Implement source changes per `tasks.md`, write/update tests, run full verification, pass `code-review` subagent
-4. **Update specs & docs** — Update spec files and any docs to reflect what was actually built
-5. **Commit & push** — Final commit with all implementation + test + spec updates
+Context is progressive:
 
-Do NOT combine spec commits with implementation commits. Each phase must be independently reviewable.
-
----
-
-## Pre-flight
-
-Before starting any task:
-
-- [ ] Read this file (`AGENTS.md`) fully
-- [ ] Read `CLAUDE.md` and follow its references
-- [ ] Read `global.css` to understand available component classes
-- [ ] Review `src/components/index.ts` for existing design system components
-- [ ] Read `tailwind.config.js` for design tokens (colors, spacing, radii)
-- [ ] Check `package.json` for available dependencies — **do not add new ones without approval**
-- [ ] Read the exact Expo SDK docs at https://docs.expo.dev/versions/v57.0.0/ before using any Expo API
-- [ ] Check `docs/supabase.md` when setting up or modifying Supabase integration
-- [ ] Check git log (`git log --oneline -10`) to understand recent context
-- [ ] Read `docs/3d-scene-guidelines.md` before editing any Three.js screen (`app/virtual-studio.tsx`, the 12 tool rooms, `explorer.tsx`)
-- [ ] Run code review via the `code-review` agent before every commit
-
----
-
-## Phase 1: Plan
-
-**Goal:** Understand what needs to change before writing code.
-
-1. **Read relevant files** — Read all files mentioned in the task, plus any files they import
-2. **Trace the data flow** — Identify state, props, and side effects before modifying
-3. **Scope the change** — Answer:
-   - What is the smallest possible change?
-   - Which files must be modified?
-   - Will this change affect other screens?
-4. **Produce a plan** — List files and changes in order. Example:
-   ```
-   1. src/components/Button.tsx — add `danger` variant
-   2. app/(auth)/login.tsx — use new variant for delete action
-   3. Run `npx tsc --noEmit` to verify types
-   4. Run `npm run build` to verify build
-   ```
-
-**Do NOT** skip straight to code. If uncertain about the approach, use the Task tool to explore first. Always define changes first by creating exactly three separate files under `openspec/changes/<change-name>/` and waiting for the user's explicit approval before implementing any source code edits:
-- `proposal.md`: Outlines the context, problem description, and high-level objectives.
-- `design.md`: Details the API signatures, visual layouts, flowcharts, state variables, and component mappings.
-- `tasks.md`: Provides a detailed, step-by-step checklist of edits and verification steps.
-
----
-
-## Phase 2: Act
-
-**Goal:** Implement the plan with minimal scope.
-
-### Constraints
-
-- **No new dependencies** unless explicitly approved. Check `package.json` first.
-- **Never modify build scripts** in `package.json` unless the user explicitly requests it.
-- **Desktop bridge rule:** Never use `require('fs')`, `ipcRenderer`, or Tauri APIs in `src/` frontend code. All native desktop I/O goes through `OpenBandNative` from `@bridge`.
-- **Follow existing patterns.** If the project uses `View` + `className`, do that. Don't introduce `StyleSheet.create`.
-- **Use the design system.** Import from `src/components/` whenever possible. Don't inline styles that exist as components.
-- **No comments in code.** The code should be self-documenting.
-- **Tailwind v3 syntax.** Use `@tailwind base/components/utilities` directives, NOT `@import "tailwindcss/..."` (that's v4).
-- **Don't modify config files** (`tailwind.config.js`, `metro.config.js`, `babel.config.js`, `tsconfig.json`) unless the task explicitly requires it. (Adding `@bridge` alias to tsconfig.json is allowed for desktop architecture changes.)
-- **Keep changes documentation updated:** Always consult and update `docs/features-implementation.md` when modifying visual layouts, themes, stylesheets, or core components to ensure all implemented features remain fully documented.
-- **No dead code.** Don't leave unused imports, variables, or files.
-- **Root cause, not suppression.** For bugs, fix the underlying issue. Don't add try/catch wrappers that silence errors.
-- **Test output format:** Every test must follow the node:test pattern — `▶ SuiteName` for describe blocks, `  ✔ test description (Xms)` for passing tests, and `✔ SuiteName (Xms)` at suite end. See legacy tests (`tests/presets.test.ts`, `tests/types.test.ts`) for reference.
-
-### Design System Reference
-
-Available in `src/components/`:
-
-| Component                 | Props                                                                                                       | Usage                                                      |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `Button`                  | `title, onPress, variant, loading, disabled, icon`                                                          | `variant: 'primary'\|'secondary'\|'ghost'`                 |
-| `TextInput`               | `label, error, ...TextInputProps`                                                                           | Wraps RN TextInput with label + error                      |
-| `Card`                    | `children, onPress, activeBorder, elevated`                                                                 | Container with dark surface styling                        |
-| `CardRow`                 | `children, onPress`                                                                                         | Horizontal card list item                                  |
-| `CardIcon`                | `icon: string`                                                                                              | Emoji/text icon in gradient box                            |
-| `Badge`                   | `text, icon, variant`                                                                                       | `variant: 'default'\|'play'\|'active'`                     |
-| `Avatar`                  | `name, size`                                                                                                | `size: 'sm'\|'md'\|'lg'`                                   |
-| `Divider`                 | `label?, className?`                                                                                        | Horizontal line with optional label                        |
-| `Loading`                 | `message?, fullScreen?`                                                                                     | Spinner + message                                          |
-| `EmptyState`              | `icon, title, subtitle?, action?`                                                                           | Centered empty state                                       |
-| `ProgressBar`             | `progress, className?`                                                                                      | 0-100 progress fill                                        |
-| `PageHeader`              | `title, subtitle?`                                                                                          | Standard page header                                       |
-| `Sidebar`                 | `currentRoute, onNavigate, isOpen, onClose, isPersistent`                                                   | Left drawer nav (persistent on desktop, overlay on mobile) |
-| `PedalRack`               | `chain, onChange, trackName`                                                                                | 6-slot guitar pedalboard with amp + cab selectors          |
-| `Tuner`                   | `visible, onClose`                                                                                          | Chromatic tuner overlay                                    |
-| `CodeSampler`             | `visible, onClose, onRender, bpm`                                                                           | Token-based beat sequencer                                 |
-| `MomentCard`              | `moment: MomentData`                                                                                        | Artist moment card for social feed                         |
-| `MiniMastering`           | `onPresetChange, activePreset, eqValues, onEqChange`                                                        | Quick mastering chain presets + EQ                         |
-| `LufsMeter`               | `isPlaying`                                                                                                 | Loudness meter (LUFS)                                      |
-| `BounceDialog`            | `visible, onClose, projectTitle, duration`                                                                  | Export/stem bounce dialog                                  |
-| `MixManager`              | `snapshots, activeMixId, onSave, onLoad, onDelete, onCompare`                                               | A/B mix snapshot manager                                   |
-| `PluginRack`              | `plugins, onChange, onEdit, trackName`                                                                      | Plugin chain per track                                     |
-| `MasterRack`              | `plugins, onChange, onEdit`                                                                                 | Master bus plugin chain                                    |
-| `PluginEditor`            | `plugin, onParamChange, onToggle, onClose`                                                                  | Deep plugin parameter editor (all 19 types)                |
-| `AutomationLane`          | `points, onChange, duration, color, visible, label, minValue, maxValue`                                     | Volume/param automation curve editor                       |
-| `TrackGroupManager`       | `groups, tracks, onCreateGroup, onRemoveGroup, onGroupVolume, onGroupMute, onAssignTrack, trackAssignments` | Track grouping with shared volume/mute                     |
-| `WaveformClip`            | `regionId, duration, color, audible, height`                                                                | Waveform visualization for audio clips (DOM)               |
-| `WaveformCanvas`          | `regionId, duration, color, audible, selected?, muted?, height?, zoom?, peaks?`                             | Canvas-based waveform with devicePixelRatio, viewport culling |
-| `SampleBrowser`           | `visible, onAddSample`                                                                                      | Browse and add sample packs                                |
-| `RecordOptions`           | `settings, onChange, visible, onClose`                                                                      | Recording settings (source, quality, sample rate)          |
-| `Metronome`               | `settings, onChange, isPlaying`                                                                             | BPM/tempo click track                                      |
-| `NewProject`              | `visible, onClose, onCreate, onStartFromScratch?`                                                           | 3-step project creation (genre→mood→details) with numBars, timeSignature, "start from scratch" |
-| `PianoRoll`               | `notes, onChange, visible, onClose, bpm, numBars?, snap?, keySignature?, scale?`                            | MIDI note piano roll editor                                |
-| `Looper`                  | `visible, onClose, bpm, onCommitLoop`                                                                       | Live loop recording/playback                               |
-| `VisualEQ`                | `frequencies, onChange?, height?`                                                                           | Visual equalizer display                                   |
-| `OneKnob`                 | `label, value, onChange, min?, max?, step?, type?`                                                          | Single-knob control (19 types)                             |
-| `Sampler`                 | `visible, onClose, onAddToTrack`                                                                            | Audio sample player                                        |
-| `Synth`                   | `visible, onClose, bpm`                                                                                     | Synthesizer with presets                                   |
-| `MasteringSuite`          | `audioUri, onExport, onClose, visible`                                                                      | Full mastering chain with EQ, comp, limiter, LUFS          |
-| `MasteringChain`          | `plugins, onToggle, onReset`                                                                                | Mastering chain slot UI with ON/OFF toggles                |
-| `MasteringVersionManager` | `versions, activeId, onSelect, onSave, onDelete, onBypass`                                                  | A/B version compare + snapshot management                  |
-| `MasteringUpload`         | `input, onModeChange, onUpload, onClear, mode, testID?`                                                     | Upload/drop zone for audio files and stems (displays bpm/key/timeSignature if present) |
-| `ChordTrack`              | `chords, onChange, keySignature, numBars, visible, onClose`                                                 | Chord progression timeline with presets + Markov suggestions |
-| `PluginUI`                | `descriptor, paramValues, onParamChange, onToggle?, onClose?`                                              | Generic Wasm plugin UI generator (renders knobs/sliders from schema) |
-| `BranchManager`           | `visible, onClose, onBranchSwitch?, onMerge?`                                                              | Git-like branch fork/merge/diff viewer for CRDT state        |
-| `Patchbay`                | `visible, onClose, trackIds, onRouteCreated?, onRouteRemoved?`                                             | Drag-and-drop hardware I/O routing matrix (multi-channel)   |
-| `CommandPalette`          | `visible, onClose`                                                                                         | Cmd+K searchable command overlay for keyboard-first workflow |
-| `CommitModal`             | `visible, onClose, onCommit?, onSync?`                                                                     | Commit message + push-to-cloud modal                         |
-| `VersionHistory`          | `visible, onClose, onRevert?`                                                                              | Visual commit timeline graph with revert support             |
-| `PromptSampler`           | `visible, onClose, onRender, bpm`                                                                          | AI prompt-based MIDI generation                              |
-| `VoiceCommandButton`      | `visible, onClose`                                                                                         | Voice command input button                                   |
-| `MiniPlayer`              | `visible, onClose`                                                                                         | Mini audio player overlay                                    |
-| `QuickActions`            | `visible, onClose`                                                                                         | Quick action shortcuts bar                                   |
-| `QuickTools`              | `visible, onClose`                                                                                         | Quick tool selector                                          |
-| `ProjectMenu`             | `visible, onClose`                                                                                         | Project-level menu (save, export, share)                     |
-| `LightControls`           | `defaultColor?, defaultIntensity?` — forwardRef implements `LightControlHandle` exposing `{color, intensity}` | RGB preset + brightness control feeding 3D scene lights via ref (no React state in rAF loop) |
-| `Screen3DFallback`        | `title`, plus `Screen3DHeader` | Web-only/CDN-failure fallback + shared back header for 3D screens |
-
-CSS component classes (from `global.css`):
-
-- `card`, `card-elevated` — container styles
-- `btn-secondary` — button style
-- `input-field`, `input-field-focused` — input styles
-- `badge` — badge container
-- `label` — text style
-
-### Desktop Bridge (`src/bridge/`)
-
-All native desktop capabilities **must** go through `src/bridge/` — **never** use `require('fs')`, Electron `ipcRenderer`, or Tauri APIs in frontend code.
-
-| File           | Role                                                                           |
-| -------------- | ------------------------------------------------------------------------------ |
-| `interface.ts` | Contract — `NativeBridge` interface with all method signatures                 |
-| `electron.ts`  | Electron impl — delegates to `window.electronAPI` (exposed via preload)        |
-| `tauri.ts`     | Tauri stub — placeholder for future migration (all methods warn + return null) |
-| `browser.ts`   | Browser fallback — uses `localStorage`, `document.createElement`, etc.         |
-| `index.ts`     | Auto-detect: `electronAPI` → Electron, `__TAURI__` → Tauri, else browser       |
-
-**Usage in frontend:**
-
-```ts
-import { OpenBandNative } from '@bridge';
-const path = await OpenBandNative.showOpenDialog({ filters: [...] });
+```text
+L0  Constitution + AGENTS + feature/tier
+L1  feature spec + impacted architecture/contracts/ADRs + Graph
+L2  relevant code + tests + specialists
 ```
 
-**Motto:** The frontend has zero knowledge of whether it's running in Electron, Tauri, or a browser tab. Swap the backend by replacing one file.
+Retrieve before assuming. Do not load the whole repository by default.
 
-### 3D & WebGL (Three.js Virtual Studio)
+## T2+ lifecycle
 
-All 3D scenes are **web-only** (native renders `Screen3DFallback`). See `docs/3d-scene-guidelines.md` — **read it before editing any 3D screen.** Key points:
-
-- **Three.js is loaded at runtime from CDN** via `src/lib/loadThree.ts` (memoized single-flight loader, `three@0.160.0`, cascading unpkg → cdnjs → jsdelivr). Screens use the returned `THREE` object — no static `from "three"` import.
-- **Hub** (`app/virtual-studio.tsx`, tab `app/tabs/virtual-studio.tsx`): isometric `OrthographicCamera`, 12 `FurnitureDef` routed via Raycaster click → `router.push(route)`, local "You" avatar (WASD), `LightControls` bubbling color via a mutable ref (no React state in rAF loop).
-- **12 tool rooms** (`app/beatmaker.tsx`, `dj-stage.tsx`, `vocal-booth.tsx`, `autotune.tsx`, `mixing-console.tsx`, `lofi-tape.tsx`, `cover-jam.tsx`, `synth-lab.tsx`, `stem-collider.tsx`, `live-room.tsx`, `spatial-audio.tsx`, `acoustics.tsx`): perspective camera + custom spherical-drag orbit + wheel/pinch zoom, `ACESFilmicToneMapping` (all tool rooms except `beatmaker.tsx`).
-- **Lighting rigs** in `src/lib/sceneLighting.ts` (`addSceneBulb` pendant, `addRGBStrip` neon) — all procedural; **no HDRI/texture/model assets** in the repo.
-- **Render is reflection, never engine.** The rAF loop NEVER computes audio/DAW state (no gain, EQ, automation, sync). Scene runs its own clock, decoupled from `clockManager`/AudioContext. `src/lib/presence.ts` (SSE, DAW-editor cursors) is NOT connected to the 3D scene — no avatar sync exists (aspirational).
-- **No post-processing** (no EffectComposer/SSAO/bloom/AgX), **no adaptive resolution** beyond `setPixelRatio(min(dpr,2))` — see the T1–T10 target playbook in the guideline doc before planning visual upgrades.
-- **Lifecycle**: rAF canceled, listeners removed, `renderer.dispose()` on unmount. No rAF pause on tab-hidden yet.
-
-### Audio System
-
-- Uses `expo-audio` (SDK 57), NOT `expo-av`
-- `useAudioPlayer(source)` — returns `AudioPlayer`
-- `useAudioPlayerStatus(player)` — returns `{ playing, currentTime, duration, isLoaded }`
-- `player.play()`, `player.pause()`, `player.replace(source)`, `player.seekTo(seconds)`
-- `player.volume = 0.0...1.0`
-- Sources can be `require(...)` or URL string
-- **Universal Audio System** (`src/lib/universalAudio.ts`): Singleton `UniversalAudioSystem` with lazy AudioContext creation, multi-track mixdown via OfflineAudioContext (web) or bridge fallback (native), cross-platform file export (save dialog / download link)
-- **Cross-platform BounceDialog**: No longer blocks on `Platform.OS !== "web"` — export works on all platforms via `audioSystem`
-- **useUniversalAudio hook** (`src/hooks/useUniversalAudio.ts`): Wraps expo-audio with AudioContext resume on user interaction, play/pause/stop/seek/setVolume
-- **App init** (`app/_layout.tsx`): Audio system initialized on first pointerdown/keydown (web) or immediately (native) — handles browser autoplay policy
-- **Web player autoplay fix**: `togglePlay()` calls `audioSystem.ensureContext()` synchronously before any async work to satisfy browser autoplay policy. `await player.replace()` and `await player.play()` with try/catch. No eager `audioSystem.initialize()` in studio mount effect. Blob URLs tracked in `currentUrlRef` and revoked on re-render/unmount.
-
-### Backend
-
-- Express server at `backend/src/index.ts`, port 3001
-- POST `/api/extract` — upload audio for Demucs stem separation
-- GET `/api/stems/:filename` — download processed stems
-- Python Demucs path: `backend/.venv/bin/python3` (or `$PYTHON_PATH` env var)
-- Mock fallback generates silent WAVs when Demucs unavailable
-- Run: `cd backend && npm run dev`
-
----
-
-## Phase 3: Check
-
-**Goal:** Verify correctness before moving on.
-
-### Required checks (run in this order):
-
-```
-# 1. Code Review — must be done via the code-review subagent
-#    Use: Task tool with subagent_type="code-review"
-#    NEVER skip this step. Always shout this same agent.
-
-# 2. TypeScript check — must pass with zero errors
-npx tsc --noEmit
-
-# 3. Backend TypeScript check — must pass
-cd backend && npx tsc --noEmit
-
-# 4. Vitest component + lib tests — must pass
-npx vitest run
-
-# 5. Legacy node:test suite — must pass
-npm run test:legacy
-
-# 6. Production build — must succeed
-npm run build
+```text
+preflight
+→ specify
+→ clarify? 
+→ plan
+→ checklist?
+→ tasks
+→ analyze
+→ HUMAN DESIGN GATE
+→ implement
+→ converge
+→ verify
+→ HUMAN MERGE GATE
+→ cleanup
 ```
 
-### Additional checks (when applicable):
+Use the Spec Kit Workflow Engine for sequence, gates, pause/resume, conditions, and run state.
 
-- **UI changes:** After building, verify the output
-- **Audio changes:** Test play/pause/seek behavior
-- **Auth changes:** Test with both real Supabase env vars and mock fallback (no .env)
-- **Android build:** `cd android && ./gradlew assembleRelease`
-- **Dependency changes:** Check `package.json` before adding any new package
+### Preflight
 
-### If a check fails:
+Before mutation, confirm:
 
-1. Read the error message carefully
-2. Fix the root cause (don't suppress)
-3. Re-run all checks from the top
-4. Only proceed to the next task when ALL checks pass
+- Issue/request identity;
+- branch `agent/<issue>-<slug>`;
+- isolated worktree;
+- active Spec Kit feature;
+- tier and risk triggers;
+- dependencies;
+- semantic/Graph impact;
+- expected working-tree state.
 
----
+One active Spec Kit feature per worktree.
 
-## Phase 4: Repeat (or Commit)
+### Design Gate
 
-**Goal:** Decide whether to continue or finish.
+T2+ implementation starts only after human approval of a Design Baseline SHA covering:
 
-- **If there are more tasks:** Go back to Phase 1 with the next task
-- **If the task is complete:** Commit and push all changes.
+- `spec.md` — WHAT;
+- `plan.md` / applicable ADR — HOW;
+- `tasks.md` — WORK;
+- verification strategy — PROOF.
 
-### Commit conventions:
+Material changes to scope, acceptance criteria, architecture/contract, tier, structural dependencies, or verification strategy invalidate the gate and require re-analysis + approval. Internal implementation details within the approved envelope do not.
 
-```
-type: short description (max 72 chars)
+### Implementation and convergence
 
-- bullet list of specific changes
-- reference design system components used
-```
+`/speckit.implement` owns implementation. Specialists provide domain policy/review; they do not run competing lifecycles.
 
-Types: `fix`, `feat`, `chore`, `refactor`, `docs`
+`/speckit.converge` is append-only. It may append remediation tasks to `tasks.md`; it does not edit product code. When tasks are appended:
 
-### Vercel Deploy
-
-- **Normal deploy**: `git push` — auto-deploys on push to `master`
-- **Clean deploy (no build cache)**: `npx vercel deploy --prod --force` — skips Vercel's cached build to avoid stale output
-
----
-
-## Session Recovery (Bad Session / Abort Flow)
-
-**Goal:** When a session goes bad, discard all changes and return to a clean known-good state.
-
-1. **Identify the safe commit** — Usually `master` or a specific known-good commit hash
-2. **Abort in-progress operations** — `git merge --abort` or `git cherry-pick --abort`
-3. **Discard all uncommitted changes**:
-   ```
-   git reset --hard HEAD       # discard staged + unstaged changes
-   git clean -fd               # remove untracked files
-   ```
-4. **Stash any work you want to keep** before resetting
-5. **Checkout to safe branch/commit**:
-   ```
-   git checkout master
-   git pull --ff-only origin master
-   ```
-6. **Delete bad feature branches** (local + remote):
-   ```
-   git branch -D <branch-name>
-   git push origin --delete <branch-name>
-   ```
-7. **Verify clean state**: `git status` should show nothing to commit, working tree clean
-
-> **Important:** Never abort a merge without first checking what staged changes would be lost. Use `git diff --cached` to review staged content before running `git merge --abort`.
-
----
-
-## Known Issues & Project Conventions
-
-Operational facts learned during the hardening work (keep these in mind before editing build/config/types):
-
-- **WSL execution wrapper:** Run git/tsc/vitest via `wsl -e bash -lc "cd /home/az1nn/openband && <cmd>"`. Vitest cannot run from the Windows UNC mount (it must execute inside WSL). Pure file edits may use the `\\wsl.localhost\...` UNC path; bash commands must not.
-- **TypeScript types:** `react-native@0.86` ships real type definitions. Do NOT add `src/react-native.d.ts` — it shadows the real types and triggers a ~52-error cascade. For asset module declarations (png/mp3/wasm/etc.) use `src/declarations.d.ts`.
-- **Build / `Expo.fx`:** The published `expo@57.0.4` package omits `Expo.fx`; `metro.config.js` keeps a defensive stub for it. The earlier build break was caused by a corrupted `node_modules/expo` extraction (missing `.tsx` src files), fixed by reinstalling `expo`.
-- **Verification matrix order (Phase 3):** `npx tsc --noEmit` → `cd backend && npx tsc --noEmit` → `npx vitest run` → `npm run test:legacy` → `npm run graph:ci` → `npm run build`.
-- **Full-repo code review:** Partition into 5 domains (Audio/DSP, State/Collab, UI/3D, Backend, 3+lib) and review in parallel subagents; fix HIGH then MED, then LOW (empty catches, dead vars) in a follow-up pass.
-- **Round-2 regression suites:** Round-2 regression suites live at `tests/regression-round2-{audio,state,ui,lib,backend}.test.ts` (all green). `tests/futureRoadmap.test.ts` was converted from node:test to vitest; `tests/backend-routes.test.ts` is a node:test script and is excluded from vitest (`vitest.config.ts`).
-
----
-
-## Graph Engineering & Architecture Toolchain
-
-OpenBand includes a zero-dependency (Node.js built-ins only) architecture-graph toolchain under `graph/` that continuously analyzes repository structure, invariants, component usage, and documentation traceability.
-
-### Core Commands
-
-| Command | Action | Output |
-| ------- | ------ | ------ |
-| `npm run graph:build` | Scan source tree & serialize graph | `.openband/graph.json` |
-| `npm run graph:validate` | Run validation rules & invariant checks | Terminal error/warning report |
-| `npm run graph:doc` | Generate auto architecture markdown | `docs/generated/ARCHITECTURE.md` |
-| `npm run graph:report` | Generate self-contained interactive report | `.openband/graph-report.html` |
-| `npm run graph:ci` | CI validation gate (fails on errors) | Exit code `0` or `1` |
-
-### Edge Types
-
-- **`import` / `require` / `dynamic-import`**: Module dependency edges (used for dependency analysis, cycles, and orphan checks).
-- **`route`**: Intra-app navigation (`router.push`, `<Link>`) linking screens.
-- **`test`**: Links test files to the modules they test.
-- **`specifies`**: Traces OpenSpec markdown citations to repository paths (with `api/*` → `backend/src/routes/*` auto-alias).
-- **`uses`**: Tracks JSX component usage (source/route file renders an imported component). Included in dependency/impact/render graphs but excluded from cycle detection and orphan filters.
-
-### Validation Rules
-
-1. **`OB-GRAPH-001` (Error)**: Frontend modules (`app/`, non-bridge `src/`) importing Node/Electron/Tauri APIs directly (must use `OpenBandNative` from `@bridge`).
-2. **`OB-GRAPH-002` (Error)**: Dependency cycles across import/require/dynamic-import edges.
-3. **`OB-GRAPH-003` (Warning)**: OpenSpec markdown referencing a non-existent path.
-4. **`OB-GRAPH-004` (Warning / Strict Error)**: Orphaned code (zero inbound import edges).
-5. **`OB-GRAPH-005` (Warning / Strict Error)**: Test coverage gap (no test file referencing the module).
-
-Interactive visual developer guide available at `docs/graph-engineer.html`.
-
----
-
-## Project Architecture Quick Reference
-
-```
-app/
-  _layout.tsx          — Root: SafeAreaProvider + AuthProvider + redirect logic
-  (auth)/login.tsx    — Login screen (Supabase auth, mock fallback)
-  tabs/
-    _layout.tsx       — Tab navigator (Feed, Biblioteca, Momentos) + responsive sidebar drawer (router.push, not replace)
-    index.tsx         — Feed screen with audio playback
-    library.tsx       — Library screen with project list + "Separar Stems" button
-    moments.tsx       — Sample pack store / artist moments
-    account.tsx       — Profile + sign-out
-    settings.tsx      — App settings
-    virtual-studio.tsx — 3D Studio tab shell (renders app/virtual-studio.tsx)
-  extractor.tsx       — Stem separation (select → process → results)
-  virtual-studio.tsx  — 3D hub screen: isometric OrthographicCamera room, 12 FurnitureDef, Raycaster click-to-open, WASD avatar, LightControls ref (web-only; native → Screen3DFallback)
-  mastering/
-    index.tsx         — Mastering suite page (full chain EQ, comp, limiter, LUFS)
-  studio/[id].tsx     — DAW-style multi-track mixer with waveform + transport (parses numBars, timeSignature, scratch params). Uses clockManager for beat tracking, busRouter for auto-assignment, automationEngine for volume interpolation
-
-src/
-  lib/
-    supabase.ts       — Supabase client with mock fallback for dev
-    responsive.ts     — useResponsive hook (mobile/tablet/desktop breakpoints)
-    midiParser.ts     — MIDI file parser
-    midiSynth.ts      — Web Audio API MIDI synthesizer (bus routing, offline rendering)
-    projectStore.ts   — Project persistence (localStorage + bridge)
-    projectTemplates.ts — Genre/mood/key templates with Mood (10-value), TIME_SIGNATURES, generateTracksForGenre
-    keyboard.ts       — useKeyboardShortcuts hook
-    automix.ts        — Genre-based auto-mix presets
-    history.ts        — useHistory (undo/redo) hook
-    mastering.ts      — Mastering chain builder
-    types.ts          — Shared types (TrackDef, Plugin, BusDef, AutomationPoint, ChordQuality, TIME_SIGNATURES, EQ_DEFAULT_BANDS)
-    automationEngine.ts — Web Audio automation scheduling (linear/exponential curves), wired into studio playback
-    busRouter.ts      — Sub-mix bus routing graph builder, auto-assigns tracks to buses on creation
-    clockManager.ts   — Web Worker master clock for metronome (25ms tick interval), tracks beat position during playback
-    presence.ts       — Client-side SSE presence hook (throttled cursor broadcasting)
-    canvasWaveform.ts — AudioBuffer → peak data (generatePeakData) + Canvas 2D waveform renderer (renderWaveformCanvas) + virtual scroll
-    midiScheduler.ts  — Lookahead MIDI scheduler with sample-accurate timing
-    subtractiveSynth.ts — Dual-oscillator subtractive synth with filter/ADSR/LFO
-    chunkedRenderer.ts — Chunked offline rendering for long projects
-    audioGraphValidation.ts — DAG cycle detection for bus/track routing
-    snapshotManager.ts — CRDT snapshot compaction + state management
-    timelineGestures.ts — Custom gesture state machine for pinch-zoom/scroll
-    crdt.ts           — Operation-based CRDT with Lamport timestamps
-    collaboration.ts  — Real-time collaboration hook with CRDT sync
-    transientDetection.ts — Audio transient detection + slicing utilities
-    timeStretch.ts    — Pitch-independent time-stretch via granular synthesis
-    timeStretchVocoded.ts — Phase Vocoder / WSOLA time-stretch AudioWorklet with FFT
-    wasmInstrumentEngine.ts — Unified Wasm synth/sampler in AudioWorklet (sample-accurate MIDI)
-    wasmPluginHost.ts — Wasm plugin loader, IPlugin interface, JSON-RPC MessagePort protocol
-    projectBranching.ts — CRDT fork/merge/diff, branch isolation, selective merge acceptance
-    yjsCRDT.ts    — Operation-based CRDT with Lamport timestamps, WebSocket sync
-    aiAutoMixAnalysis.ts — Stem analysis (LUFS, spectral balance, transient density), role-based suggestions
-    chordTrackState.ts  — ChordRegion schema, chord-to-MIDI conversion, harmonic suggestion
-    stateAssetSeparation.ts — OpenBandManifest v2 with S3 URL pointers, SHA-256 commit hashing
-    supabaseRemote.ts — Push/pull/sync with asset deduplication via hash check
-    modulationMatrix.ts — LFO/envelope/macro modulation routing (11 sources × 11 targets)
-    audioTelemetry.ts — Ring buffer for underruns/CPU metrics with server reporting
-    openbandFormat.ts  — .openband binary archive with CRC32 integrity
-    previewEngine.ts  — Decoupled AudioContext for debounced sample preview, thumbnail generation
-    hardwareIO.ts   — multi-channel hardware I/O enumeration, patchbay routing
-    commandRegistry.ts — Centralized command registry, keyboard shortcut engine, Cmd+K palette
-    universalAudio.ts — Singleton AudioContext, cross-platform mixdown, export to file (web + native)
-  context/
-    AuthContext.tsx    — Auth state context (session, user, loading, signOut)
-  bridge/            — Desktop bridge (interface, electron, tauri stub, browser fallback, auto-detect)
-  components/         — Design system (79 components, see table above)
-  hooks/
-    useUniversalAudio.ts — expo-audio wrapper with AudioContext resume
-
-tests/
-  Accessibility, assetStore, audioExport, audioPlayback (aux audioMock.ts), authTier, cloudSync, dawproject, feed, feedApi, generateCoverModal, hardwareIO.native + hardwareIONative, i18n, instrumentPresets, layout, mastering, midiLearn, mixer, modes, modulation (.test.ts + .test.tsx), modulationMatrix + modulationMatrixRender, nativeBridge, nav-shell, objectStorage, onboarding, patchbay, playbackEngine, presence, projectBranching, projectCover, projectStarter, recording, regionEdit, responsive, scenes, settingsAI, settingsStore, studio, studio-audio-pure, telemetry, tier, transport, tune, videoExport, voiceCleaner + voiceCleanerMetrics, webPlayback
-  lib, lib2..lib10, lib_wasm  — library/test helpers (grouped)
-  components, components2..components7  — component tests (grouped)
-  specs-group1..specs-group6  — spec/canonical test groups
-  plugins/ (dsp, presetSerial)  — plugin sub-suite
-  presets.test.ts, types.test.ts  — Legacy node:test suite (supporting ok-reporter.ts, setup.ts)
-   Full suite totals: 1650 vitest tests + 24 legacy node:test tests across 91 test files
-
-stories/                      — Storybook for all 79 components (50 stories)
-  *.stories.tsx       — Run: `npx storybook dev -p 6006`
-
-.storybook/
-  main.ts             — Vite + react-native-web alias
-  preview.ts          — Dark theme, CSS import
-
-backend/
-  src/
-    index.ts          — Express server entry (port 3001)
-    routes/
-      extract.ts      — POST /api/extract + GET /api/stems/:filename
-      master.ts       — POST /api/master — master bounce processing
-      presence.ts     — SSE presence endpoint (cursor broadcasting)
-      collab.ts       — SSE collaboration endpoint (CRDT operation sync)
-      generator.ts    — POST /api/generate — contextual MIDI generation
-    services/
-      demucs.ts       — Python Demucs subprocess (htdemucs, 4 stems)
-      mock.ts         — Silent WAV fallback generator
-      queue.ts        — In-memory job queue for async stem separation
-    middleware/
-      upload.ts       — Multer config (200MB, audio formats)
-    types.ts          — Shared types
-
-supabase/
-  schema.sql          — DB tables: profiles, projects, tracks, stems, posts
-
-Config:
-  tailwind.config.js  — Design tokens (colors, spacing, fonts, radii)
-  global.css          — Tailwind v3 directives + component layer
-  babel.config.js     — Babel with expo preset + nativewind/babel + reanimated
-  metro.config.js     — Metro with NativeWind + nativewind node_modules paths
-  tsconfig.json       — Strict TS, @/ + @bridge path aliases
-  .env.example        — Supabase env vars template
-  docs/supabase.md    — Complete Supabase setup guide
-
-electron/
-  main.js             — Electron main process (BrowserWindow, IPC handlers, native menus)
-  preload.js          — Context bridge exposing electronAPI methods to renderer
-  package.json        — Electron + electron-builder deps
+```text
+implement → converge → implement → converge
 ```
 
----
+If gaps persist, blast radius grows, or design assumptions change, stop patching and reopen plan/analyze. Never weaken a requirement or test merely to obtain green status.
 
-## Domain-Driven Agent Architecture
+### Verification and Merge Gate
 
-This project uses five specialized agents with strict domain boundaries to minimize context switching and prevent race conditions.
+Verification is risk- and impact-derived. Required evidence can include acceptance tests, typecheck, build, `graph:ci`, specialist review, dependency validation, and normative documentation reconciliation.
 
-### A. UI & Rendering Agent
-**Focus:** HTML5 Canvas, DOM, Timeline interactions, 60fps visual performance.
-- Canvas-based waveform rendering and timeline zoom/scroll optimization
-- Non-destructive visual editing (trimming/splitting regions)
-- Pedalboard UI interactions and knob dragging
-- Stripped of all audio math and state logic
+Allowed evidence states:
 
-### B. Audio Engine & DSP Agent
-**Focus:** Web Audio API, AudioWorklets, WebAssembly, audio routing.
-- Heavy DSP (distortion, delay, amp sims) in AudioWorklets
-- Automatic delay compensation and phase alignment
-- Track grouping, sub-mix bus routing, automation lane scheduling
-- IndexedDB caching for heavy Impulse Response (IR) files
-- Never touches UI thread — "headless" audio graph via MessagePort
-
-### C. State & Collaboration Agent
-**Focus:** Application state, multi-user synchronization, history.
-- CRDTs (Conflict-free Replicated Data Types) for real-time project merging
-- Infinite Undo/Redo history graph via Command Pattern
-- WebSocket presence service (cursors, active users)
-- Every action designed to be CRDT-compatible
-
-### D. Media Processing & AI Agent
-**Focus:** Asynchronous, CPU/GPU-intensive backend tasks.
-- Decoupled queue for AI stem separation (Demucs/Spleeter)
-- Pre-calculating waveform peak JSON data upon asset upload
-- Audio normalization and orphaned file garbage collection
-
-### E. Core Infrastructure & API Agent
-**Focus:** Standard backend operations, database, storage.
-- REST/GraphQL APIs, user authentication, database schema
-- Object Storage (S3/R2) presigned URLs for fast audio uploads/downloads
-
-### Inter-Agent Communication Patterns
-
-1. **Headless Audio Engine:** UI Agent sends high-level commands via `MessagePort` (e.g., `AudioEngine.setParam('drive', 0.8)`). Never touches `AudioBuffer` directly.
-2. **SharedArrayBuffer for Real-Time Sync:** Audio Engine writes playhead/VU positions to a shared buffer; UI Agent reads on animation frame — no message lag.
-3. **Event-Driven Backend (Pub/Sub):** Media Processing Agent never called synchronously. Infrastructure Agent publishes events (e.g., `AssetUploaded`); Media Agent listens and triggers background work.
-4. **Command Pattern + CRDT Integration:** Every action (e.g., `MoveRegionCommand`) has an inverse for Undo. State Agent broadcasts inverse operations to collaborators via WebSockets.
+```text
+PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED
 ```
+
+`FAIL`, `BLOCKED`, or `FLAKY` blocks a required gate.
+
+For T2+, the human merges the verified PR HEAD. If HEAD changes after verification, rerun affected checks. Agents do not merge T2+.
+
+## Architecture and knowledge
+
+Authority while designing:
+
+```text
+Constitution
+> current architecture / ADR / durable contract
+> approved feature spec
+> plan
+> tasks
+```
+
+Feature specs are flow-forward history after merge. Current topology lives in `docs/architecture.md`; durable cross-feature contracts live in `docs/contracts/`; ADRs live in `docs/adr/` and are append-only/superseded explicitly.
+
+Frontend code under `app/` and `src/` must not call Node filesystem, Electron, or Tauri APIs directly. Runtime-specific I/O goes through `@bridge` / `OpenBandNative`.
+
+## Git and dependencies
+
+- Issue = demand/tracking.
+- Spec Kit feature = coherent engineering change.
+- PR = review/integration evidence.
+- Git = history.
+- Presence under `specs/` never implies active, pending, or shipped status.
+- Feature dependencies must be explicit and acyclic.
+- Stacked work is allowed only for explicit dependencies and must be revalidated when its base changes.
+
+## Emergency and degraded operation
+
+Urgency can compress sequencing, never assurance. T2+ still requires material intent, Design Gate, regression proof, convergence, critical verification, normative knowledge reconciliation, and human merge.
+
+If Spec Kit tooling fails, use degraded SDD only as a temporary tooling fallback: preserve tiers, artifacts, gates and evidence; record the tooling failure and fix it separately. Never reactivate OpenSpec.
+
+## Specialists
+
+Load specialists only when impact requires them. Useful project skills include domain modeling, architecture/Graph, TDD, audio/DSP, security, cross-platform review, debugging, and code review.
+
+Detailed product/runtime knowledge belongs in architecture/docs/skills, not in this policy file.
