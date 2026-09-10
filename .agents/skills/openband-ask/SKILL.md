@@ -1,32 +1,22 @@
 ---
 name: openband-ask
-description: Route incoming user requests or tasks to the optimal OpenBand skill and workflow pipeline.
+description: Classify OpenBand work, gather bounded context, and start or resume the correct Spec Kit workflow.
 ---
 
-# OpenBand Ask — Pipeline Router
+# OpenBand Ask
 
-Routes incoming user requests to the optimal OpenBand specialized skill and workflow pipeline according to Playbook V6 §5.
+`AGENTS.md` owns policy; Spec Kit owns lifecycle state. This skill only routes.
 
-## Routing Decision Matrix
+## Route
 
-Analyze the user's intent and select the appropriate skill pipeline:
+1. Read the Constitution and `AGENTS.md`.
+2. Identify the request/Issue and classify T0–T4 with concrete risk triggers.
+3. Use `graph:impact` plus semantic impact to keep or elevate the tier.
+4. Build progressive context: governance → impacted architecture/contracts/ADRs → relevant code/tests.
+5. For T0/T1, use the lightweight path defined in `AGENTS.md`.
+6. For T2+, verify branch/worktree/feature identity, then start or resume `sdd/openband-design.yml` with OpenCode `speckit`.
+7. Stop at the human Design Gate. After approval, start/resume `sdd/openband-build.yml` with OpenCode `build`.
+8. Load domain specialists only when impact requires them.
+9. After clean convergence and required verification, prepare the PR for the human Merge Gate.
 
-| Phase | Task Intent | Target Skill |
-| :--- | :--- | :--- |
-| **Discovery** | Clarifying ambiguous requirements, reading repo docs, ADRs | `openband-grill-with-docs` |
-| **Domain** | Defining DAW core domain entities, types, boundaries | `openband-domain-modeling` |
-| **Spec** | Writing OpenSpec SDD proposals (`proposal.md`, `design.md`, `tasks.md`) | `openband-to-spec` |
-| **Decomposition** | Slicing OpenSpec tasks into vertical tracer-bullet tickets | `openband-to-tickets` |
-| **Implementation** | Feature implementation, refactoring, bug fixes | `openband-implement` |
-| **TDD** | Test-first development for audio math, CRDTs, DSP | `openband-tdd` |
-| **Validation** | Verifying tests, linter, graph invariants, build gates | `openband-test-gate` |
-| **Architecture** | Graph analysis (`graph:*`), cycle removal, deep modules | `openband-improve-architecture` |
-| **Review** | Code review, cross-platform check, audio DSP review | `code-review` / `openband-security` |
-| **Debugging** | Cross-runtime bug diagnosis, root-cause isolation | `openband-diagnosing-bugs` |
-| **Meta** | Creating or updating agent skills | `openband-writing-skills` |
-
-## Pipeline Execution Flow
-
-1. **Classify Request**: Identify primary phase and outcome expected by the user.
-2. **Invoke Target Skill**: Delegate execution to the specific skill instructions.
-3. **Chain Next Steps**: Once a phase finishes, route seamlessly to the downstream skill (e.g., Spec → Tickets → Implement → Test Gate → Review).
+Do not create a parallel backlog, lifecycle state machine, approval flag, or status document.
