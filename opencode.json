@@ -35,6 +35,22 @@
         }
       }
     },
+    "speckit": {
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "specs/**": "allow"
+        },
+        "bash": {
+          "*": "deny",
+          "git status*": "allow",
+          "git diff*": "allow",
+          "git log*": "allow",
+          "specify *": "allow",
+          ".specify/scripts/bash/*": "allow"
+        }
+      }
+    },
     "build": {
       "permission": {
         "edit": "allow",
