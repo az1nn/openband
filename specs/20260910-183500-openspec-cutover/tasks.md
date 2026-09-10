@@ -10,4 +10,4 @@
 - [x] T008 Create annotated `openspec-final` checkpoint tag.
 - [x] T009 Remove `openspec/` atomically.
 - [x] T010 Run post-cutover negative assertions and SDD/Graph verification.
-- [ ] T011 Open final stacked PR for Human Merge Gate.
+- [x] T011 Open final stacked PR #44 for Human Merge Gate.
