@@ -8,11 +8,11 @@ import {
   addEdge,
   detectNodeType,
   posixRelative,
-  SOURCE_EXTENSIONS,
 } from "./core.mjs";
 import { resolveSpecifier } from "./scan.mjs";
 
-const SPEC_DIRS = ["openspec/specs", "openspec/changes", "openspec/archive"];
+const SPEC_DIRS = ["specs", "docs/adr", "docs/contracts"];
+const NORMATIVE_SPEC_FILES = ["docs/architecture.md"];
 const PATH_RE = /(app|src|backend|api|tests)(?:\/[A-Za-z0-9_.\-]+)+/g;
 const KNOWN_EXT = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".json"];
 const ARTIFACT_ROOT_RE = /^(app\/_expo|tests\/stories\.)/;
@@ -49,13 +49,40 @@ function mdFilesUnder(root, dir) {
   return out;
 }
 
+export function normativeSpecFiles(root) {
+  const out = [];
+  const featureRoot = path.join(root, "specs");
+  if (fs.existsSync(featureRoot)) {
+    let entries = [];
+    try {
+      entries = fs.readdirSync(featureRoot, { withFileTypes: true });
+    } catch {
+      entries = [];
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const spec = path.join(featureRoot, entry.name, "spec.md");
+      if (fs.existsSync(spec) && fs.statSync(spec).isFile()) out.push(spec);
+    }
+  }
+
+  for (const rel of NORMATIVE_SPEC_FILES) {
+    const abs = path.join(root, rel);
+    if (fs.existsSync(abs) && fs.statSync(abs).isFile()) out.push(abs);
+  }
+
+  for (const dir of ["docs/adr", "docs/contracts"]) {
+    out.push(...mdFilesUnder(root, dir));
+  }
+
+  return [...new Set(out)].sort((a, b) => a.localeCompare(b));
+}
+
 function extractRepoPaths(content) {
   const found = new Set();
   let m;
   PATH_RE.lastIndex = 0;
-  while ((m = PATH_RE.exec(content)) !== null) {
-    found.add(m[0]);
-  }
+  while ((m = PATH_RE.exec(content)) !== null) found.add(m[0]);
   return [...found];
 }
 
@@ -88,27 +115,24 @@ export function scanSpecs(root, options = {}) {
   const graph = options.graph || createGraph();
   const nodeSet = new Set(graph.nodes.map((n) => n.id));
 
-  for (const dir of SPEC_DIRS) {
-    const files = mdFilesUnder(root, dir);
-    for (const abs of files) {
-      const rel = posixRelative(root, abs);
-      addNode(graph, createNode(rel, "spec", rel));
-      nodeSet.add(rel);
-      let content;
-      try {
-        content = fs.readFileSync(abs, "utf8");
-      } catch {
-        continue;
-      }
-      const candidates = extractRepoPaths(content);
-      for (const cand of candidates) {
-        if (!isPlausibleRepoPath(cand)) continue;
-        const targets = resolveTargetNodes(cand, nodeSet);
-        if (targets.length > 0) {
-          for (const t of targets) addEdge(graph, createEdge(rel, t, "specifies", rel));
-        } else {
-          graph.unresolved.push({ code: "OB-GRAPH-003", spec: rel, path: cand });
-        }
+  for (const abs of normativeSpecFiles(root)) {
+    const rel = posixRelative(root, abs);
+    addNode(graph, createNode(rel, "spec", rel));
+    nodeSet.add(rel);
+    let content;
+    try {
+      content = fs.readFileSync(abs, "utf8");
+    } catch {
+      continue;
+    }
+    const candidates = extractRepoPaths(content);
+    for (const cand of candidates) {
+      if (!isPlausibleRepoPath(cand)) continue;
+      const targets = resolveTargetNodes(cand, nodeSet);
+      if (targets.length > 0) {
+        for (const t of targets) addEdge(graph, createEdge(rel, t, "specifies", rel));
+      } else {
+        graph.unresolved.push({ code: "OB-GRAPH-003", spec: rel, path: cand });
       }
     }
   }
@@ -141,9 +165,9 @@ function testFilesUnder(root, dir) {
 
 function extractTestSpecifiers(content) {
   const specs = new Set();
-  const importRe = /(?:import|export)\s+(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]/g;
-  const dynRe = /import\(\s*['"]([^'"]+)['"]\s*\)/g;
-  const reqRe = /require\(\s*['"]([^'"]+)['"]\s*\)/g;
+  const importRe = /(?:import|export)\s+(?:[^'\"]*?\s+from\s+)?['\"]([^'\"]+)['\"]/g;
+  const dynRe = /import\(\s*['\"]([^'\"]+)['\"]\s*\)/g;
+  const reqRe = /require\(\s*['\"]([^'\"]+)['\"]\s*\)/g;
   let m;
   for (const re of [importRe, dynRe, reqRe]) {
     re.lastIndex = 0;
@@ -181,4 +205,4 @@ export function scanTests(root, options = {}) {
   return graph;
 }
 
-export { SPEC_DIRS, TEST_RE };
+export { SPEC_DIRS, NORMATIVE_SPEC_FILES, TEST_RE };
