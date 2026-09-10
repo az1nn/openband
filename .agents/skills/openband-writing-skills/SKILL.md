@@ -24,6 +24,14 @@ description: A concise, clear summary of what this skill accomplishes.
 ## Content Structure Guidelines
 
 1. **Title & Purpose**: High-level objective of the skill.
-2. **Cognitive Workflow**: Step-by-step numbered instructions for execution.
-3. **Rules & Constraints**: Concrete repository constraints (e.g., bridge isolation, AudioContext handling, OpenSpec flow).
+2. **Cognitive Workflow**: Step-by-step instructions for the specialist reasoning it owns.
+3. **Rules & Constraints**: Concrete repository constraints such as bridge isolation, AudioContext handling, deterministic DSP, persistence boundaries, or Spec Kit artifact authority.
 4. **Actionable Examples**: Short code or workflow snippets illustrating expected usage.
+
+## Scope Discipline
+
+- Skills provide domain knowledge or review policy; they do not implement a parallel SDD lifecycle.
+- Operational workflow rules belong in `AGENTS.md`.
+- Spec Kit owns feature lifecycle and artifacts.
+- Durable product knowledge belongs in `docs/architecture.md`, `docs/adr/`, or `docs/contracts/` when warranted.
+- Avoid duplicating repository status, task progress, approval state, or large inventories inside skills.
