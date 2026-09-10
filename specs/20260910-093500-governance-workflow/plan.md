@@ -2,34 +2,28 @@
 
 ## Approach
 
-Use project-owned policy/workflow files around the official Spec Kit v1.0.4 integration.
+Use project-owned policy/workflow files around the official Spec Kit v1.0.4 integration. Preserve least privilege by separating design and build runs.
 
 ## Changes
 
 1. Replace `AGENTS.md` with concise operational policy: T0–T4, gates, context, worktrees and escalation.
-2. Add `sdd/openband-workflow.yml` as the T2+ workflow definition executed by `specify workflow run`.
-3. Add `sdd/openband.schema.json` for the feature sidecar.
-4. Keep official `.specify/scripts`, templates and generated OpenCode commands untouched.
-5. Keep `openband-ask` unchanged in this feature; its simplification belongs to the next migration slice.
+2. Add `sdd/openband-design.yml` for design work under OpenCode `speckit`.
+3. Add `sdd/openband-build.yml` for implementation/convergence under OpenCode `build`.
+4. Add `sdd/openband.schema.json` for the feature sidecar.
+5. Keep official `.specify/scripts`, templates and generated OpenCode commands untouched.
+6. Keep `openband-ask` unchanged in this feature; its simplification belongs to the next migration slice.
 
 ## Workflow
 
 ```text
-preflight
-→ specify
-→ clarify? 
-→ plan
-→ checklist?
-→ tasks
-→ analyze
-→ DESIGN GATE
-→ implement
-→ converge
-→ verification
-→ HUMAN MERGE
+DESIGN RUN
+specify → clarify? → plan → checklist? → tasks → analyze → HUMAN DESIGN GATE
+
+BUILD RUN
+implement → converge → implement again if tasks were appended → verify → HUMAN MERGE
 ```
 
-`converge` may append tasks but never edits code. If tasks are appended, resume implementation and run convergence again.
+The Workflow Engine owns run state. OpenBand does not parse free-form convergence output to invent a custom loop. If `converge` appends tasks, implementation is resumed explicitly and convergence is rerun.
 
 ## Design Delta
 
@@ -45,12 +39,13 @@ Internal implementation details within the approved envelope do not.
 
 ## Verification
 
-- validate workflow YAML structure;
+- validate both workflow YAML files with Spec Kit;
 - validate `openband.json` examples against schema;
 - confirm `AGENTS.md` contains no OpenSpec lifecycle instructions;
-- confirm `speckit` OpenCode profile still cannot edit product source;
+- confirm `speckit` OpenCode profile cannot edit product source;
+- confirm design/build runs use explicit OpenCode profiles;
 - run repository CI in the PR.
 
 ## Architecture Decision
 
-ADR: **NOT REQUIRED**. This feature changes engineering workflow, not product/runtime architecture. The durable governance decision lives in the Constitution and `AGENTS.md`.
+ADR: **NOT REQUIRED**. This changes engineering workflow, not product/runtime architecture. Durable governance lives in the Constitution and `AGENTS.md`.
