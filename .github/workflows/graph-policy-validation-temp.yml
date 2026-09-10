@@ -21,7 +21,7 @@ jobs:
       - name: SDD policy
         run: npm run sdd:check
       - name: Spec Kit graph fixtures
-        run: npx vitest run tests/graph-speckit.test.mjs
+        run: npm run test:graph-sdd
       - name: Architecture Graph CI
         run: npm run graph:ci
       - name: No legacy authority in migrated graph surfaces
