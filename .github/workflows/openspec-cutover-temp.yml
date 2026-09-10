@@ -1,0 +1,111 @@
+name: OpenSpec Cutover Temp
+
+on:
+  push:
+    branches:
+      - agent/38-openspec-cutover
+
+permissions:
+  contents: write
+
+jobs:
+  cutover:
+    if: ${{ !contains(github.event.head_commit.message, '[cutover-complete]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Verify immutable checkpoint before deletion
+        run: |
+          git fetch --tags --force
+          git cat-file -e 'openspec-final^{commit}:openspec'
+          git cat-file -e 'openspec-final^{commit}:docs/migrations/openspec-manifest.md'
+          echo "checkpoint commit: $(git rev-parse 'openspec-final^{commit}')"
+
+      - name: Remove legacy tree atomically in working tree
+        run: |
+          git rm -r openspec
+          test ! -d openspec
+
+      - name: Assert no operational legacy path dependency remains
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          allowed_prefixes = (
+              'docs/migrations/',
+              'specs/20260910-093500-governance-workflow/',
+              'specs/20260910-094400-knowledge-agents/',
+              'specs/20260910-182300-graph-policy/',
+              'specs/20260910-183500-openspec-cutover/',
+          )
+          allowed_files = {'.github/workflows/openspec-cutover-temp.yml'}
+          ignored_parts = {'.git', 'node_modules', '.openband'}
+          bad = []
+
+          for path in Path('.').rglob('*'):
+              if not path.is_file() or any(part in ignored_parts for part in path.parts):
+                  continue
+              rel = path.as_posix()
+              if rel.startswith('./'):
+                  rel = rel[2:]
+              if rel in allowed_files or rel.startswith(allowed_prefixes):
+                  continue
+              try:
+                  text = path.read_text(errors='ignore')
+              except OSError:
+                  continue
+              if 'openspec/' in text.lower():
+                  bad.append(rel)
+
+          if bad:
+              raise SystemExit('operational openspec/ dependencies remain: ' + ', '.join(sorted(bad)))
+          print('post-cutover operational path audit: PASS')
+          PY
+
+      - name: Install frontend and backend dependencies
+        run: |
+          npm ci
+          cd backend
+          npm ci
+
+      - name: SDD policy
+        run: npm run sdd:check
+
+      - name: Graph regression suite
+        run: npm run test:graph-sdd
+
+      - name: Architecture Graph CI
+        run: npm run graph:ci
+
+      - name: Frontend typecheck
+        run: npx tsc --noEmit
+
+      - name: Backend typecheck
+        run: cd backend && npx tsc --noEmit
+
+      - name: Vitest regression suite
+        run: npx vitest run
+
+      - name: Legacy node:test suite
+        run: npm run test:legacy
+
+      - name: Web build
+        run: npm run build
+
+      - name: Commit atomic legacy removal
+        run: |
+          rm .github/workflows/openspec-cutover-temp.yml
+          test ! -d openspec
+          git config user.name "openband-speckit-cutover"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(sdd): remove OpenSpec after checkpoint [cutover-complete]"
+          git push origin HEAD:agent/38-openspec-cutover
