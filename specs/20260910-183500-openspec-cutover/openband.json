@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "tier": "T3",
+  "issue": 38,
+  "riskTriggers": ["engineering-architecture", "irreversible-repository-cutover"],
+  "dependsOn": ["20260910-182300-graph-policy"]
+}
