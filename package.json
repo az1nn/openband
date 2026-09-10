@@ -77,6 +77,7 @@
     "web": "expo start --web",
     "desktop": "npm run build && cd electron && npm start",
     "desktop:dev": "concurrently \"expo start --web\" \"sleep 5 && cd electron && npm start\"",
+    "sdd:check": "node scripts/sdd-policy-check.mjs",
     "graph:build": "node graph/cli.mjs build",
     "graph:validate": "node graph/cli.mjs validate",
     "graph:deps": "node graph/cli.mjs deps",
