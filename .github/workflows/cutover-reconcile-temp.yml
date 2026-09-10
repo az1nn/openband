@@ -1,0 +1,184 @@
+name: Cutover Reconciliation Temp
+
+on:
+  push:
+    branches:
+      - agent/38-openspec-cutover
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    if: ${{ !contains(github.event.head_commit.message, '[manifest-generated]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate complete legacy manifest
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path('openspec')
+          if not root.is_dir():
+              raise SystemExit('openspec/ missing before reconciliation')
+
+          change_dispositions = {
+              'project-starter-approved-snapshot-promotion': ('SUPERSEDED', 'Behavior is covered by the implemented Project Starter/V10 state; do not copy the proposal.'),
+              'project-starter-arrangement-preview': ('SUPERSEDED', 'Behavior is covered by the implemented Project Starter/V10 state; do not copy the proposal.'),
+              'project-starter-seeded-variations': ('SUPERSEDED', 'Behavior is covered by the implemented Project Starter/V10 state; do not copy the proposal.'),
+              'v10-b-seed-determinism': ('COMPLETED_HISTORY', 'Implementation/tests are the evidence; legacy task checkbox state is stale.'),
+              'v10-c-locks': ('COMPLETED_HISTORY', 'V10 implementation history; future changes require a new Spec Kit feature.'),
+              'v10-creative-iteration': ('COMPLETED_HISTORY', 'Completed V10 umbrella history; all material work is represented by implementation/tests.'),
+              'v10-d-variation-history': ('COMPLETED_HISTORY', 'V10 implementation history; future changes require a new Spec Kit feature.'),
+              'v10-e-arrangement-preview': ('COMPLETED_HISTORY', 'V10 implementation history; future changes require a new Spec Kit feature.'),
+              'v10-f-concurrency': ('COMPLETED_HISTORY', 'V10 implementation history; concurrency changes must be re-specified at T4.'),
+              'v10-g-audio-safety': ('COMPLETED_HISTORY', 'V10 implementation history; future audio-safety changes require a new feature.'),
+              'v10-h-persistence': ('COMPLETED_HISTORY', 'V10 implementation history; durable persistence invariants are carried by current contracts/code.'),
+              'v10-i-regression': ('COMPLETED_HISTORY', 'Regression work is represented by current tests/CI, not the legacy checklist.'),
+              'v8-round-a-governance': ('SUPERSEDED', 'Superseded by the Spec Kit Constitution, AGENTS.md, workflows and policy-as-code.'),
+              'v8-round-b-native': ('FUTURE_RESPEC', 'Native runtime work is partially complete; verification hardening is tracked by GitHub Issue #43.'),
+          }
+
+          spec_overrides = {
+              'architecture.md': ('MIGRATE_ARCHITECTURE', 'Distilled into docs/architecture.md; stale SDK/version prose was not copied.'),
+              'audio-transport.md': ('MIGRATE_CONTRACT', 'Durable transport invariants distilled into docs/contracts/audio-transport.md.'),
+              'project-storage': ('MIGRATE_CONTRACT', 'Durable persistence/integrity invariants distilled into docs/contracts/project-persistence.md.'),
+              'collaboration-crdt': ('MIGRATE_CONTRACT', 'Durable concurrency invariants distilled into docs/contracts/collaboration-crdt.md.'),
+              'native-builds': ('FUTURE_RESPEC', 'Verification remains incomplete/weak; tracked by GitHub Issue #43.'),
+          }
+
+          def top_entries(name):
+              base = root / name
+              return sorted(p.name for p in base.iterdir()) if base.is_dir() else []
+
+          changes = top_entries('changes')
+          specs = top_entries('specs')
+          archive = top_entries('archive')
+
+          missing_changes = sorted(set(changes) - set(change_dispositions))
+          stale_mapping = sorted(set(change_dispositions) - set(changes))
+          if missing_changes or stale_mapping:
+              raise SystemExit(f'change disposition mismatch: missing={missing_changes}, stale={stale_mapping}')
+
+          lines = [
+              '# OpenSpec Reconciliation Manifest',
+              '',
+              '> Archaeological index only. OpenSpec is legacy evidence, not current SDD authority.',
+              '',
+              '## Checkpoint',
+              '',
+              '- Historical checkpoint tag: `openspec-final`.',
+              '- The tag is created only after this manifest and all live-reference reconciliation are complete, while `openspec/` still exists.',
+              '- Git history plus this tag preserve the full legacy bytes; the active tree does not keep an OpenSpec archive after cutover.',
+              '',
+              '## Disposition semantics',
+              '',
+              '`MIGRATE_*` means semantics were distilled into the named current artifact, never directory-copied. `COMPLETED_HISTORY` preserves historical evidence only. `SUPERSEDED` means a newer authority replaces it. `FUTURE_RESPEC` records unresolved demand that must start as a new Spec Kit feature.',
+              '',
+              f'Coverage: **{len(specs)} specs + {len(changes)} changes + {len(archive)} archive units = {len(specs)+len(changes)+len(archive)} top-level legacy units**.',
+              '',
+              '## `openspec/specs/*`',
+              '',
+              '| Legacy unit | Disposition | Current handling |',
+              '| --- | --- | --- |',
+          ]
+
+          for name in specs:
+              disposition, note = spec_overrides.get(
+                  name,
+                  ('COMPLETED_HISTORY', 'Historical behavioral/domain reference; implementation/tests are current evidence and future behavior changes create a new Spec Kit feature.')
+              )
+              lines.append(f'| `{name}` | `{disposition}` | {note} |')
+
+          lines += [
+              '',
+              '## `openspec/changes/*`',
+              '',
+              '| Legacy unit | Disposition | Current handling |',
+              '| --- | --- | --- |',
+          ]
+          for name in changes:
+              disposition, note = change_dispositions[name]
+              lines.append(f'| `{name}` | `{disposition}` | {note} |')
+
+          lines += [
+              '',
+              '## `openspec/archive/*`',
+              '',
+              '| Legacy unit | Disposition | Current handling |',
+              '| --- | --- | --- |',
+          ]
+          for name in archive:
+              lines.append(f'| `{name}` | `COMPLETED_HISTORY` | Preserved by Git/tag history only; no current lifecycle or status authority. |')
+
+          lines += [
+              '',
+              '## Residual demand',
+              '',
+              '- Native Android/Electron build verification hardening: GitHub Issue #43. It is intentionally **not** converted into an active Spec Kit feature during this migration.',
+              '',
+              '## Cutover rule',
+              '',
+              'After the `openspec-final` checkpoint is pushed, `openspec/` is deleted from the active tree in one commit. Any future change to a historical behavior starts from current code/tests/architecture/contracts and a new Spec Kit feature; historical OpenSpec artifacts are consulted only as archaeology.',
+              '',
+          ]
+
+          target = Path('docs/migrations/openspec-manifest.md')
+          target.parent.mkdir(parents=True, exist_ok=True)
+          target.write_text('\n'.join(lines), encoding='utf-8')
+
+          # Coverage assertion from the generated markdown itself.
+          text = target.read_text(encoding='utf-8')
+          for group, entries in [('specs', specs), ('changes', changes), ('archive', archive)]:
+              for entry in entries:
+                  if f'`{entry}`' not in text:
+                      raise SystemExit(f'manifest missing {group}/{entry}')
+          PY
+
+      - name: Write concise migration note
+        run: |
+          mkdir -p docs/migrations
+          cat > docs/migrations/openspec-to-speckit.md <<'EOF'
+          # OpenSpec → GitHub Spec Kit
+
+          OpenBand now uses GitHub Spec Kit as its sole specification-driven development lifecycle. The migration intentionally reconciles **semantics and authority**, not directory shapes.
+
+          ## Current authority
+
+          `Constitution → docs/architecture.md / ADRs / stable contracts → specs/*/spec.md → plan.md → tasks.md → implementation → tests/CI/Architecture Graph`
+
+          GitHub Issues track demand and ownership; PRs carry design/review/integration evidence; Git history is definitive history. `AGENTS.md` is the operational agent policy. Spec Kit owns feature lifecycle/order/state.
+
+          ## Legacy handling
+
+          Every top-level legacy unit is dispositioned in `docs/migrations/openspec-manifest.md`. The full pre-deletion corpus is preserved by the annotated Git tag `openspec-final`; no `openspec/archive` is copied into the new tree.
+
+          Three durable cross-feature contracts were distilled rather than copied: audio transport, project persistence, and collaboration/CRDT. Native build verification remains explicit future demand in Issue #43.
+
+          ## New work
+
+          Use `openband-ask` for the canonical risk-proportional path or direct `/speckit.*` commands for advanced control. Direct commands remain subject to `AGENTS.md`, OpenCode permissions, policy checks, human gates and CI.
+          EOF
+
+      - name: Audit live OpenSpec references
+        run: |
+          echo '=== OpenSpec references outside legacy tree ==='
+          grep -RniE 'OpenSpec|openspec' . \
+            --exclude-dir=.git \
+            --exclude-dir=node_modules \
+            --exclude-dir=.openband \
+            --exclude-dir=openspec \
+            || true
+
+      - name: Commit manifest and remove generator
+        run: |
+          rm .github/workflows/cutover-reconcile-temp.yml
+          git config user.name "openband-speckit-cutover"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "docs(sdd): reconcile OpenSpec corpus [manifest-generated]"
+          git push origin HEAD:agent/38-openspec-cutover
