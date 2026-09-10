@@ -68,7 +68,7 @@
     "lint": "npx tsc --noEmit",
     "test": "npx vitest run",
     "test:legacy": "npx tsx --test tests/presets.test.ts tests/types.test.ts",
-    "test:graph-sdd": "node --test tests/graph-speckit.test.mjs",
+    "test:graph-sdd": "node --test tests/graph-engineer.test.mjs tests/graph-engineer-v2.test.mjs tests/graph-engineer-v3.test.mjs tests/graph-speckit.test.mjs",
     "test:ui": "npx vitest --ui",
     "test:ui:screenshot": "node scripts/screenshot-vitest-ui.mjs",
     "build": "expo export --platform web --clear && node scripts/post-export.js",
