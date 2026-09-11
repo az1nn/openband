@@ -11,6 +11,10 @@ async function importAudio(page: Page, name: string, bytes: number[]) {
   });
 }
 
+function trackName(page: Page, name: string) {
+  return page.getByText(name, { exact: true }).first();
+}
+
 test.describe("Persistence trust", () => {
   test("keeps imported local audio durable across reload/reopen and rejects failed asset writes", async ({
     context,
@@ -19,18 +23,11 @@ test.describe("Persistence trust", () => {
     const projectId = `pw-persistence-${Date.now()}`;
     const route = `/studio/${projectId}?title=Persistence%20Smoke`;
 
-    await page.addInitScript(() => {
-      (window as any).__openbandAlerts = [];
-      window.alert = (message?: unknown) => {
-        (window as any).__openbandAlerts.push(String(message ?? ""));
-      };
-    });
-
     await page.goto(route);
     await expect(page.getByText("Audio", { exact: true })).toBeVisible();
 
     await importAudio(page, "persist-smoke.wav", [82, 73, 70, 70, 1, 2, 3, 4]);
-    await expect(page.getByText("persist-smoke", { exact: true })).toBeVisible();
+    await expect(trackName(page, "persist-smoke")).toBeVisible();
 
     await expect
       .poll(
@@ -72,12 +69,12 @@ test.describe("Persistence trust", () => {
       .toBeGreaterThan(0);
 
     await page.reload();
-    await expect(page.getByText("persist-smoke", { exact: true })).toBeVisible();
+    await expect(trackName(page, "persist-smoke")).toBeVisible();
 
     await page.close();
     const reopened = await context.newPage();
     await reopened.goto(`/studio/${projectId}`);
-    await expect(reopened.getByText("persist-smoke", { exact: true })).toBeVisible();
+    await expect(trackName(reopened, "persist-smoke")).toBeVisible();
 
     const beforeFailure = await reopened.evaluate((id) => {
       const project = JSON.parse(localStorage.getItem(`openband_project_${id}`)!);
