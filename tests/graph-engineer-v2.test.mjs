@@ -167,7 +167,7 @@ test("G1: spec md referencing method chain does not produce OB-GRAPH-003", () =>
   const root = makeTmp();
   writeFile(
     root,
-    "openspec/specs/g1/spec.md",
+    "specs/g1/spec.md",
     [
       "See backend/src/lib/musicTheory.resolveProgression for details.",
       "Also app/_expo/static/js/web/entry-bundle.js and src/lib/a.b.c.method.",

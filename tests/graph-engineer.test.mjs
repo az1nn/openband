@@ -137,7 +137,7 @@ describe("specs scanner", () => {
   it("connects specifies edges and records unresolved paths", () => {
     const { root, write } = tmpRepo();
     write("src/lib/util.ts", `export const x = 1;`);
-    write("openspec/specs/demo/spec.md", `See src/lib/util.ts and src/missing.ts for details.`);
+    write("specs/demo/spec.md", `See src/lib/util.ts and src/missing.ts for details.`);
     const g = createGraph();
     scanSources(root, { graph: g });
     scanSpecs(root, { graph: g });
@@ -266,7 +266,7 @@ describe("cli", () => {
     write("src/bridge/index.ts", `import electron from 'electron';`);
     write("src/lib/util.ts", `export const x = 1;`);
     write("app/screen.tsx", `import fs from 'fs';\nimport { x } from '@/lib/util';`);
-    write("openspec/specs/demo/spec.md", `See src/lib/util.ts and src/missing.ts.`);
+    write("specs/demo/spec.md", `See src/lib/util.ts and src/missing.ts.`);
     const out = path.join(root, ".openband", "graph.json");
 
     execFileSync("node", ["graph/cli.mjs", "build", "--root", root, "--out", out]);

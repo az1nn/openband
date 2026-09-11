@@ -89,12 +89,11 @@ export function serialize(graph) {
 }
 
 export function detectNodeType(relPath) {
-  if (relPath.startsWith("openspec/")) return "spec";
+  if (/^specs\/[^/]+\/spec\.md$/.test(relPath)) return "spec";
+  if (relPath === "docs/architecture.md") return "spec";
+  if (/^docs\/(adr|contracts)\/.*\.md$/.test(relPath)) return "spec";
   if (relPath.startsWith("tests/")) return "test";
   if (relPath.startsWith("app/")) return "route";
   if (relPath.startsWith("backend/src/routes/") || relPath.startsWith("api/")) return "route";
   return "source";
 }
-
-
-
