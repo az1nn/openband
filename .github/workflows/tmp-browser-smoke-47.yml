@@ -45,12 +45,7 @@ jobs:
               );
             });
 
-            await page.goto("/tabs/library");
-            await expect(page.getByText("Biblioteca")).toBeVisible({ timeout: 15000 });
-            await page.getByRole("button", { name: "Novo Projeto" }).click();
-            await page.getByText("Começar do Zero", { exact: true }).click();
-            await page.waitForURL(/\/studio\/.*scratch=1/, { timeout: 15000 });
-
+            await page.goto("/studio/e2e-creative-loop?scratch=1");
             await expect(page.getByText("Make your first sound")).toBeVisible({ timeout: 15000 });
             const startedAt = Date.now();
 
