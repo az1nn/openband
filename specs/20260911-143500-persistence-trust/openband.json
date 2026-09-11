@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "tier": "T3",
+  "issue": 48,
+  "riskTriggers": ["persistence", "data-integrity", "web-storage", "audio-assets"],
+  "dependsOn": []
+}

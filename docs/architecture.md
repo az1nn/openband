@@ -47,7 +47,9 @@ Frontend code in `app/` and `src/` must not call Node filesystem, Electron IPC o
 
 ### Persistence and collaboration
 
-Persistence exists across local/runtime-specific storage and server/cloud capabilities. Any change to persistence models, synchronization semantics, CRDT behavior or cross-runtime storage contracts is at least T3; corruption/loss or concurrency-critical work is T4.
+Local project persistence is split by data shape rather than by feature. `src/lib/projectStore.ts` owns application-facing serialized project state. On Web, compact project JSON remains synchronous local state, while `src/lib/assetStore.ts` owns durable binary audio bytes in IndexedDB and exposes stable `asset://` references; runtime blob URLs are ephemeral materializations. Native/desktop durable I/O remains behind `OpenBandNative`. Remote/cloud assets and synchronization use their explicit object-storage/API boundaries and are not prerequisites for local Web ownership.
+
+Any change to persistence models, synchronization semantics, CRDT behavior or cross-runtime storage contracts is at least T3; destructive migration or a credible new corruption/loss path is T4.
 
 ### Audio/DSP
 
