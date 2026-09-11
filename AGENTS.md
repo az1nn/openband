@@ -36,6 +36,16 @@ L2  relevant code + tests + specialists
 
 Retrieve before assuming. Do not load the whole repository by default.
 
+### Conversation context handoff
+
+Continuously monitor whether the current chat remains a trustworthy bounded implementation context. Use `docs/ai/context-handoff.md` as the policy and `docs/ai/session-handoff-template.md` when a clean-chat handoff is warranted.
+
+- GREEN: continue normally; conversation length alone is irrelevant.
+- YELLOW: a semantic boundary is approaching; finish the current safe atomic step and refresh canonical state.
+- RED: continuing materially increases stale/conflicting-context risk; explicitly recommend a new chat and generate a `SESSION_HANDOFF.md`.
+
+A handoff is derived bootstrap context only. It must never override Git, Spec Kit, architecture/contracts/ADRs, tests, Graph evidence, risk tier, Design Gate, verification state, or Merge Gate. A new chat reconstructs bounded L0 → L1 → L2 context and verifies branch/worktree/HEAD, feature state and gate freshness before acting.
+
 ## T2+ lifecycle
 
 ```text
