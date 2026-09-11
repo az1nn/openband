@@ -1,0 +1,21 @@
+schema_version: "1.0"
+workflow:
+  id: "openband-build"
+  name: "OpenBand Build"
+  version: "1.0.0"
+  author: "OpenBand"
+  description: "Post-Design-Gate implementation and convergence pass"
+
+requires:
+  speckit_version: ">=1.0.4"
+  integrations:
+    any: ["opencode"]
+
+steps:
+  - id: implement
+    command: speckit.implement
+    integration: opencode
+
+  - id: converge
+    command: speckit.converge
+    integration: opencode

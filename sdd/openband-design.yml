@@ -1,0 +1,67 @@
+schema_version: "1.0"
+workflow:
+  id: "openband-design"
+  name: "OpenBand Design"
+  version: "1.0.0"
+  author: "OpenBand"
+  description: "T2+ design through analysis and human Design Gate"
+
+requires:
+  speckit_version: ">=1.0.4"
+  integrations:
+    any: ["opencode"]
+
+inputs:
+  spec:
+    type: string
+    required: true
+    prompt: "Describe the bounded engineering change"
+  run_clarify:
+    type: boolean
+    default: false
+  run_checklist:
+    type: boolean
+    default: false
+
+steps:
+  - id: specify
+    command: speckit.specify
+    integration: opencode
+    input:
+      args: "{{ inputs.spec }}"
+
+  - id: clarify-if-needed
+    type: if
+    condition: "{{ inputs.run_clarify }}"
+    then:
+      - id: clarify
+        command: speckit.clarify
+        integration: opencode
+
+  - id: plan
+    command: speckit.plan
+    integration: opencode
+
+  - id: checklist-if-needed
+    type: if
+    condition: "{{ inputs.run_checklist }}"
+    then:
+      - id: checklist
+        command: speckit.checklist
+        integration: opencode
+        input:
+          args: "Review material requirement risks for this feature."
+
+  - id: tasks
+    command: speckit.tasks
+    integration: opencode
+
+  - id: analyze
+    command: speckit.analyze
+    integration: opencode
+
+  - id: design-gate
+    type: gate
+    message: "Approve the current spec, plan, tasks, verification strategy and Design Baseline SHA before implementation."
+    options: [approve, reject]
+    on_reject: abort
