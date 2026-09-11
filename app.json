@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "openband",
+    "name": "OpenBand",
     "slug": "openband",
     "version": "1.0.0",
     "scheme": "openband",
@@ -31,9 +31,9 @@
       "bundler": "metro",
       "output": "single",
       "favicon": "./assets/favicon.png",
-      "backgroundColor": "#0f0f11",
+      "backgroundColor": "#0a0a0d",
       "themeColor": "#ff3b30",
-      "description": "OpenBand - Open-source music production platform"
+      "description": "Record, arrange, mix, and export in a local-first, open-source browser studio without mandatory signup or project lock-in."
     },
     "plugins": [
       "expo-audio",

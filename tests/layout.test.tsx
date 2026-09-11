@@ -22,7 +22,12 @@ vi.mock("../src/lib/universalAudio", () => ({
 
 vi.mock("expo-router", () => {
   const Stack = ({ children }: any) => <div data-testid="stack">{children}</div>;
-  Stack.Screen = ({ name }: any) => <div data-testid={`screen-${name}`} />;
+  Stack.Screen = ({ name, options }: any) => (
+    <div
+      data-testid={`screen-${name}`}
+      data-header-shown={String(options?.headerShown)}
+    />
+  );
   return {
     useRouter: () => ({ push: vi.fn(), replace: mockReplace, back: vi.fn() }),
     useSegments: () => mockSegments(),
@@ -128,13 +133,31 @@ describe("Root Layout", () => {
     expect(screen.getByTestId("stack")).toBeTruthy();
   });
 
-  it("renders all 5 Stack.Screen routes", () => {
+  it("renders all Stack.Screen routes with the auth group header hidden", () => {
     render(<RootLayout />);
     expect(screen.getByTestId("screen-index")).toBeTruthy();
+    expect(screen.getByTestId("screen-(auth)")).toHaveAttribute(
+      "data-header-shown",
+      "false",
+    );
     expect(screen.getByTestId("screen-tabs")).toBeTruthy();
     expect(screen.getByTestId("screen-extractor")).toBeTruthy();
     expect(screen.getByTestId("screen-studio/[id]")).toBeTruthy();
     expect(screen.getByTestId("screen-mastering")).toBeTruthy();
+    expect(screen.getByTestId("screen-settings-ai")).toBeTruthy();
+  });
+
+  it("publishes descriptive web metadata", () => {
+    render(<RootLayout />);
+    expect(document.title).toBe("OpenBand — Make music. Keep the project.");
+    expect(document.querySelector('meta[name="description"]')).toHaveAttribute(
+      "content",
+      "Record, arrange, mix, and export in a local-first, open-source browser studio without mandatory signup or project lock-in.",
+    );
+    expect(document.querySelector('meta[property="og:title"]')).toHaveAttribute(
+      "content",
+      "OpenBand — Make music. Keep the project.",
+    );
   });
 
   it("registers web audio init on pointerdown and keydown", () => {

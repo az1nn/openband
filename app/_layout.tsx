@@ -46,6 +46,7 @@ function RootLayoutProtected() {
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="tabs" options={{ headerShown: false }} />
       <Stack.Screen name="extractor" options={{ headerShown: false }} />
       <Stack.Screen name="studio/[id]" options={{ headerShown: false }} />
@@ -105,6 +106,27 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <Head>
+        <title>OpenBand — Make music. Keep the project.</title>
+        <meta
+          name="description"
+          content="Record, arrange, mix, and export in a local-first, open-source browser studio without mandatory signup or project lock-in."
+        />
+        <meta name="application-name" content="OpenBand" />
+        <meta name="theme-color" content="#0a0a0d" />
+        <meta name="color-scheme" content="dark light" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="OpenBand" />
+        <meta property="og:title" content="OpenBand — Make music. Keep the project." />
+        <meta
+          property="og:description"
+          content="Record, arrange, mix, and export in a local-first, open-source browser studio without mandatory signup or project lock-in."
+        />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="OpenBand — Make music. Keep the project." />
+        <meta
+          name="twitter:description"
+          content="Record, arrange, mix, and export in a local-first, open-source browser studio without mandatory signup or project lock-in."
+        />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta
           name="apple-mobile-web-app-status-bar-style"

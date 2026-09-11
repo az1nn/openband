@@ -1,544 +1,179 @@
 # OpenBand
 
-Open-source music production platform — multi-track DAW, guitar pedal board, amp/cab modeling, stem separation, social feed, and responsive web-first design.
+**Make music. Keep the project.**
 
-Built with **Expo Router**, **TypeScript**, **NativeWind v4 (Tailwind CSS v3)**, and **Supabase**. Runs on Web, Android, iOS, and **Desktop (Electron)**.
+A local-first, open-source browser music studio for recording, arranging, mixing, and exporting without mandatory signup.
 
-## Stack
+[![CI](https://github.com/az1nn/openband/actions/workflows/ci.yml/badge.svg)](https://github.com/az1nn/openband/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-white.svg)](LICENSE)
+[![Web alpha](https://img.shields.io/badge/status-web_alpha-ff3b30.svg)](https://openband-one.vercel.app)
 
-| Layer            | Technology                                                                                             |
-| ---------------- | ------------------------------------------------------------------------------------------------------ |
-| Framework        | [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/) + [Expo Router](https://expo.github.io/router/) |
-| Styling          | [NativeWind v4](https://www.nativewind.dev/) + Tailwind CSS v3                                         |
-| Language         | TypeScript ~6.0                                                                                        |
-| Auth / DB (dev)  | [SQLite](https://sqlite.org/) via `better-sqlite3` — zero-config local database                       |
-| Auth / DB (prod) | [Supabase](https://supabase.com/) (PostgreSQL + Auth)                                                  |
-| Audio            | [`expo-audio`](https://docs.expo.dev/versions/v57.0.0/sdk/audio/) (SDK 57) + HTML5 Audio (web)         |
-| Audio Processing | [Demucs](https://github.com/facebookresearch/demucs) (HTDEMUCS model) via Python subprocess            |
-| Desktop          | [Electron 35](https://www.electronjs.org/) with swappable bridge (`src/bridge/`)                       |
-| 3D / WebGL       | [Three.js](https://threejs.org/) — Virtual Studio (Habbo-style)                                        |
-| Backend          | [Express](https://expressjs.com/) (`backend/src/index.ts`, port 3001) — stems, mastering, auth; optional `openband-backend/` Docker microservices (Redis) |
-| Testing          | [Vitest](https://vitest.dev/) (1650 tests) + optional [Playwright](https://playwright.dev/) (E2E) + legacy `node:test` (24 tests) |
+[Try the web alpha](https://openband-one.vercel.app) · [Understand the product](docs/product.md) · [See the roadmap](ROADMAP.md) · [Contribute](CONTRIBUTING.md)
 
-## Getting Started
+> **Alpha:** explore without an account, but keep an independent backup of important work. Platform availability and service-backed features vary by release and configuration.
+>
+> **Naming note:** OpenBand is the repository's working name while same-category brand clearance is completed. See the [brand gate](docs/marketing/brand.md#naming-gate).
 
-### Prerequisites
+![OpenBand multitrack studio](marketing/screenshots/stack/daw-studio.png)
 
-- Node.js >= 18
-- Python 3.12 (optional, for stem separation)
-- Expo CLI (`npx expo`)
+*Current alpha capture; the launch-grade recapture is specified in [`docs/marketing/launch-assets.md`](docs/marketing/launch-assets.md).*
 
-### 1. Install frontend dependencies
+## Why OpenBand
+
+Music ideas often get stranded between a recorder, a beat tool, a DAW, stem services, mastering tools, and closed clouds. OpenBand organizes the journey as **start → hear → shape → finish → keep or share**.
+
+- **Start with momentum:** enter as a visitor or choose a genre and mood starter.
+- **Shape in context:** work with audio, MIDI, instruments, guitar tools, effects, stems, and focused creative modes.
+- **Finish the track:** mix, meter, master, save, and export without changing products.
+- **Keep the project:** use local workflows, inspect the source, and opt into cloud or BYOK AI services only where configured.
+
+Open source is the proof. Creative control is the benefit.
+
+## Product paths
+
+| Path | What it helps you do | Representative tools |
+| --- | --- | --- |
+| Start | Move past a blank project | Visitor mode, genre/mood starters, samples |
+| Record and arrange | Capture and structure musical material | Multitrack audio, MIDI, piano roll, looper, chord track |
+| Create sound | Build a part around the instrument or idea | Sampler, synth, beatmaker, guitar pedalboard, amp/cab chain |
+| Transform | Prepare or reuse existing material | Stem separation, tuning, time/pitch tools, BYOK helpers |
+| Mix and finish | Turn a sketch into a keepable result | Mixer, effects, buses, snapshots, LUFS, mastering, export |
+| Explore | Enter focused or experimental workflows | Creative modes and 3D studio rooms |
+| Collaborate | Build on shared project foundations | Presence, CRDT, branching, optional services; public flow still evolving |
+
+Detailed, code-backed capability status lives in [`docs/features-implementation.md`](docs/features-implementation.md). Public claims follow the [marketing claim guardrails](docs/marketing/messaging.md#claim-guardrails).
+
+## Current availability
+
+| Surface | Status | How to use it |
+| --- | --- | --- |
+| Web | Public alpha | [Open the demo](https://openband-one.vercel.app) |
+| Electron desktop | Build from source | `npm run desktop` |
+| Android | Codebase target / local build | `npm run android` |
+| iOS | Codebase target / macOS local build | `npm run ios` |
+| Hosted collaboration and AI processing | Configuration-dependent | Run the optional backend services |
+
+No mobile store listing or signed desktop download is claimed by this repository until a verified release link is published.
+
+## Run locally
+
+### Requirements
+
+- Node.js 22 or newer
+- npm
+- Python 3.12 only if you want local Demucs stem separation
+
+### Web app
 
 ```bash
-npm install
+git clone https://github.com/az1nn/openband.git
+cd openband
+npm ci
+npm run web
 ```
 
-### 2. (Optional) Install backend dependencies
+The frontend can run without a `.env` file using development fallbacks. Those fallbacks are for exploration and testing—not proof of production services.
+
+### Optional API
 
 ```bash
 cd backend
-npm install
+npm ci
+npm run dev
 ```
 
-### 3. (Optional) Install Demucs for stem separation
+The API uses SQLite by default for local development. See [`docs/sqlite.md`](docs/sqlite.md) and [`docs/supabase.md`](docs/supabase.md) for storage modes.
+
+### Optional local stem separation
 
 ```bash
 cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install demucs==4.0.1
-```
-
-If Demucs isn't installed, the backend falls back to mock WAV generation.
-
-### 4. Configure database (SQLite by default)
-
-The backend uses **SQLite** as the default development database — zero configuration needed:
-
-```bash
-cd backend
 npm run dev
 ```
 
-This auto-creates `backend/data/openband.sqlite` with the full schema on first run.
+Without Demucs, development may use mock WAV generation. Do not present mock results as processed audio.
 
-See **[docs/sqlite.md](docs/sqlite.md)** for SQLite management, inspection, and reset.
-
-### 4b. (Optional) Configure Supabase for production
-
-When ready to deploy with a real multi-user database:
+### Desktop
 
 ```bash
-cp backend/.env.example backend/.env
+cd electron
+npm ci
+cd ..
+npm run desktop
 ```
 
-Fill in your Supabase credentials in `backend/.env` and set `DATABASE_MODE=supabase`.
+Desktop-specific I/O crosses the `OpenBandNative` bridge; frontend screens do not call Electron APIs directly.
 
-Run `supabase/schema.sql` in your Supabase SQL editor.
+## Architecture at a glance
 
-See **[docs/supabase.md](docs/supabase.md)** for a complete setup guide.
+```mermaid
+flowchart TD
+    UI[Expo Router + React Native Web] --> CORE[Typed music and project core]
+    UI --> BRIDGE[OpenBandNative bridge]
+    CORE --> LOCAL[Local project and asset stores]
+    CORE --> AUDIO[Web Audio / expo-audio / WASM]
+    CORE --> API[Optional Express API]
+    API --> DATA[SQLite or Supabase]
+    API --> SERVICES[Stems, mastering, collaboration]
+```
 
-### 5. Start the backend
+| Layer | Main technology |
+| --- | --- |
+| App | Expo Router, React, React Native Web, TypeScript |
+| Styling | NativeWind / Tailwind tokens |
+| State | React state/context and Zustand where appropriate |
+| Audio | Web Audio, `expo-audio`, worklets, optional WASM |
+| Local data | Browser stores / bridge filesystem; SQLite for local API development |
+| Hosted data | Optional Supabase/PostgreSQL and object storage |
+| Desktop | Electron behind a swappable bridge |
+| Validation | TypeScript, Vitest, Playwright smoke tests, architecture graph checks |
+
+Start with [`docs/architecture.md`](docs/architecture.md) for current boundaries and [`docs/graph-engineering.md`](docs/graph-engineering.md) for dependency/impact tooling.
+
+## Useful commands
+
+```bash
+npm run lint             # Frontend TypeScript check
+npm test                 # Vitest suite
+npm run test:legacy      # Legacy node:test suite
+npm run test:graph-sdd   # Spec Kit / graph regression tests
+npm run graph:ci         # Architecture graph gate
+npm run build            # Production web export
+```
+
+Backend typecheck:
 
 ```bash
 cd backend
-npm run dev
+npm ci
+npx tsc --noEmit
 ```
 
-Server runs on `http://localhost:3001`.
+CI is the source of truth for the complete merge gate. A locally skipped or masked command is not a pass.
 
-### 6. Start the app
+## Documentation
 
-```bash
-npm start        # Expo Go / web
-npm run android  # Android
-npm run ios      # iOS (macOS only)
-npm run web      # Browser
-npm run desktop  # Build web SPA then launch Electron desktop app
-```
+| Topic | Document |
+| --- | --- |
+| Product strategy and honest claims | [`docs/product.md`](docs/product.md) |
+| Architecture | [`docs/architecture.md`](docs/architecture.md) |
+| Build and runtime setup | [`BUILD.md`](BUILD.md) |
+| Feature implementation status | [`docs/features-implementation.md`](docs/features-implementation.md) |
+| Product roadmap | [`ROADMAP.md`](ROADMAP.md) |
+| Contracts | [`docs/contracts/`](docs/contracts/README.md) |
+| Architecture decisions | [`docs/adr/`](docs/adr/README.md) |
+| Marketing foundation | [`docs/marketing/`](docs/marketing/README.md) |
+| Screenshot/UI audit | [`marketing/SCREEN-SPECS.md`](marketing/SCREEN-SPECS.md) |
 
-### 7. Desktop (Electron)
+## Contributing
 
-```bash
-cd electron
-npm install
-cd ..
-npm run desktop       # Build + launch
-npm run desktop:dev   # Hot-reload dev (starts Expo + Electron concurrently)
-```
+OpenBand welcomes focused issues, reproducible bugs, documentation improvements, audio-engineering evidence, and well-scoped pull requests.
 
-The desktop app uses a **swappable bridge** (`src/bridge/`) — the frontend has zero knowledge of Electron. All native desktop I/O goes through `OpenBandNative` from `@bridge`. The same code runs in browser, Electron, or (future) Tauri without changes.
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before changing the project. Repository work is PR-first and uses GitHub Spec Kit for T2+ changes; [`AGENTS.md`](AGENTS.md) defines the agent policy.
 
-## Features
+## License
 
-### Studio (`app/studio/[id].tsx`)
-
-Multi-track DAW with real-time audio playback via `expo-audio`:
-
-- Per-track volume sliders, mute/solo toggles, and pan controls
-- Canvas-based waveform visualization with viewport culling devicePixelRatio
-- Playhead cursor with real-time position tracking via rAF
-- Play/pause/seek transport controls with pitch correction (±12 semitones)
-- BPM readout, time signature display, metronome with count-in
-- Audio recording via `useAudioRecorder` with direct monitoring (latencyMonitor)
-- Piano roll MIDI note editor with snap, scale highlighting, note drag/resize/delete
-- Sidechain routing per track (source selector + compressor sidechain filter)
-- Looper with record/overdub/playback, 4 independent loop slots
-- Chord track with 8 progression presets + Markov chain suggestions
-- MIDI generation from chord progression via chordTrackState
-- OneKnob Quick FX per track (19 knob types)
-- Visual 8-band EQ on master with bypass and preset shapes
-- AutoMix with 11 genre-based presets + track role classification
-- Auto-pitch, noise gate, bass mono, stereo widener, reverb, delay, distortion plugins
-- Pedalboard with 16 famous pedal presets + 20 amp + 10 cab models
-- Mastering chain with 10 presets, 8-band EQ, compressor, limiter, LUFS
-- Plugin rack per track + master bus (19 plugin types)
-- Mix snapshot A/B comparison and save/load
-- Sub-mix send buses (up to 20) with per-track send levels
-- Track grouping with shared volume/mute
-- Sample browser with 60+ curated samples and category filtering
-- Sampler with velocity control (0-127), melodic mini-keyboard (C2-C4), transient slicing, stereo ADSR
-- Synthesizer with 25 presets, 16-voice polyphony, 5-tab UI (OSC/FLT/ENV/LFO/ARP), 25-key piano
-- CodeSampler token-based beat sequencer
-- Command palette (Cmd+K) with 18 commands across Transport/Edit/Track/File/View/System
-- Branch manager for CRDT fork/merge/diff
-- Commit modal with push-to-cloud via supabaseRemote
-- Undo/redo via useHistory (100-step, useReducer-based)
-- Automation lanes per track with linear/exponential curves
-- Bounce/export dialog (WAV/AIFF/FLAC, 16/24/32-bit, cross-platform)
-
-### IA & Capas
-
-AI album-cover generation with **bring-your-own-key (BYOK)** providers — Gemini, OpenAI, OpenRouter, Claude (refine only) and Hugging Face:
-
-- Keys are stored **only on-device** and never logged or persisted on OpenBand servers
-- Manage keys in **Configurações → IA & Chaves de API** (`app/settings-ai.tsx`)
-- Studio → **✨ Gerar Capa com IA** opens the generation modal (source from project lyrics or a custom text, optional prompt refinement, aspect ratio/quality settings)
-- Generated covers persist on the project and render in the library cards
-
-Full business rules live in [`docs/AI_INTEGRATION_AGENT_SPEC.md`](docs/AI_INTEGRATION_AGENT_SPEC.md). Backend endpoints are under `POST /api/ai/*` (`backend/src/routes/ai.ts`).
-
-### Stem Extraction (`app/extractor.tsx`)
-
-3-phase separation pipeline:
-
-1. **Select** — Pick an audio file or enter a URL
-2. **Process** — Upload to backend for Demucs processing with progress feedback
-3. **Results** — Play back 4 separated stems (bass, drums, vocals, other) with individual players
-
-Backend (`POST /api/extract`):
-
-- Accepts audio files (MP3, WAV, FLAC, M4A, OGG, AAC, WMA; up to 200 MB)
-- Returns JSON with 4 stem URLs after processing
-
-### Feed (`app/tabs/index.tsx`)
-
-Global social feed of published projects:
-
-- Audio cards with play/pause and progress bar
-- Avatar, username, and post metadata
-- Like, comment, and share action bar
-
-### Library (`app/tabs/library.tsx`)
-
-User's project collection:
-
-- Project cards with gradient icons
-- "Separar Stems" action button
-- Empty state when no projects exist
-
-### Authentication (`app/(auth)/login.tsx`)
-
-- Email/password login via Supabase Auth
-- Mock fallback: any email + any password works when Supabase env vars aren't set
-- Session persistence via `expo-secure-store` (native) / `localStorage` (web)
-- Visitor mode (anonymous exploration without sign-up)
-
-### Settings (`app/tabs/settings.tsx`)
-
-- Dark/light theme toggle
-- Profile display, app version info
-- Theme persisted via ThemeContext
-
-### Feed (`app/tabs/moments.tsx`)
-
-- Artist moments / social feed with audio previews
-- Free sample pack store with 30+ curated samples
-- One-tap sample import to new studio project
-
-### Account (`app/tabs/account.tsx`)
-
-- Display name editing with Supabase profile sync
-- Sign-out with loading state
-- Profile info (member since, location, bio)
-
-### Bug-Fix Rounds (14 completed)
-
-Ongoing hardening through periodic fix-and-verify cycles. Each round fixes verified bugs (stale closures, O(n²) maps, unused imports, missing error handlers, type gaps, CSP issues, stale state) and runs the full tsc + vitest + build suite before shipping.
-
-**Round 10–13 — Previous code review sweeps (73 issues found and fixed):**
-
-**Round 14 — Wire components + web player fix:**
-- Wired CommandPalette with 18 commands (transport, edit, track, file, view, system)
-- Wired BranchManager + CommitModal buttons in studio toolbar
-- RecordOptions gets direct monitoring toggle via latencyMonitor
-- Chord tab gets "Generate MIDI" button via chordTrackState
-- universalAudio initialized in studio audio setup
-- Fixed root calc for sharp/flat keys (used `[0]` which stripped accidentals)
-- Fixed chord quality type cast (silent wrong voicings for min/7/sus4)
-- Fixed useHistory impure nested setState → pure useReducer pattern
-- Re-exported useHistory hook (was removed during semantic undo rewrite)
-- Fixed web player autoplay policy block: remove eager AudioContext from mount effect, call ensureContext() synchronously in togglePlay before any await, try/catch around player.replace()/player.play()
-- Added blob URL tracking (currentUrlRef) with cleanup on re-render/unmount
-
-## Project Structure
-
-```
-openband/
-├── app/
-│   ├── _layout.tsx          # Root: SafeAreaProvider + AuthProvider + redirect
-│   ├── (auth)/login.tsx     # Login screen
-│   ├── tabs/
-│   │   ├── _layout.tsx      # Tab navigator (Feed, Biblioteca, Momentos)
-│   │   ├── index.tsx        # Global feed with audio playback
-│   │   ├── library.tsx      # Project library
-│   │   ├── moments.tsx      # Sample pack store / artist moments
-│   │   ├── account.tsx      # Profile + sign-out
-│   │   └── settings.tsx     # App settings
-│   ├── extractor.tsx        # Stem separation page
-│   ├── mastering/
-│   │   └── index.tsx        # Mastering suite page (full chain)
-│   └── studio/[id].tsx      # DAW multi-track mixer
-├── src/
-│   ├── lib/                 # Utilities: supabase, audio, midi, projectStore, etc.
-│   ├── context/             # AuthContext, ThemeContext
-│   ├── bridge/              # Desktop bridge (interface, Electron, Tauri stub, browser fallback)
-│   │   ├── interface.ts     # NativeBridge contract
-│   │   ├── electron.ts      # Electron impl → window.electronAPI
-│   │   ├── tauri.ts         # Tauri stub for future migration
-│   │   ├── browser.ts       # Browser fallback (localStorage, DOM APIs)
-│   │   └── index.ts         # Auto-detect platform + re-export
-│   └── components/          # Design system (79 components, see table below)
-├── electron/
-│   ├── main.js              # Electron main process (BrowserWindow, IPC, native menus)
-│   ├── preload.js           # Context bridge (sandboxed electronAPI)
-│   └── package.json         # Electron 35 + electron-builder 26
-├── backend/
-│   ├── src/
-│   │   ├── index.ts         # Express server (port 3001)
-│   │   ├── routes/extract.ts # POST /api/extract, GET /api/stems/:filename
-│   │   ├── services/
-│   │   │   ├── demucs.ts    # Python Demucs subprocess
-│   │   │   └── mock.ts      # Silent WAV fallback
-│   │   ├── middleware/upload.ts
-│   │   └── types.ts
-│   ├── .venv/               # Python venv with Demucs
-│   └── package.json
-├── supabase/
-│   └── schema.sql           # DB schema (profiles, projects, tracks, stems, posts)
-├── components/              # (global.css utilities: .card, .btn-primary, etc.)
-├── global.css               # Tailwind directives + component layer
-├── tailwind.config.js       # Design tokens
-├── babel.config.js
-├── metro.config.js
-├── tsconfig.json            # Strict TS, @/ + @bridge path aliases
-├── global.d.ts              # ElectronAPI window type declarations
-├── .env.example
-├── AGENTS.md                # Agent workflow instructions
-├── CLAUDE.md                # Points to AGENTS.md
-└── docs/
-    ├── supabase.md          # Complete Supabase setup guide
-    ├── features-analysis.md # Feature comparison vs BandLab/Cubasis
-    ├── features-implementation.md # Implementation plan
-    └── apk-build.md         # Android APK build guide
-```
-
-## Design System
-
-56+ reusable components in `src/components/` (see `AGENTS.md` for full reference):
-
-| Component                                                                           | Description                                                        |
-| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `Button`                                                                            | `variant: primary\|secondary\|ghost`, `loading`, `icon`            |
-| `TextInput`                                                                         | Wraps RN TextInput with label + error                              |
-| `Card` / `CardRow` / `CardIcon`                                                     | Dark surface containers, gradient icons                            |
-| `Badge`                                                                             | `variant: default\|play\|active`, with optional icon               |
-| `Avatar`                                                                            | `size: sm\|md\|lg`, displays initials                              |
-| `Divider`                                                                           | Horizontal line with optional label                                |
-| `Loading` / `EmptyState`                                                            | Spinner + message / centered empty state                           |
-| `ProgressBar`                                                                       | 0–100 fill bar                                                     |
-| `PageHeader` / `Sidebar`                                                            | Screen title + responsive drawer nav                               |
-| `PedalRack` / `Tuner`                                                               | 6-slot pedalboard + chromatic tuner                                |
-| `CodeSampler` / `PianoRoll` / `Looper`                                              | Token sequencer, MIDI editor, live loop recorder                   |
-| `BounceDialog` / `MixManager`                                                       | Export dialog + A/B snapshot manager                               |
-| `PluginRack` / `MasterRack` / `PluginEditor`                                        | Track/master plugin chains + full 19-type editor                   |
-| `AutomationLane` / `WaveformCanvas`                                                 | Volume/param automation + canvas waveform viz with DPR, culling    |
-| `VisualEQ` / `OneKnob` / `OneKnobProcessor`                                         | Visual equalizer + single-knob control (19 types)                  |
-| `MiniMastering` / `LufsMeter`                                                       | Mastering chain presets + loudness meter                           |
-| `MomentCard`                                                                        | Social feed post card                                              |
-| `SampleBrowser` / `Sampler` / `Synth`                                               | Sample packs, audio player, synthesizer with 6 presets             |
-| `Metronome` / `RecordOptions` / `NewProject`                                        | Click track, recording settings, project creator                   |
-| `TrackGroupManager` / `ChordTrack`                                                  | Track grouping + chord progression timeline w/ Markov suggestions  |
-| `MasteringSuite` / `MasteringChain` / `MasteringVersionManager` / `MasteringUpload` | Full mastering chain + A/B versioning + audio upload               |
-| `PluginUI` / `BranchManager` / `Patchbay`                                           | Wasm plugin UI generator, git-like branch viewer, I/O patchbay    |
-| `CommandPalette` / `CommitModal` / `VersionHistory`                                 | Cmd+K palette, commit/push modal, visual commit timeline           |
-
-CSS utility classes (from `global.css`):
-
-- `.card`, `.card-elevated` — containers
-- `.btn-primary`, `.btn-secondary`, `.btn-ghost` — buttons
-- `.input-field`, `.input-field-focused` — inputs
-- `.badge`, `.section-header`, `.label` — text
-
-## Audio API (expo-audio)
-
-```ts
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
-
-const player = useAudioPlayer(source); // source = require(...) | URL string
-const status = useAudioPlayerStatus(player); // { playing, currentTime, duration, isLoaded }
-
-player.play();
-player.pause();
-player.seekTo(seconds);
-player.replace(newSource);
-player.volume = 0.5; // 0.0 – 1.0
-```
-
-## Backend API
-
-| Method | Endpoint                         | Description                                              |
-| ------ | -------------------------------- | -------------------------------------------------------- |
-| POST   | `/api/extract`                   | Upload audio file → returns stem URLs                    |
-| GET    | `/api/stems/:filename`           | Download processed stem                                  |
-| POST   | `/api/master/bounce`             | Upload audio → apply master processing → download result |
-| GET    | `/api/master/download/:filename` | Download mastered audio file                             |
-
-### POST /api/extract
-
-- Content-Type: `multipart/form-data`
-- Field: `file` (audio file, max 200 MB)
-- Accepted formats: MP3, WAV, FLAC, M4A, OGG, AAC, WMA
-- Response: `{ stems: { bass, drums, vocals, other }, taskId }`
-
-### Test Dashboard (Vitest UI)
-
-You can run and monitor the test suite in real-time using Vitest's visual dashboard:
-
-![Vitest UI Test Dashboard](docs/vitest-ui-dashboard.png)
-
-## Scripts
-
-```bash
-npm start                  # Start Expo dev server
-npm run web                # Start web-only dev server
-npm run build              # Production web export (output: dist/)
-npm run desktop            # Build + launch Electron desktop app
-npm run desktop:dev        # Hot-reload dev (Expo + Electron concurrently)
-npm run test:ui:screenshot # Run Vitest UI, take a dashboard screenshot, and exit
-npx tsc --noEmit           # TypeScript check (frontend)
-cd backend && npx tsc --noEmit  # TypeScript check (backend)
-npx vitest run             # Run all component + lib tests (single run, 1650 tests)
-npm run test:legacy        # Legacy node:test suite (24 tests)
-npm run graph:ci           # Architecture-graph CI validation gate
-npm run build              # Production web export (output: dist/)
-npx vitest --ui            # Open interactive test dashboard in browser (real-time)
-npx vitest                 # Run test suite in real-time watch mode
-cd backend && npm run dev  # Backend dev server (port 3001)
-
-# Electron packaging (run from electron/ directory)
-cd electron && npm run build:electron  # Package for current platform
-cd electron && npm run build:linux     # Package Linux (AppImage + deb)
-cd electron && npm run build:mac       # Package macOS (DMG)
-cd electron && npm run build:win       # Package Windows (NSIS)
-```
-
-## Verification
-
-The full verification matrix must pass before any change is merged. All commands must run **inside WSL** (Vitest cannot run from the Windows UNC mount):
-
-```bash
-wsl -e bash -lc "cd /home/az1nn/openband && <cmd>"
-```
-
-1. `npx tsc --noEmit` — frontend TypeScript check (zero errors)
-2. `cd backend && npx tsc --noEmit` — backend TypeScript check (zero errors)
-3. `npx vitest run` — Vitest component + lib tests (1650 tests, all green)
-4. `npm run test:legacy` — legacy `node:test` suite (24 tests, all green)
-5. `npm run graph:ci` — architecture-graph CI gate (fails on errors)
-6. `npm run build` — production web build (must succeed)
-
-> **Note:** Playwright/E2E is optional and is not part of the required verification matrix above — no E2E run command is provided here.
-
-### Electron Desktop
-
-**Development:**
-
-```bash
-cd electron
-npm install
-cd ..
-npm run desktop:dev       # Hot-reload dev (Expo + Electron concurrently)
-```
-
-**Building distributable packages:**
-
-```bash
-# 1. Build the web export bundle first
-npm run build
-
-# 2. Package for your current platform
-cd electron
-npm run build:electron
-```
-
-The packaged output lands in `electron/out/`.
-
-**Platform-specific builds:**
-
-| Platform      | Command                      | Output format                      |
-| ------------- | ---------------------------- | ---------------------------------- |
-| **Linux**     | `npm run build:linux`        | AppImage + `.deb` (Debian/Ubuntu)  |
-| **macOS**     | `npm run build:mac`          | `.dmg` installer                   |
-| **Windows**   | `npm run build:win`          | NSIS `.exe` installer              |
-| **All**       | `npm run build:electron`     | Current platform only              |
-
-**Prerequisites per platform:**
-
-| Platform    | Requirements                                                              |
-| ----------- | ------------------------------------------------------------------------- |
-| **Linux**   | `dpkg` (for `.deb`), `libfuse2` (for AppImage on some distros)            |
-| **macOS**   | Xcode Command Line Tools, valid code signing identity (optional for dev)  |
-| **Windows** | None — NSIS is bundled by electron-builder automatically                  |
-
-**Cross-platform builds:**
-
-To build for a different platform from your current machine, pass the `--` flag:
-
-```bash
-cd electron
-npx electron-builder --linux --win   # Linux + Windows from any OS
-npx electron-builder --mac           # macOS (macOS host required)
-```
-
-> **Note:** Cross-compiling macOS binaries requires a macOS host. Linux and Windows packages can be built from any platform.
-
-Project files are persisted to `~/Documents/OpenBand/projects/` on desktop.
-
-## Desktop Bridge
-
-All native desktop capabilities go through a single swappable bridge:
-
-```ts
-import { OpenBandNative } from "@bridge";
-
-// File dialogs
-const file = await OpenBandNative.showOpenDialog({
-  filters: [{ name: "Audio", extensions: ["wav", "mp3"] }],
-});
-await OpenBandNative.writeFile(path, data);
-
-// Project persistence
-await OpenBandNative.saveProject(id, JSON.stringify(project));
-const data = await OpenBandNative.loadProject(id);
-const projects = await OpenBandNative.listProjects();
-```
-
-The bridge auto-detects Electron, Tauri (future), or browser — swap the backend by replacing one file.
-
-### Virtual Studio (`app/tabs/virtual-studio.tsx`)
-
-3D "Habbo Hotel"-style collaborative studio environment:
-
-- Three.js WebGL room with floor, walls, grid, and dynamic lighting
-- 6 interactive furniture pieces (Mixer, Mastering, Tracks, Piano Roll, Looper, Sampler)
-- WASD movement + right-click drag camera orbit + scroll zoom
-- Click any furniture to open the corresponding tool
-- Multi-user avatars synced via WebSocket (collaboration service)
-- Each user has independent playback — no audio conflicts
-- Glowing ring animations around furniture
-
-### Docker Backend (`openband-backend/`)
-
-Optional microservices backend for collaboration and AI features:
-
-```bash
-cd openband-backend
-docker compose up --build
-```
-
-| Service | Port | Purpose |
-|---------|------|---------|
-| Redis | 6379 | Message broker + state cache |
-| Collaboration | 8001 | WebSocket rooms for multi-user sync |
-| AI Separation | 8002 | FastAPI + Celery for stem separation |
-| Project Backup | 8003 | S3/R2 presigned URLs for cloud storage |
-
-**The frontend works 100% offline** — the backend is optional for cloud features.
-
-## Environment Variables
-
-### Frontend (`.env` at project root)
-
-```env
-EXPO_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=sua-chave-anonima-aqui
-EXPO_PUBLIC_API_URL=http://localhost:3001
-```
-
-No `.env` required for development — the app falls back to a mock auth client.
-
-### Backend (`backend/.env`)
-
-```env
-DATABASE_MODE=sqlite              # sqlite (dev) or supabase (prod)
-SQLITE_DB_PATH=data/openband.sqlite
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-key
-JWT_SECRET=your-jwt-secret
-GOOGLE_CLIENT_ID=your-google-client-id
-PORT=3001
-```
-
-See **[docs/sqlite.md](docs/sqlite.md)** for full database configuration details.
+The repository currently carries the terms in [`LICENSE`](LICENSE). Project attribution and third-party notices are a documented launch-review item; dependencies, models, samples, and creator-provided material retain their own terms.

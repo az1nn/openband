@@ -1,46 +1,75 @@
-# OpenBand — Product Narrative
+# OpenBand Product Direction
 
-## Vision
-OpenBand is the open-source DAW that runs everywhere and lets you own your music.
-No subscription, no platform lock-in, no "your projects belong to us." If you can
-open a browser, you can record, produce, master, and collaborate.
+> Durable product decisions for the launch path. [`docs/marketing/`](./marketing/README.md) owns positioning, copy, distribution and measurement; [`features-implementation.md`](./features-implementation.md) records implementation status.
 
-## Who it's for
-- Bedroom producers who don't want to rent Adobe/BandLab/Soundtrap forever.
-- Educators who need a free, inspectable DAW that runs on a school Chromebook.
-- Communities that want to collaborate on tracks without handing data to a silo.
-- Developers who want a DAW they can fork, extend, and self-host.
+## Product goal
 
-## Positioning
-| Vs. | OpenBand's angle |
-|-----|------------------|
-| BandLab / Soundtrap | Self-hostable, no rent, no data silo |
-| GarageBand | Cross-platform: web + Android + Windows + Electron |
-| Reaper | Free + collaborative + code-accessible |
-| Audacity | Modern UI, MIDI, plugins, CRDT collab |
+OpenBand helps an independent musician move from a blank project to an audible, saved and exported track in the browser while keeping control of the project.
 
-## The open promise
-- **Own your data:** SQLite locally, Supabase optional, S3-exportable.
-- **Open code:** fork it, audit the DSP, write your own plugin.
-- **Open format ambition:** DAWproject interop so you're never trapped.
+The product is successful when the creator can complete that loop quickly, understand what is local or hosted, and return to continue the work.
 
-## Strategy by phase
-- **Phase 0 — Make it work:** web playback must be audible and stable. A silent
-  DAW is not a product. (web-player-studio-audio, real-plugin-dsp,
-  wire-modulation-matrix, real-lufs-meter)
-- **Phase 1 — Make them stay:** first-run onboarding + a light social feed for
-  retention. DAW-first, social as a thin layer — not a BandLab rebuild.
-- **Phase 2 — Differentiate:** video export for shareability, MIDI Learn + MCU
-  for pro hardware, DAWproject for switch-cost elimination.
-- **Phase 3 — The moat:** AI Voice Cleaner (pairs with existing Demucs stems)
-  and WASM off-thread DSP.
+## Web MVP contract
 
-## Success metrics
-- **Activation:** % of new web visitors who create/load a project AND hear audio.
-- **Retention:** % returning within 7 days (post-onboarding + feed).
-- **Credibility:** LUFS accuracy within ±0.5 of reference; plugin DSP verifiable.
+The launch contract is tracked by [Issue #46](https://github.com/az1nn/openband/issues/46) and its implementation slices.
 
-## Non-goals (for now)
-- Competing with Ableton on live performance.
-- Building a full social network — feed is a retention loop, not the product.
-- Native-mobile audio parity in Phase 0 (web-first).
+- Web MVP first; Android follows native hardening.
+- A visitor can start a local project without mandatory signup.
+- Core creation remains free.
+- Local-first project ownership is a product boundary, not only a message.
+- First-sound target: under 60 seconds for a new user.
+- Blank-project-to-valid-export target: under 10 minutes.
+- Save/reopen and export trust must be proven before broad launch.
+- Cloud and AI transitions must be visible and specific to the workflow.
+
+Targets become marketing claims only after measurement on the promoted release.
+
+## Audience priority
+
+1. **Primary:** independent musicians and producers who want a low-friction path from idea to export without mandatory account lock-in.
+2. **Workflow entries:** guitarists, vocalists and beatmakers using the same core creative loop.
+3. **Advocates:** open-source audio developers who want to inspect, extend or self-host the system.
+
+Education is a later validation segment. Classroom administration, accessibility, content policy and device constraints must be proven before institutional marketing.
+
+## Experience order
+
+The first session follows one sequence:
+
+1. Enter as a visitor and start or load a project.
+2. Produce first sound.
+3. Make and hear a meaningful edit.
+4. Save, reload and recover the same project.
+5. Export and play a valid audio file.
+
+The DAW is the backbone. Stems, mastering, collaboration, social surfaces, AI helpers and 3D rooms can deepen a workflow, but they do not replace proof of the core loop.
+
+## Launch scope
+
+### Required proof
+
+- public Web entry and visitor path;
+- recording/import or another obvious path to sound;
+- launch-scope arrangement, transport and mixer controls;
+- durable project state and audio assets across reload;
+- valid, audible export;
+- visible, non-destructive failure states;
+- supported-browser, privacy, support and limitation documentation.
+
+### Expansion, not launch parity
+
+Social feed, CRDT collaboration, stem separation, AI cover generation, advanced AutoMix, video export, MCU, DAWproject, advanced mastering and native-platform parity are not broad-launch claims until their complete user journeys have release evidence.
+
+## Business-model boundary
+
+Core creation stays free under the current product contract. Donations, sponsorship, optional hosted sync/collaboration and paid compute are possible later models, not launched offers.
+
+The existing `FREE`, `LIVE` and `STUDIO` tier scaffolding is not a public pricing commitment. Product policy, code gates, hosted-service economics and public copy must agree before pricing or subscription claims are published. Opening or exporting a locally owned core project must not become a paid dependency without an explicit product-strategy change.
+
+## Success model
+
+- **Activation:** a new visitor makes or loads a project, produces sound, makes a meaningful change and hears it.
+- **Completion:** the creator saves/reopens and exports a valid result.
+- **Retention:** the creator returns within seven days to continue a project.
+- **Trust:** the creator can explain what stays local and when a hosted service is involved.
+
+The event and privacy contract lives in [`marketing/measurement.md`](./marketing/measurement.md). Public language must follow [`marketing/messaging.md`](./marketing/messaging.md#claim-guardrails), and go/no-go decisions use [`marketing/launch-checklist.md`](./marketing/launch-checklist.md).

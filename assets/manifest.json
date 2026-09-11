@@ -1,10 +1,10 @@
 {
   "name": "OpenBand",
   "short_name": "OpenBand",
-  "description": "Open-source music production platform",
+  "description": "Record, arrange, mix, and export in a local-first, open-source browser studio without mandatory signup or project lock-in.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f0f11",
+  "background_color": "#0a0a0d",
   "theme_color": "#ff3b30",
   "orientation": "portrait",
   "icons": [
