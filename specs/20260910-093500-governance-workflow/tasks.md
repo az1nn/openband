@@ -8,4 +8,4 @@
 - [x] T006 Validate OpenCode 1.18.30 `--agent speckit/build` discovery/dispatch contract and least-privilege profile separation.
 - [x] T007 Verify no OpenSpec lifecycle rule remains in the new governance files.
 - [x] T008 Validate workflows and schema with Spec Kit v1.0.4.
-- [ ] T009 Run PR CI and record Merge Gate evidence after the parent bootstrap PR is merged/retargeted.
+- [x] T009 Run PR CI and record Merge Gate evidence after the parent bootstrap PR is merged/retargeted.
