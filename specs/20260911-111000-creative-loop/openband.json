@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "tier": "T2",
+  "issue": 47,
+  "riskTriggers": ["user-visible-behavior", "audio-runtime", "studio-route"],
+  "dependsOn": []
+}

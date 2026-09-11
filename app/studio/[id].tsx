@@ -89,6 +89,7 @@ import {
 import { StudioModals } from "./StudioModals";
 import { useProjectParams, useStudioPersistence, useMixSnapshots, useStudioModals, useStudioTransport, usePluginChains, useMixerState, applyPitchShift, renderTracksCached, type BottomTab, type RenderCache } from "./hooks";
 import { getPlayheadBeat, setPlayheadBeat, subscribePlayhead } from "../../src/lib/playheadStore";
+import { deleteRegion, duplicateRegion, moveRegionBySeconds, repeatRegion } from "../../src/lib/creativeLoop";
 
 export function deriveRecordingUri(
   recorder: { uri: string | null },
@@ -176,6 +177,7 @@ export default function Studio() {
   }, [isRecording, webRecordingStart]);
   const liveRecordingDataRef = useRef<Float32Array[]>([]);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+  const [selectedRegion, setSelectedRegion] = useState<{ trackId: string; regionId: string } | null>(null);
   const [bottomTab, setBottomTab] = useState<BottomTab>(initialBottomTab);
   const { modals, openModal, closeModal, toggleModal } = useStudioModals({
     synth: rawTool === "synth",
@@ -559,11 +561,11 @@ export default function Studio() {
   [player, webAudio, isWeb, initialBpm, projectMood, buses, pitchCorrected, playbackRate, pitchShiftSemitones, engineActive],
   );
 
-  const toggleRecording = useCallback(async () => {
+  const toggleRecording = useCallback(async (forceArmed?: boolean | object) => {
     const guard = recordingGuardRef.current!;
     if (!guard.begin()) return;
     try {
-      if (!recordSettings.armed) {
+      if (!recordSettings.armed && forceArmed !== true) {
         openModal("recordOptions");
         return;
       }
@@ -575,6 +577,10 @@ export default function Studio() {
         if (isWeb) {
           const blob = await audioSystem.stopRecording();
           if (!blob) {
+            Alert.alert(
+              t("studio.errorTitle", "Error"),
+              t("studio.recordEmptyError", "Recording stopped without producing audio. Your project was not changed."),
+            );
             setIsRecording(false);
             setWebRecordingStart(null);
             liveRecordingDataRef.current = [];
@@ -632,9 +638,7 @@ export default function Studio() {
           }
           setTracks(updatedTracks);
           if (isWeb) {
-            rerenderAfterMuteSolo(updatedTracks).catch((e) =>
-              console.warn("rerender after record failed:", e)
-            );
+            await rerenderAfterMuteSolo(updatedTracks);
           }
         }
         setIsRecording(false);
@@ -1119,6 +1123,68 @@ export default function Studio() {
     setSelectedTrackId(trackId);
   }, [tracks, setTracks, selectedTrackId, initialBpm, initialNumBars]);
 
+  const refreshEditedTracks = useCallback(
+    (updatedTracks: TrackDef[]) => {
+      if (!isWeb) return;
+      rerenderAfterMuteSolo(updatedTracks).catch((error) =>
+        console.warn("region edit audio refresh failed:", error),
+      );
+    },
+    [isWeb, rerenderAfterMuteSolo],
+  );
+
+  const handleUndo = useCallback(() => {
+    undoHistory();
+    if (isWeb) {
+      setTimeout(() => refreshEditedTracks(tracksRef.current), 0);
+    }
+  }, [undoHistory, isWeb, refreshEditedTracks]);
+
+  const handleRedo = useCallback(() => {
+    redoHistory();
+    if (isWeb) {
+      setTimeout(() => refreshEditedTracks(tracksRef.current), 0);
+    }
+  }, [redoHistory, isWeb, refreshEditedTracks]);
+
+  const applyRegionAction = useCallback(
+    (action: "move-left" | "move-right" | "duplicate" | "repeat" | "delete") => {
+      if (!selectedRegion) return;
+      const { trackId, regionId } = selectedRegion;
+      const beatSeconds = 60 / Math.max(1, metronome.bpm);
+      const stamp = Date.now();
+      const current = tracksRef.current;
+      let updatedTracks = current;
+
+      switch (action) {
+        case "move-left":
+          updatedTracks = moveRegionBySeconds(current, trackId, regionId, -beatSeconds);
+          break;
+        case "move-right":
+          updatedTracks = moveRegionBySeconds(current, trackId, regionId, beatSeconds);
+          break;
+        case "duplicate":
+          updatedTracks = duplicateRegion(current, trackId, regionId, `region-${stamp}-copy`);
+          break;
+        case "repeat":
+          updatedTracks = repeatRegion(current, trackId, regionId, [
+            `region-${stamp}-repeat-1`,
+            `region-${stamp}-repeat-2`,
+            `region-${stamp}-repeat-3`,
+          ]);
+          break;
+        case "delete":
+          updatedTracks = deleteRegion(current, trackId, regionId);
+          break;
+      }
+
+      setTracks(updatedTracks);
+      refreshEditedTracks(updatedTracks);
+      if (action === "delete") setSelectedRegion(null);
+    },
+    [selectedRegion, metronome.bpm, setTracks, refreshEditedTracks],
+  );
+
   const handleCodeRender = useCallback(
     (
       patterns: { name: string; tokens: string[]; unit: string; bpm: number }[],
@@ -1323,8 +1389,8 @@ export default function Studio() {
     () => ({
       play: togglePlay,
       record: toggleRecording,
-      undo: undoHistory,
-      redo: redoHistory,
+      undo: handleUndo,
+      redo: handleRedo,
       save: handleManualSave,
       bounce: () => openModal("bounce"),
       escape: () => {
@@ -1354,8 +1420,8 @@ export default function Studio() {
     [
       togglePlay,
       toggleRecording,
-      undoHistory,
-      redoHistory,
+      handleUndo,
+      handleRedo,
       handleManualSave,
       selectedTrack,
       toggleMute,
@@ -1369,8 +1435,8 @@ export default function Studio() {
   useEffect(() => {
     registerCommand("transport.play", t("studio.command.play", "Play"), "Start/stop playback", "Transport", togglePlay, "Space");
     registerCommand("transport.record", t("studio.command.record", "Record"), "Toggle recording", "Transport", toggleRecording, "R");
-    registerCommand("edit.undo", t("studio.command.undo", "Undo"), "Undo last action", "Edit", undoHistory, "Ctrl+Z");
-    registerCommand("edit.redo", t("studio.command.redo", "Redo"), "Redo last action", "Edit", redoHistory, "Ctrl+Shift+Z");
+    registerCommand("edit.undo", t("studio.command.undo", "Undo"), "Undo last action", "Edit", handleUndo, "Ctrl+Z");
+    registerCommand("edit.redo", t("studio.command.redo", "Redo"), "Redo last action", "Edit", handleRedo, "Ctrl+Shift+Z");
     registerCommand("edit.delete", t("studio.command.delete", "Delete"), "Delete selected track", "Edit", () => selectedTrack && deleteTrack(selectedTrack.id), "Delete", "Backspace");
     registerCommand("track.add", t("studio.command.addTrack", "Add Track"), "Add a new track to the project", "Track", handleAddTrack, "Ctrl+T");
     registerCommand("clip.add", t("studio.command.addClip", "Add Clip"), "Add a clip region to the selected track", "Clip", handleAddClip, "Ctrl+Shift+C");
@@ -1387,7 +1453,7 @@ export default function Studio() {
     return () => {
       disposeKeyBindings();
     };
-  }, [togglePlay, toggleRecording, undoHistory, redoHistory, handleManualSave, selectedTrack, toggleMute, toggleSolo, deleteTrack, handleAddTrack, handleAddClip, setBottomTab, openModal, toggleModal, closeModal, t]);
+  }, [togglePlay, toggleRecording, handleUndo, handleRedo, handleManualSave, selectedTrack, toggleMute, toggleSolo, deleteTrack, handleAddTrack, handleAddClip, setBottomTab, openModal, toggleModal, closeModal, t]);
 
   const getEffectiveVolume = useCallback((trackId: string): number => {
     const gv = getGroupVolume(groups, trackId);
@@ -1522,7 +1588,7 @@ export default function Studio() {
 
         <View className="flex-row items-center gap-1.5">
           <Pressable
-            onPress={undoHistory}
+            onPress={handleUndo}
             accessibilityRole="button"
             accessibilityLabel={t("studio.a11yUndo", "Undo")}
             accessibilityState={{ disabled: !canUndo }}
@@ -1531,7 +1597,7 @@ export default function Studio() {
             <Text className="text-gray-300 text-xs">↩</Text>
           </Pressable>
           <Pressable
-            onPress={redoHistory}
+            onPress={handleRedo}
             accessibilityRole="button"
             accessibilityLabel={t("studio.a11yRedo", "Redo")}
             accessibilityState={{ disabled: !canRedo }}
@@ -1870,6 +1936,58 @@ export default function Studio() {
         </View>
       </View>
 
+      {selectedRegion && (
+        <View className="h-10 bg-dark-surface/80 border-b border-dark-border/50 flex-row items-center px-3 gap-2">
+          <Text className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mr-1">
+            {t("studio.regionActions", "Region")}
+          </Text>
+          <Pressable
+            onPress={() => applyRegionAction("move-left")}
+            accessibilityRole="button"
+            accessibilityLabel={t("studio.moveRegionLeft", "Move region left one beat")}
+            className="h-7 px-2 rounded-lg bg-dark-muted items-center justify-center active:opacity-70"
+          >
+            <Text className="text-gray-300 text-xs">← 1 beat</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => applyRegionAction("move-right")}
+            accessibilityRole="button"
+            accessibilityLabel={t("studio.moveRegionRight", "Move region right one beat")}
+            className="h-7 px-2 rounded-lg bg-dark-muted items-center justify-center active:opacity-70"
+          >
+            <Text className="text-gray-300 text-xs">1 beat →</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => applyRegionAction("duplicate")}
+            accessibilityRole="button"
+            className="h-7 px-2 rounded-lg bg-dark-muted items-center justify-center active:opacity-70"
+          >
+            <Text className="text-gray-300 text-xs">{t("studio.duplicateRegion", "Duplicate")}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => applyRegionAction("repeat")}
+            accessibilityRole="button"
+            className="h-7 px-2 rounded-lg bg-dark-muted items-center justify-center active:opacity-70"
+          >
+            <Text className="text-gray-300 text-xs">{t("studio.repeatRegion", "Repeat ×4")}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => applyRegionAction("delete")}
+            accessibilityRole="button"
+            className="h-7 px-2 rounded-lg bg-red-500/15 border border-red-500/30 items-center justify-center active:opacity-70"
+          >
+            <Text className="text-red-400 text-xs">{t("studio.deleteRegion", "Delete")}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setSelectedRegion(null)}
+            accessibilityRole="button"
+            className="ml-auto w-7 h-7 rounded-lg items-center justify-center active:opacity-70"
+          >
+            <Text className="text-gray-500 text-xs">✕</Text>
+          </Pressable>
+        </View>
+      )}
+
       <View className="flex-1 flex-row">
         <View
           style={{ width: resp.tracksSidebarWidth }}
@@ -2056,11 +2174,40 @@ export default function Studio() {
 
         <ScrollView horizontal className="flex-1 bg-dark-bg">
           {tracks.length === 0 ? (
-              <View className="flex-1 items-center justify-center px-6" style={{ width: timelineWidth }}>
-              <Text className="text-gray-400 text-base font-semibold">{t("studio.noTracksTitle", "No tracks yet")}</Text>
-              <Text className="text-gray-500 text-xs mt-1 text-center">
-                {t("studio.noTracksHint", "Add a track to get started")}
+            <View className="flex-1 items-center justify-center px-6" style={{ width: timelineWidth }}>
+              <Text className="text-gray-300 text-lg font-bold">{t("studio.quickStartTitle", "Make your first sound")}</Text>
+              <Text className="text-gray-500 text-xs mt-1 text-center max-w-md">
+                {t("studio.quickStartHint", "Start with your microphone, an instrument, or a sample. No setup detour required.")}
               </Text>
+              <View className="flex-row flex-wrap justify-center gap-2 mt-4">
+                <Pressable
+                  onPress={() => {
+                    setRecordSettings((current) => ({ ...current, armed: true }));
+                    void toggleRecording(true);
+                  }}
+                  accessibilityRole="button"
+                  className="h-10 px-4 rounded-xl bg-red-500/20 border border-red-500/40 flex-row items-center gap-2 justify-center active:opacity-70"
+                >
+                  <Text className="text-red-400 text-sm">●</Text>
+                  <Text className="text-white text-sm font-bold">{t("studio.quickRecord", "Record")}</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => openModal("synth")}
+                  accessibilityRole="button"
+                  className="h-10 px-4 rounded-xl bg-dark-muted border border-dark-border flex-row items-center gap-2 justify-center active:opacity-70"
+                >
+                  <Text className="text-sm">🎹</Text>
+                  <Text className="text-white text-sm font-bold">{t("studio.quickInstrument", "Instrument")}</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => toggleModal("sampleBrowser")}
+                  accessibilityRole="button"
+                  className="h-10 px-4 rounded-xl bg-dark-muted border border-dark-border flex-row items-center gap-2 justify-center active:opacity-70"
+                >
+                  <Text className="text-sm">📂</Text>
+                  <Text className="text-white text-sm font-bold">{t("studio.quickSamples", "Samples")}</Text>
+                </Pressable>
+              </View>
             </View>
           ) : (
           <View style={{ width: timelineWidth }}>
@@ -2087,29 +2234,39 @@ export default function Studio() {
                       className="border-b border-dark-border/30 relative justify-center bg-dark-bg/10"
                       style={{ height: trackH }}
                     >
-                      {track.regions.map((region) => (
-                        <View
-                          key={region.id}
-                          style={{
-                            left: region.start * pxPerSec,
-                            width: region.duration * pxPerSec,
-                            position: "absolute",
-                          }}
-                          className={`h-14 rounded-xl border border-white/10 overflow-hidden shadow-md ${
-                            track.color
-                          } ${isAudible(track) ? "opacity-95" : "opacity-25"}`}
-                        >
-                          <WaveformCanvas
-                            regionId={region.id}
-                            duration={region.duration}
-                            color={track.color}
-                            audible={isAudible(track)}
-                            selected={selectedTrackId === track.id}
-                            muted={track.muted}
-                            height={56}
-                          />
-                        </View>
-                      ))}
+                      {track.regions.map((region) => {
+                        const regionSelected =
+                          selectedRegion?.trackId === track.id && selectedRegion?.regionId === region.id;
+                        return (
+                          <Pressable
+                            key={region.id}
+                            onPress={() => {
+                              setSelectedTrackId(track.id);
+                              setSelectedRegion({ trackId: track.id, regionId: region.id });
+                            }}
+                            accessibilityRole="button"
+                            accessibilityLabel={t("studio.selectRegion", "Select region")}
+                            style={{
+                              left: region.start * pxPerSec,
+                              width: region.duration * pxPerSec,
+                              position: "absolute",
+                            }}
+                            className={`h-14 rounded-xl border overflow-hidden shadow-md ${
+                              regionSelected ? "border-2 border-brand-accent" : "border-white/10"
+                            } ${track.color} ${isAudible(track) ? "opacity-95" : "opacity-25"}`}
+                          >
+                            <WaveformCanvas
+                              regionId={region.id}
+                              duration={region.duration}
+                              color={track.color}
+                              audible={isAudible(track)}
+                              selected={regionSelected}
+                              muted={track.muted}
+                              height={56}
+                            />
+                          </Pressable>
+                        );
+                      })}
                       {isRecording && track.isArmed && (
                         <View
                           style={{
