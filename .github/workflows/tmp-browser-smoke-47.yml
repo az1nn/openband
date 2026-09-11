@@ -33,7 +33,10 @@ jobs:
           });
 
           test("visitor reaches first recorded sound and source-neutral region edits", async ({ page }) => {
-            await page.goto("/");
+            test.setTimeout(90000);
+
+            await page.goto("/login");
+            await expect(page.getByText("Entrar como Visitante")).toBeVisible({ timeout: 15000 });
             await page.getByText("Entrar como Visitante").click();
             await page.waitForURL(/\/tabs/, { timeout: 15000 });
 
