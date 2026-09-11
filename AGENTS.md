@@ -40,6 +40,8 @@ Retrieve before assuming. Do not load the whole repository by default.
 
 Continuously monitor whether the current chat remains a trustworthy bounded implementation context. Use `docs/ai/context-handoff.md` as the policy and `docs/ai/session-handoff-template.md` when a clean-chat handoff is warranted.
 
+For ChatGPT Projects, `docs/ai/chatgpt-project-instructions.md` is the repository-owned source for the Project Instructions that mirror this policy into ChatGPT.
+
 - GREEN: continue normally; conversation length alone is irrelevant.
 - YELLOW: a semantic boundary is approaching; finish the current safe atomic step and refresh canonical state.
 - RED: continuing materially increases stale/conflicting-context risk; explicitly recommend a new chat and generate a `SESSION_HANDOFF.md`.
