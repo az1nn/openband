@@ -501,7 +501,7 @@ function autoMix(tracks: TrackDef[], genre: string): TrackDef[] {
 
 ## Stability & Code-Review Hardening (Latest)
 
-Post-implementation stabilization across six archived changes (see `openspec/archive/`):
+Post-implementation stabilization across six historical hardening changes (preserved in Git history):
 
 - **Audio/DSP:** Guarded `OfflineAudioContext.close()` after every render; guarded `audioWorklet.addModule()` with blob-URL revoke in `finally`; real `bpm` threading into native MIDI render; worker blob-URL revoke moved off the synchronous `new Worker` tick; sample-rate-keyed shared buffer context; separate true peak-CPU accumulator.
 - **State/Collab:** CRDT `*.add` now merges commutatively (no lost update) with Lamport-clock ordering; `projectBranching.mergeBranch` applies modified tracks always and gates only added tracks by the accept list, with a single `main.state` assignment and a filtered `crdtOperations` log; bridge-save queue bounded; presence/collaboration reconnect + timer guards; `Set`-based listeners; `supabaseRemote` does a remote-preferring rebase on divergence.
