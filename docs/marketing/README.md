@@ -85,6 +85,8 @@ flowchart LR
 - [`go-to-market.md`](./go-to-market.md) — launch phases, channels, content engine, community, SEO and repository growth.
 - [`measurement.md`](./measurement.md) — activation funnel, north-star metrics, event taxonomy and experiment model.
 - [`launch-checklist.md`](./launch-checklist.md) — marketing/release gates mapped to product launch truth.
+- [`launch-kit.md`](./launch-kit.md) — localized, channel-ready copy templates governed by the launch gates.
+- [`launch-assets.md`](./launch-assets.md) — current visual evidence audit, production brief and rights record.
 - [`competitive-landscape.md`](./competitive-landscape.md) — strategic competitor map and source notes.
 
 ## Decision hierarchy
