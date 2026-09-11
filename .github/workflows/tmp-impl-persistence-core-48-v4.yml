@@ -1,0 +1,62 @@
+name: Temporary #48 persistence core implementation v4
+
+on:
+  push:
+    branches: [ agent/48-persistence-trust ]
+
+permissions:
+  contents: write
+
+jobs:
+  implement-core:
+    if: contains(github.event.head_commit.message, 'run persistence core v4')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/48-persistence-trust
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - name: Reapply approved core patch and harness fix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess, textwrap
+
+          text = Path('.github/workflows/tmp-impl-persistence-core-48-v3.yml').read_text()
+          start_marker = '      - name: Reapply approved core patch\n        run: |\n'
+          middle_marker = '      - name: Fix module-reset URL test harness\n        run: |\n'
+          npm_marker = '      - run: npm ci\n'
+
+          start = text.index(start_marker) + len(start_marker)
+          middle = text.index(middle_marker, start)
+          first = textwrap.dedent(text[start:middle])
+          subprocess.run(['bash', '-e'], input=first, text=True, check=True)
+
+          fix_start = middle + len(middle_marker)
+          fix_end = text.index(npm_marker, fix_start)
+          second = textwrap.dedent(text[fix_start:fix_end])
+          subprocess.run(['bash', '-e'], input=second, text=True, check=True)
+
+          p = Path('tests/persistenceTrust.test.ts')
+          source = p.read_text()
+          target = 'mockImplementation(function (key: string, value: string) {'
+          replacement = 'mockImplementation(function (this: Storage, key: string, value: string) {'
+          if target not in source:
+              raise SystemExit('Storage mock typing target not found')
+          p.write_text(source.replace(target, replacement, 1))
+          PY
+      - run: npm ci
+      - name: Targeted persistence tests
+        run: npx vitest run tests/assetStore.test.ts tests/persistenceTrust.test.ts tests/lib.test.ts
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Commit implementation
+        run: |
+          git config user.name "OpenBand Agent"
+          git config user.email "openband-agent@users.noreply.github.com"
+          git add src/lib/assetStore.ts src/lib/projectStore.ts tests/assetStore.test.ts tests/helpers/fakeIndexedDb.ts tests/persistenceTrust.test.ts
+          git commit -m "feat(mvp): harden persistence core"
+          git push origin HEAD:agent/48-persistence-trust
