@@ -1,0 +1,36 @@
+name: Temporary #47 Converge
+
+on:
+  push:
+    branches: [ agent/47-creative-loop ]
+
+permissions:
+  contents: write
+
+jobs:
+  converge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/47-creative-loop
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - name: Apply converge remediation
+        run: python scripts/patch-47-converge.py
+      - name: Focused creative-loop tests
+        run: npx vitest run tests/creativeLoop.test.ts tests/recordingFixes.test.ts tests/studio.test.tsx
+      - name: Frontend typecheck
+        run: npx tsc --noEmit
+      - name: Commit remediation and remove temporary tooling
+        run: |
+          rm scripts/patch-47-converge.py .github/workflows/tmp-converge-47.yml
+          git config user.name "OpenBand Agent"
+          git config user.email "actions@openband.dev"
+          git add -A
+          git commit -m "fix(studio): refresh audio after region history edits"
+          git push origin HEAD:agent/47-creative-loop
