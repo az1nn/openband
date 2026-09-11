@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   implement-studio:
-    if: contains(github.event.head_commit.message, 'execute persistence Studio patch v3')
+    if: contains(github.event.head_commit.message, 'execute persistence Studio patch v4')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +25,7 @@ jobs:
       - name: Focused persistence tests
         run: npx vitest run tests/assetStore.test.ts tests/persistenceTrust.test.ts tests/studioAssetPersistence.test.ts tests/studioPersistenceHook.test.tsx
       - name: Typecheck
-        run: npm run typecheck
+        run: npx tsc --noEmit
       - name: Commit Studio persistence implementation
         run: |
           git config user.name 'OpenBand Agent'
