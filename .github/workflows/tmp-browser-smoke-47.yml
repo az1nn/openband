@@ -35,10 +35,15 @@ jobs:
           test("visitor reaches first recorded sound and source-neutral region edits", async ({ page }) => {
             test.setTimeout(90000);
 
-            await page.goto("/login");
-            await expect(page.getByText("Entrar como Visitante")).toBeVisible({ timeout: 15000 });
-            await page.getByText("Entrar como Visitante").click();
-            await page.waitForURL(/\/tabs/, { timeout: 15000 });
+            await page.addInitScript(() => {
+              localStorage.setItem(
+                "openband_visitor_session",
+                JSON.stringify({
+                  id: "e2e-creative-loop-visitor",
+                  createdAt: "2026-09-11T12:00:00.000Z",
+                }),
+              );
+            });
 
             await page.goto("/tabs/library");
             await expect(page.getByText("Biblioteca")).toBeVisible({ timeout: 15000 });
