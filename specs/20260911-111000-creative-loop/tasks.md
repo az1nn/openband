@@ -12,3 +12,4 @@
 - [ ] T010 Converge and remediate within the approved envelope.
 - [ ] T011 Run full verification and manual Web smoke.
 - [ ] T012 Human Merge Gate on verified PR HEAD.
+- [ ] T013 Converge remediation: refresh audible engine after region edits and history undo/redo.
