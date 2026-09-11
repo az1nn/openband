@@ -8,4 +8,4 @@
 - [x] T006 Remove redundant handoff/pending status docs.
 - [x] T007 Reconcile roadmap duplication.
 - [x] T008 Verify no live references depend on removed artifacts.
-- [ ] T009 Run PR CI after parent PRs merge/retarget.
+- [x] T009 Retarget to `master` and trigger final PR CI; Merge Gate requires green evidence on this exact HEAD.
