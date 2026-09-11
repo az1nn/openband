@@ -1,0 +1,26 @@
+name: Temporary #47 Graph Impact
+
+on:
+  push:
+    branches: [ agent/47-creative-loop ]
+
+jobs:
+  impact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - name: Build graph
+        run: npm run graph:build
+      - name: Studio route impact
+        run: npm run graph:impact -- 'app/studio/[id].tsx'
+      - name: Library route impact
+        run: npm run graph:impact -- 'app/tabs/library.tsx'
+      - name: NewProject impact
+        run: npm run graph:impact -- 'src/components/NewProject.tsx'
+      - name: Region edit impact
+        run: npm run graph:impact -- 'src/lib/regionEdit.ts'
