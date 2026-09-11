@@ -64,6 +64,38 @@ describe("persistence trust", () => {
     expect(loadProject("p1")?.title).toBe("Persistence");
   });
 
+  it("preserves durable asset pointers through JSON export/import recovery", async () => {
+    const { saveProject, exportProject, importProject, loadProject, deleteProject } = await import(
+      "../src/lib/projectStore"
+    );
+    const id = "p-asset-json";
+    const withAsset = {
+      ...project,
+      tracks: [
+        {
+          id: "t1",
+          name: "Audio",
+          volume: 75,
+          pan: 0,
+          muted: false,
+          solo: false,
+          sends: {},
+          sidechainSource: null,
+          regions: [{ id: "r1", start: 0, duration: 1, url: "asset://existing" }],
+          plugins: [],
+          automation: {},
+        },
+      ],
+    };
+    expect(saveProject(id, withAsset as any)).toBe(true);
+    const json = exportProject(id);
+    expect(json).toContain("asset://existing");
+
+    deleteProject(id);
+    expect(importProject(json!)).toBe(id);
+    expect(loadProject(id)?.tracks[0].regions[0].url).toBe("asset://existing");
+  });
+
   it("keeps persisted asset bytes resolvable after a module-session reset", async () => {
     const idb = createFakeIndexedDb();
     vi.stubGlobal("indexedDB", idb.indexedDB);
