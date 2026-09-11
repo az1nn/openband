@@ -1,0 +1,35 @@
+name: Temporary #48 Studio persistence executor
+
+on:
+  push:
+    branches:
+      - agent/48-persistence-trust
+
+permissions:
+  contents: write
+
+jobs:
+  implement-studio:
+    if: github.event.head_commit.message == 'chore(impl): execute persistence Studio patch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/48-persistence-trust
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: python scripts/tmp_apply_persistence_studio_48.py
+      - run: npm ci
+      - name: Focused persistence tests
+        run: npx vitest run tests/assetStore.test.ts tests/persistenceTrust.test.ts tests/studioAssetPersistence.test.ts tests/studioPersistenceHook.test.tsx
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Commit Studio persistence implementation
+        run: |
+          git config user.name 'OpenBand Agent'
+          git config user.email 'openband-agent@users.noreply.github.com'
+          git add app/studio/hooks.ts app/studio/'[id].tsx' app/studio/persistenceTrust.ts tests/studioAssetPersistence.test.ts tests/studioPersistenceHook.test.tsx
+          git commit -m 'feat(mvp): persist Studio audio safely'
+          git push origin HEAD:agent/48-persistence-trust
