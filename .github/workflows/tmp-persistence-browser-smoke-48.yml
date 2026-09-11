@@ -1,0 +1,22 @@
+name: Temporary #48 browser persistence smoke
+
+on:
+  push:
+    branches:
+      - agent/48-persistence-trust
+
+jobs:
+  browser-smoke:
+    if: contains(github.event.head_commit.message, 'run browser persistence smoke')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/48-persistence-trust
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test e2e/persistence-trust.spec.ts --reporter=line
