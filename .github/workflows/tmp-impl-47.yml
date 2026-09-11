@@ -1,0 +1,36 @@
+name: Temporary #47 Implementation
+
+on:
+  push:
+    branches: [ agent/47-creative-loop ]
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/47-creative-loop
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - name: Apply approved Studio patch
+        run: python scripts/patch-47.py
+      - name: Focused creative-loop tests
+        run: npx vitest run tests/creativeLoop.test.ts tests/recordingFixes.test.ts
+      - name: Frontend typecheck
+        run: npx tsc --noEmit
+      - name: Commit implementation and remove temporary tooling
+        run: |
+          rm scripts/patch-47.py .github/workflows/tmp-impl-47.yml
+          git config user.name "OpenBand Agent"
+          git config user.email "actions@openband.dev"
+          git add -A
+          git commit -m "feat(studio): make the first creative loop actionable"
+          git push origin HEAD:agent/47-creative-loop
