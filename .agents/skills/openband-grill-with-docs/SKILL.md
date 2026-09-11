@@ -1,27 +1,16 @@
 ---
 name: openband-grill-with-docs
-description: Refine features and investigate repository documentation and context before making irreversible decisions.
+description: Resolve material ambiguity from current OpenBand evidence before asking for irreversible decisions.
 ---
 
-# OpenBand Grill With Docs — Systematic Discovery
+# OpenBand Grill With Docs
 
-Investigates repository context, documentation, and existing conventions before committing to architectural decisions or code edits.
+Use progressive disclosure; do not read the repository wholesale.
 
-## Discovery Workflow
+1. Start with the Constitution, `AGENTS.md`, active feature spec and `openband.json`.
+2. Read only impacted parts of `docs/architecture.md`, `docs/adr/`, `docs/contracts/` and the Architecture Graph.
+3. Inspect relevant code, tests, dependency versions and Git history when durable knowledge is insufficient.
+4. Surface only unresolved choices whose alternatives materially change scope, behavior, architecture, security, persistence or verification.
+5. Create an ADR only when the criteria in `docs/adr/README.md` are met.
 
-1. **Read Core Context**:
-   - `AGENTS.md` & `CLAUDE.md`: System directives, desktop bridge rules, styling rules.
-   - `docs/`: Relevant domain documentation (e.g., `docs/supabase.md`, `docs/3d-scene-guidelines.md`, `docs/features-implementation.md`).
-   - `openspec/`: Existing active or archived specs.
-
-2. **Inspect Code Dependencies**:
-   - Check `package.json` for approved packages.
-   - Trace existing imports, component usage in `src/components/`, and state flow.
-
-3. **Identify Unknowns & Trade-offs**:
-   - Uncover hidden assumptions or cross-runtime impacts (Web, Electron, Tauri, iOS, Android).
-   - Evaluate performance implications (Audio Context thread, 60fps rendering, memory usage).
-
-4. **Record Architecture Decision Records (ADR)**:
-   - For significant trade-offs, record decisions in `docs/adr/YYYY-MM-DD-<title>.md`.
-   - Format: Context, Decision, Consequences, Alternatives Considered.
+Historical OpenSpec material is migration evidence only; it is not current authority.

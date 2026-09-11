@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "tier": "T3",
+  "issue": 38,
+  "riskTriggers": ["engineering-architecture"],
+  "dependsOn": ["20260910-093500-governance-workflow"]
+}
