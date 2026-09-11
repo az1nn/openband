@@ -16,10 +16,15 @@ Make the existing blank-project Studio usable as a fast creative scratchpad on W
 - Play/stop, BPM, metronome, mute/solo, volume, and pan remain functional in the same flow.
 - Mic/recording interaction failures are visible and do not discard existing tracks.
 
+## Affected surface
+
+- `app/studio/[id].tsx`
+- Studio-local parts/tests only when needed to keep the route maintainable.
+
 ## Non-goals
 
 - Source-aware split/trim: #53.
 - Persistence hardening: #48.
 - Export correctness: #49.
 - Full onboarding/release E2E: #50.
-- Changes to `NewProject`, Library project creation, project storage, asset storage, or audio-rendering contracts.
+- Changes to shared project creation, project storage, asset storage, or audio-rendering contracts.

@@ -8,7 +8,7 @@ Graph preflight on current `master`:
 - `src/components/NewProject.tsx`: HIGH — 95 transitive dependents.
 - `src/lib/regionEdit.ts`: HIGH — 70 transitive dependents.
 
-Keep T2 by making the implementation Studio-local. Touching persistence, `NewProject`, Library flow, shared region semantics, or audio-rendering contracts requires re-analysis and likely tier elevation.
+Keep T2 by making implementation Studio-local. Touching persistence, shared project creation, shared region semantics, or audio-rendering contracts requires re-analysis and likely tier elevation.
 
 ## Design
 
@@ -26,9 +26,10 @@ Keep T2 by making the implementation Studio-local. Touching persistence, `NewPro
 
 ## Verification
 
-- Targeted Vitest for recording success/failure and region actions.
-- Existing region-edit/history/Studio regressions remain green.
+- Targeted Studio tests for quick-start actions, recording success/failure, region actions and undo/redo.
+- Existing visitor/auth and Studio regressions remain green.
 - Frontend typecheck, full Vitest, legacy tests, web build, `sdd:check`, Graph tests and `graph:ci`.
-- Manual Web smoke: visitor → blank project → first sound <60s → record → hear → edit → undo/redo.
+- Manual Web smoke with real browser/mic: visitor → blank project → first sound <60s → record → hear → edit → undo/redo.
+- The 60-second UX target is manual evidence, not a brittle CI timer.
 
 Full save/reopen/export E2E remains owned by #48–#50.
