@@ -127,28 +127,88 @@ async function deleteViaBridge(id: string): Promise<void> {
   await OpenBandNative.deleteProject(id);
 }
 
+type ProjectIndexEntry = {
+  title: string;
+  lastSaved: number;
+  genre?: string;
+  key?: string;
+  bpm?: number;
+  coverUrl?: string;
+  parentProjectId?: string;
+};
+
+type ProjectIndex = Record<string, ProjectIndexEntry>;
+
+function toIndexEntry(project: ProjectData): ProjectIndexEntry {
+  return {
+    title: project.title,
+    lastSaved: project.lastSaved,
+    genre: project.genre,
+    key: project.key,
+    bpm: project.bpm,
+    coverUrl: project.coverUrl,
+    parentProjectId: project.parentProjectId,
+  };
+}
+
+function parseProjectIndex(raw: string | null): ProjectIndex | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed as ProjectIndex;
+  } catch {
+    return null;
+  }
+}
+
+function rebuildProjectIndex(storage: Storage): ProjectIndex {
+  const rebuilt: ProjectIndex = {};
+  for (let i = 0; i < storage.length; i++) {
+    const key = storage.key(i);
+    if (!key || key === INDEX_KEY || !key.startsWith(STORAGE_PREFIX)) continue;
+    const raw = storage.getItem(key);
+    if (!raw) continue;
+    try {
+      const project = sanitizeProjectData(JSON.parse(raw));
+      if (!project) continue;
+      const id = key.slice(STORAGE_PREFIX.length);
+      rebuilt[id] = toIndexEntry({ ...project, id });
+    } catch {
+    }
+  }
+  return rebuilt;
+}
+
+function restoreStorageValue(storage: Storage, key: string, previous: string | null): void {
+  try {
+    if (previous === null) storage.removeItem(key);
+    else storage.setItem(key, previous);
+  } catch (e) {
+    console.error("[projectStore] rollback failed for", key, e);
+  }
+}
+
 export function saveProject(
   id: string,
   data: Omit<ProjectData, "id" | "lastSaved">,
 ): boolean {
   const project: ProjectData = { ...data, id, lastSaved: Date.now() };
   const storage = getStorage();
+  if (Platform.OS === "web" && !storage) return false;
   if (storage) {
+    const projectKey = STORAGE_PREFIX + id;
+    const previousProject = storage.getItem(projectKey);
+    const previousIndex = storage.getItem(INDEX_KEY);
     try {
-      storage.setItem(STORAGE_PREFIX + id, JSON.stringify(project));
-      const index = listProjectIndex();
-      index[id] = {
-        title: data.title,
-        lastSaved: project.lastSaved,
-        genre: data.genre,
-        key: data.key,
-        bpm: data.bpm,
-        coverUrl: data.coverUrl,
-        parentProjectId: data.parentProjectId,
-      };
+      storage.setItem(projectKey, JSON.stringify(project));
+      const index = parseProjectIndex(previousIndex) ?? rebuildProjectIndex(storage);
+      index[id] = toIndexEntry(project);
       storage.setItem(INDEX_KEY, JSON.stringify(index));
       onProjectSavedListeners.forEach((cb) => cb(id, project));
     } catch (e) {
+      restoreStorageValue(storage, projectKey, previousProject);
+      restoreStorageValue(storage, INDEX_KEY, previousIndex);
       console.warn("Project save failed:", e);
       return false;
     }
@@ -288,8 +348,7 @@ export function importProject(json: string): string | null {
       }
       const data = sanitizeProjectData(sanitized);
       if (!data) return null;
-      saveProject(data.id, data);
-      return data.id;
+      return saveProject(data.id, data) ? data.id : null;
     }
     return null;
   } catch (e) {
@@ -313,42 +372,37 @@ export function createProjectSnapshot(
   saveProject(projectId, { ...current, commits });
 }
 
-export function listProjectIndex(): Record<
-  string,
-  {
-    title: string;
-    lastSaved: number;
-    genre?: string;
-    key?: string;
-    bpm?: number;
-    coverUrl?: string;
-    parentProjectId?: string;
-  }
-> {
+export function listProjectIndex(): ProjectIndex {
   const storage = getStorage();
   if (!storage) return {};
   const raw = storage.getItem(INDEX_KEY);
-  if (!raw) return {};
-  try {
-    return JSON.parse(raw);
-  } catch (e) {
-    console.warn("[projectStore] listProjectIndex parse failed:", e);
-    return {};
+  const parsed = parseProjectIndex(raw);
+  if (parsed) return parsed;
+
+  if (raw) {
+    console.warn("[projectStore] project index is corrupt; rebuilding from project payloads");
   }
+  const rebuilt = rebuildProjectIndex(storage);
+  try {
+    storage.setItem(INDEX_KEY, JSON.stringify(rebuilt));
+  } catch (e) {
+    console.warn("[projectStore] rebuilt index could not be persisted:", e);
+  }
+  return rebuilt;
 }
 
 export function createRemix(originalId: string, _userId: string): string | null {
   const original = loadProject(originalId);
   if (!original) return null;
   const newId = `proj-${Date.now()}`;
-  saveProject(newId, {
-    ...original,
-    title: `Remix: ${original.title}`,
-    parentProjectId: originalId,
-    isPublished: false,
-    coverUrl: undefined,
-  });
-  return newId;
+  const saved = saveProject(newId, {
+  ...original,
+  title: `Remix: ${original.title}`,
+  parentProjectId: originalId,
+  isPublished: false,
+  coverUrl: undefined,
+});
+return saved ? newId : null;
 }
 
 const FAVORITES_KEY = "openband_favorites";

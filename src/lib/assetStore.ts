@@ -6,9 +6,11 @@ export const ASSET_PREFIX = "asset://";
 const assetCache = new Map<string, string>();
 const memStore = new Map<string, Blob>();
 
-function openDb(): Promise<IDBDatabase | null> {
-  if (typeof indexedDB === "undefined") return Promise.resolve(null);
-  return new Promise((resolve) => {
+function openDb(): Promise<IDBDatabase> {
+  if (typeof indexedDB === "undefined") {
+    return Promise.reject(new Error("IndexedDB is not available"));
+  }
+  return new Promise((resolve, reject) => {
     const req = indexedDB.open("openband_assets", 1);
     req.onupgradeneeded = () => {
       const db = req.result;
@@ -17,7 +19,8 @@ function openDb(): Promise<IDBDatabase | null> {
       }
     };
     req.onsuccess = () => resolve(req.result);
-    req.onerror = () => resolve(null);
+    req.onerror = () => reject(req.error ?? new Error("IndexedDB open failed"));
+    req.onblocked = () => reject(new Error("IndexedDB open blocked"));
   });
 }
 
@@ -27,8 +30,8 @@ function assetPath(base: string, id: string): string {
 }
 
 async function persistBytes(id: string, blob: Blob): Promise<void> {
-  memStore.set(id, blob);
   if (Platform.OS !== "web") {
+    memStore.set(id, blob);
     try {
       const base = await OpenBandNative.getDocumentsPath();
       await OpenBandNative.writeFile(assetPath(base, id), await blob.arrayBuffer());
@@ -37,18 +40,16 @@ async function persistBytes(id: string, blob: Blob): Promise<void> {
       return;
     }
   }
-  try {
-    const db = await openDb();
-    if (!db) return;
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction("assets", "readwrite");
-      tx.objectStore("assets").put({ id, blob });
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-  } catch {
-    /* fall back to memStore */
-  }
+
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction("assets", "readwrite");
+    tx.objectStore("assets").put({ id, blob });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error("IndexedDB asset write failed"));
+    tx.onabort = () => reject(tx.error ?? new Error("IndexedDB asset write aborted"));
+  });
+  memStore.set(id, blob);
 }
 
 async function readBytes(id: string): Promise<Blob> {
