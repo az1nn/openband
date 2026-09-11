@@ -80,7 +80,7 @@ test("specs alias: api/health resolves to backend route", () => {
   write(root, "backend/src/routes/health.ts", "export const handler = {};\n");
   write(
     root,
-    "openspec/specs/foo.md",
+    "specs/foo/spec.md",
     "The health endpoint lives at `api/health` and is used by monitoring.\n"
   );
   const graph = buildGraph(root);

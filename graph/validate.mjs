@@ -67,7 +67,7 @@ export function validate(graph) {
     if (u.code === "OB-GRAPH-003") {
       warnings.push({
         code: "OB-GRAPH-003",
-        message: `OpenSpec '${u.spec}' references unresolved repository path '${u.path}'.`,
+        message: `Normative artifact '${u.spec}' references unresolved repository path '${u.path}'.`,
         spec: u.spec,
         path: u.path,
       });

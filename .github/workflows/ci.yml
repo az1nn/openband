@@ -17,6 +17,8 @@ jobs:
           node-version: 22.x
           cache: 'npm'
       - run: npm ci
+      - run: npm run sdd:check
+      - run: npm run test:graph-sdd
       - run: npm run graph:ci
 
   frontend-typecheck:
