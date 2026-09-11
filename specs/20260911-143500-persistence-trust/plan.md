@@ -4,6 +4,7 @@
 
 Graph preflight on `master`:
 
+- `src/lib/assetStore.ts`: HIGH — 7 direct / 142 transitive dependents.
 - `src/lib/projectStore.ts`: HIGH — 20 direct / 113 transitive dependents.
 - `app/studio/hooks.ts`: HIGH — 4 direct / 6 transitive dependents.
 - `src/lib/stateAssetSeparation.ts`: HIGH — 8 direct / 102 transitive dependents.
@@ -23,7 +24,7 @@ Keep T3 by evolving the existing local boundaries compatibly. Elevate to T4 befo
 ## Design
 
 1. **Keep the existing state boundary.** `projectStore` remains the application-facing project save/load/import/export boundary. Web project JSON stays in `localStorage` for this MVP so 113 transitive dependents do not inherit an unnecessary async API migration.
-2. **Make the existing local asset boundary authoritative.** `assetStore` remains the owner of Web binary audio durability through IndexedDB and the existing `asset://` pointer format. Memory/object-URL caches are performance/runtime materializations only; they are never evidence of a durable write.
+2. **Make the existing local asset boundary authoritative.** `assetStore` remains the owner of Web binary audio durability through IndexedDB and the existing `asset://` pointer format. Memory/object-URL caches are performance/runtime materializations only; they are never evidence of a durable write. Compatibility verification must include direct playback consumers such as `midiSynth` and `universalAudio` because the Graph reports 142 transitive dependents.
 3. **Make asset writes fail explicitly.** On Web, `saveAsset` may return a durable pointer only after the IndexedDB transaction completes. IndexedDB/quota failure rejects instead of silently accepting memory-only durability. Existing `asset://` IDs remain compatible; no re-key migration is required.
 4. **Commit bytes before references.** Recording and audio import persist bytes first, then add the region/track reference. A failed asset write leaves the previous project state intact and produces user-visible failure feedback. Multi-file import may commit successful files independently but must never create a track for a failed asset.
 5. **Treat `asset://` as persisted identity and blob URLs as ephemeral.** Hydration/playback resolves persisted pointers through `assetStore`; it never replaces the persisted pointer with a blob URL. Missing/corrupt assets become visible degraded-state evidence without deleting project structure.
@@ -36,7 +37,7 @@ Keep T3 by evolving the existing local boundaries compatibly. Elevate to T4 befo
 
 - Architecture: UPDATE_REQUIRED — document Web state-vs-binary local persistence responsibilities.
 - Contracts: UPDATE_REQUIRED — make durable-success, `asset://`, and derived-index semantics explicit.
-- ADR: CREATE — `2026-09-11-web-local-audio-asset-persistence.md`.
+- ADR: docs/adr/2026-09-11-web-local-audio-asset-persistence.md
 - Governance: UNCHANGED.
 
 ## Verification
@@ -44,7 +45,8 @@ Keep T3 by evolving the existing local boundaries compatibly. Elevate to T4 befo
 - `assetStore` tests with a controllable IndexedDB double:
   - durable write survives cache/module-session reset;
   - IndexedDB/quota failure rejects rather than returning durable success;
-  - existing `asset://` references continue to resolve.
+  - existing `asset://` references continue to resolve;
+  - `midiSynth` and `universalAudio` continue resolving persisted pointers through the same API.
 - `projectStore` tests:
   - project-state write failure returns failure without overwriting the prior valid snapshot;
   - missing/corrupt index is rebuilt from valid project records;
