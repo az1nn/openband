@@ -1123,35 +1123,66 @@ export default function Studio() {
     setSelectedTrackId(trackId);
   }, [tracks, setTracks, selectedTrackId, initialBpm, initialNumBars]);
 
+  const refreshEditedTracks = useCallback(
+    (updatedTracks: TrackDef[]) => {
+      if (!isWeb) return;
+      rerenderAfterMuteSolo(updatedTracks).catch((error) =>
+        console.warn("region edit audio refresh failed:", error),
+      );
+    },
+    [isWeb, rerenderAfterMuteSolo],
+  );
+
+  const handleUndo = useCallback(() => {
+    undoHistory();
+    if (isWeb) {
+      setTimeout(() => refreshEditedTracks(tracksRef.current), 0);
+    }
+  }, [undoHistory, isWeb, refreshEditedTracks]);
+
+  const handleRedo = useCallback(() => {
+    redoHistory();
+    if (isWeb) {
+      setTimeout(() => refreshEditedTracks(tracksRef.current), 0);
+    }
+  }, [redoHistory, isWeb, refreshEditedTracks]);
+
   const applyRegionAction = useCallback(
     (action: "move-left" | "move-right" | "duplicate" | "repeat" | "delete") => {
       if (!selectedRegion) return;
       const { trackId, regionId } = selectedRegion;
       const beatSeconds = 60 / Math.max(1, metronome.bpm);
       const stamp = Date.now();
+      const current = tracksRef.current;
+      let updatedTracks = current;
 
-      setTracks((current) => {
-        switch (action) {
-          case "move-left":
-            return moveRegionBySeconds(current, trackId, regionId, -beatSeconds);
-          case "move-right":
-            return moveRegionBySeconds(current, trackId, regionId, beatSeconds);
-          case "duplicate":
-            return duplicateRegion(current, trackId, regionId, `region-${stamp}-copy`);
-          case "repeat":
-            return repeatRegion(current, trackId, regionId, [
-              `region-${stamp}-repeat-1`,
-              `region-${stamp}-repeat-2`,
-              `region-${stamp}-repeat-3`,
-            ]);
-          case "delete":
-            return deleteRegion(current, trackId, regionId);
-        }
-      });
+      switch (action) {
+        case "move-left":
+          updatedTracks = moveRegionBySeconds(current, trackId, regionId, -beatSeconds);
+          break;
+        case "move-right":
+          updatedTracks = moveRegionBySeconds(current, trackId, regionId, beatSeconds);
+          break;
+        case "duplicate":
+          updatedTracks = duplicateRegion(current, trackId, regionId, `region-${stamp}-copy`);
+          break;
+        case "repeat":
+          updatedTracks = repeatRegion(current, trackId, regionId, [
+            `region-${stamp}-repeat-1`,
+            `region-${stamp}-repeat-2`,
+            `region-${stamp}-repeat-3`,
+          ]);
+          break;
+        case "delete":
+          updatedTracks = deleteRegion(current, trackId, regionId);
+          break;
+      }
 
+      setTracks(updatedTracks);
+      refreshEditedTracks(updatedTracks);
       if (action === "delete") setSelectedRegion(null);
     },
-    [selectedRegion, metronome.bpm, setTracks],
+    [selectedRegion, metronome.bpm, setTracks, refreshEditedTracks],
   );
 
   const handleCodeRender = useCallback(
@@ -1358,8 +1389,8 @@ export default function Studio() {
     () => ({
       play: togglePlay,
       record: toggleRecording,
-      undo: undoHistory,
-      redo: redoHistory,
+      undo: handleUndo,
+      redo: handleRedo,
       save: handleManualSave,
       bounce: () => openModal("bounce"),
       escape: () => {
@@ -1389,8 +1420,8 @@ export default function Studio() {
     [
       togglePlay,
       toggleRecording,
-      undoHistory,
-      redoHistory,
+      handleUndo,
+      handleRedo,
       handleManualSave,
       selectedTrack,
       toggleMute,
@@ -1404,8 +1435,8 @@ export default function Studio() {
   useEffect(() => {
     registerCommand("transport.play", t("studio.command.play", "Play"), "Start/stop playback", "Transport", togglePlay, "Space");
     registerCommand("transport.record", t("studio.command.record", "Record"), "Toggle recording", "Transport", toggleRecording, "R");
-    registerCommand("edit.undo", t("studio.command.undo", "Undo"), "Undo last action", "Edit", undoHistory, "Ctrl+Z");
-    registerCommand("edit.redo", t("studio.command.redo", "Redo"), "Redo last action", "Edit", redoHistory, "Ctrl+Shift+Z");
+    registerCommand("edit.undo", t("studio.command.undo", "Undo"), "Undo last action", "Edit", handleUndo, "Ctrl+Z");
+    registerCommand("edit.redo", t("studio.command.redo", "Redo"), "Redo last action", "Edit", handleRedo, "Ctrl+Shift+Z");
     registerCommand("edit.delete", t("studio.command.delete", "Delete"), "Delete selected track", "Edit", () => selectedTrack && deleteTrack(selectedTrack.id), "Delete", "Backspace");
     registerCommand("track.add", t("studio.command.addTrack", "Add Track"), "Add a new track to the project", "Track", handleAddTrack, "Ctrl+T");
     registerCommand("clip.add", t("studio.command.addClip", "Add Clip"), "Add a clip region to the selected track", "Clip", handleAddClip, "Ctrl+Shift+C");
@@ -1422,7 +1453,7 @@ export default function Studio() {
     return () => {
       disposeKeyBindings();
     };
-  }, [togglePlay, toggleRecording, undoHistory, redoHistory, handleManualSave, selectedTrack, toggleMute, toggleSolo, deleteTrack, handleAddTrack, handleAddClip, setBottomTab, openModal, toggleModal, closeModal, t]);
+  }, [togglePlay, toggleRecording, handleUndo, handleRedo, handleManualSave, selectedTrack, toggleMute, toggleSolo, deleteTrack, handleAddTrack, handleAddClip, setBottomTab, openModal, toggleModal, closeModal, t]);
 
   const getEffectiveVolume = useCallback((trackId: string): number => {
     const gv = getGroupVolume(groups, trackId);
@@ -1557,7 +1588,7 @@ export default function Studio() {
 
         <View className="flex-row items-center gap-1.5">
           <Pressable
-            onPress={undoHistory}
+            onPress={handleUndo}
             accessibilityRole="button"
             accessibilityLabel={t("studio.a11yUndo", "Undo")}
             accessibilityState={{ disabled: !canUndo }}
@@ -1566,7 +1597,7 @@ export default function Studio() {
             <Text className="text-gray-300 text-xs">↩</Text>
           </Pressable>
           <Pressable
-            onPress={redoHistory}
+            onPress={handleRedo}
             accessibilityRole="button"
             accessibilityLabel={t("studio.a11yRedo", "Redo")}
             accessibilityState={{ disabled: !canRedo }}
