@@ -239,10 +239,16 @@ export function useStudioPersistence(params: {
     labelTimerRef.current = setTimeout(() => setLastSavedLabel(null), 2000);
   }, []);
 
+  const reportSaveResult = useCallback(
+    (saved: boolean, successLabel: string) => {
+      flashLabel(saved ? successLabel : t("studio.saveFailed", "Save failed"));
+    },
+    [flashLabel, t],
+  );
+
   const handleManualSave = useCallback(() => {
-    save();
-    flashLabel(t("studio.savedToast", "Saved ✓"));
-  }, [save, flashLabel, t]);
+    reportSaveResult(save(), t("studio.savedToast", "Saved ✓"));
+  }, [save, reportSaveResult, t]);
 
   // Hydrate from storage on mount / id change.
   useEffect(() => {
@@ -253,11 +259,20 @@ export function useStudioPersistence(params: {
   // Debounced autosave whenever the snapshot content changes.
   useEffect(() => {
     const timer = setTimeout(() => {
-      save();
-      flashLabel(t("studio.saved", "Saved"));
+      reportSaveResult(save(), t("studio.saved", "Saved"));
     }, 2000);
     return () => clearTimeout(timer);
-  }, [snapshot, id, save, flashLabel, t]);
+  }, [snapshot, id, save, reportSaveResult, t]);
+
+  // Flush the latest synchronous project state when a Web page is leaving.
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") return;
+    const flushLatestSnapshot = () => {
+      save();
+    };
+    window.addEventListener("pagehide", flushLatestSnapshot);
+    return () => window.removeEventListener("pagehide", flushLatestSnapshot);
+  }, [save]);
 
   useEffect(
     () => () => {
