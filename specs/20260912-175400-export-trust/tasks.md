@@ -6,7 +6,7 @@
 - [x] Reconstruct L0/L1 context from Constitution, `AGENTS.md`, AI instructions, architecture and launch contract evidence.
 - [x] Run Architecture Graph impact preflight for export/render surfaces.
 - [x] Materialize T3 spec, plan, tasks and durable audio-export contract.
-- [ ] Run design-policy / Graph validation on the exact design HEAD.
+- [x] Run design-policy / Graph validation on the exact design HEAD.
 - [ ] Human Design Gate approval on the exact design baseline SHA.
 
 ## Implementation — only after Design Gate
