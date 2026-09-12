@@ -88,6 +88,7 @@ import {
 } from "./parts";
 import { StudioModals } from "./StudioModals";
 import { useProjectParams, useStudioPersistence, useMixSnapshots, useStudioModals, useStudioTransport, usePluginChains, useMixerState, applyPitchShift, renderTracksCached, type BottomTab, type RenderCache } from "./hooks";
+import { persistImportedAudioFiles, resolvePersistedTrackAssets } from "./persistenceTrust";
 import { getPlayheadBeat, setPlayheadBeat, subscribePlayhead } from "../../src/lib/playheadStore";
 import { deleteRegion, duplicateRegion, moveRegionBySeconds, repeatRegion } from "../../src/lib/creativeLoop";
 
@@ -390,15 +391,26 @@ export default function Studio() {
     prevRegionUrlsRef.current = current;
   }, [tracks]);
 
+  const reportedMissingAssetsRef = useRef(new Set<string>());
   useEffect(() => {
-    for (const t of tracks) {
-      for (const r of t.regions) {
-        if (r.url && r.url.startsWith("asset://")) {
-          resolveAssetUrl(r.url).catch((e) => console.warn("resolve asset url failed", e));
-        }
-      }
-    }
-  }, [tracks]);
+    let cancelled = false;
+    void resolvePersistedTrackAssets(tracks, resolveAssetUrl).then((missing) => {
+      if (cancelled) return;
+      const fresh = missing.filter((pointer) => !reportedMissingAssetsRef.current.has(pointer));
+      if (fresh.length === 0) return;
+      fresh.forEach((pointer) => reportedMissingAssetsRef.current.add(pointer));
+      Alert.alert(
+        t("studio.assetMissingTitle", "Audio unavailable"),
+        t(
+          "studio.assetMissingMessage",
+          "Some local audio could not be restored. The project structure was kept intact.",
+        ),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [tracks, t]);
 
   useEffect(() => {
     return () => revokeAssetCache();
@@ -1041,43 +1053,42 @@ export default function Studio() {
 
   const handleImportAudio = useCallback(() => {
     if (Platform.OS !== "web") {
-      Alert.alert(t("studio.importTitle", "Import"), t("studio.importWebOnly", "Importing is only available in the web version."));
+      Alert.alert(
+        t("studio.importTitle", "Import"),
+        t("studio.importWebOnly", "Importing is only available in the web version."),
+      );
       return;
     }
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".wav,.mp3,.aiff,.flac,.ogg,.m4a,audio/*";
     input.multiple = true;
-    input.onchange = (e: Event) => {
+    input.onchange = async (e: Event) => {
       const files = (e.target as HTMLInputElement).files;
       if (!files || files.length === 0) return;
-      const newTracks = Array.from(files).map((file, i) => {
-        const approxDuration = Math.max(10, Math.round(file.size / 30000));
-        return {
-          id: `import-${Date.now()}-${i}`,
-          name: file.name.replace(/\.[^/.]+$/, ""),
-          color: TRACK_COLORS[(tracks.length + i) % TRACK_COLORS.length],
-          muted: false,
-          solo: false,
-          volume: 75,
-          pan: 0,
-          sends: {},
-          sidechainSource: null,
-          regions: [
-            {
-              id: `region-import-${Date.now()}-${i}`,
-              start: i * 4,
-              duration: Math.min(approxDuration, 300),
-            },
-          ],
-          plugins: [] as Plugin[],
-          automation: {} as Record<string, AutomationPoint[]>,
-        } as TrackDef;
+
+      const { tracks: importedTracks, failedNames } = await persistImportedAudioFiles({
+        files: Array.from(files),
+        existingTrackCount: tracks.length,
+        trackColors: TRACK_COLORS,
+        persistAsset: saveAsset,
       });
-      setTracks([...tracks, ...newTracks]);
+
+      if (importedTracks.length > 0) {
+        setTracks([...tracks, ...importedTracks]);
+      }
+      if (failedNames.length > 0) {
+        Alert.alert(
+          t("studio.importFailedTitle", "Import incomplete"),
+          t(
+            "studio.importFailedMessage",
+            "Some audio files could not be stored locally and were not added to the project.",
+          ),
+        );
+      }
     };
     input.click();
-  }, [tracks, setTracks]);
+  }, [tracks, setTracks, t]);
 
   const handleAddClip = useCallback(() => {
     const defaultDuration = initialNumBars && initialBpm ? (60 / initialBpm) * initialNumBars : 4;
