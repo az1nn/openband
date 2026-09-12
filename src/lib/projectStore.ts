@@ -96,8 +96,16 @@ function queueBridgeSave(id: string, project: ProjectData): void {
 let storageWarned = false;
 
 function getStorage(): Storage | null {
-  if (Platform.OS === "web" && typeof localStorage !== "undefined") {
-    return localStorage;
+  if (Platform.OS === "web") {
+    try {
+      if (typeof window !== "undefined") return window.localStorage;
+    } catch (e) {
+      if (!storageWarned) {
+        storageWarned = true;
+        console.warn("[projectStore] Web storage is unavailable:", e);
+      }
+      return null;
+    }
   }
   if (!storageWarned) {
     storageWarned = true;
@@ -198,17 +206,23 @@ export function saveProject(
   if (Platform.OS === "web" && !storage) return false;
   if (storage) {
     const projectKey = STORAGE_PREFIX + id;
-    const previousProject = storage.getItem(projectKey);
-    const previousIndex = storage.getItem(INDEX_KEY);
+    let previousProject: string | null | undefined;
+    let previousIndex: string | null | undefined;
     try {
+      previousProject = storage.getItem(projectKey);
+      previousIndex = storage.getItem(INDEX_KEY);
       storage.setItem(projectKey, JSON.stringify(project));
       const index = parseProjectIndex(previousIndex) ?? rebuildProjectIndex(storage);
       index[id] = toIndexEntry(project);
       storage.setItem(INDEX_KEY, JSON.stringify(index));
       onProjectSavedListeners.forEach((cb) => cb(id, project));
     } catch (e) {
-      restoreStorageValue(storage, projectKey, previousProject);
-      restoreStorageValue(storage, INDEX_KEY, previousIndex);
+      if (previousProject !== undefined) {
+        restoreStorageValue(storage, projectKey, previousProject);
+      }
+      if (previousIndex !== undefined) {
+        restoreStorageValue(storage, INDEX_KEY, previousIndex);
+      }
       console.warn("Project save failed:", e);
       return false;
     }
@@ -220,13 +234,11 @@ export function saveProject(
 export function loadProject(id: string): ProjectData | null {
   const storage = getStorage();
   if (storage) {
-    const raw = storage.getItem(STORAGE_PREFIX + id);
-    if (raw) {
-      try {
-        return sanitizeProjectData(JSON.parse(raw));
-      } catch (e) {
-        console.warn("Failed to parse project data:", e);
-      }
+    try {
+      const raw = storage.getItem(STORAGE_PREFIX + id);
+      if (raw) return sanitizeProjectData(JSON.parse(raw));
+    } catch (e) {
+      console.warn("Failed to load project data:", e);
     }
   }
   return null;
@@ -375,20 +387,25 @@ export function createProjectSnapshot(
 export function listProjectIndex(): ProjectIndex {
   const storage = getStorage();
   if (!storage) return {};
-  const raw = storage.getItem(INDEX_KEY);
-  const parsed = parseProjectIndex(raw);
-  if (parsed) return parsed;
-
-  if (raw) {
-    console.warn("[projectStore] project index is corrupt; rebuilding from project payloads");
-  }
-  const rebuilt = rebuildProjectIndex(storage);
   try {
-    storage.setItem(INDEX_KEY, JSON.stringify(rebuilt));
+    const raw = storage.getItem(INDEX_KEY);
+    const parsed = parseProjectIndex(raw);
+    if (parsed) return parsed;
+
+    if (raw) {
+      console.warn("[projectStore] project index is corrupt; rebuilding from project payloads");
+    }
+    const rebuilt = rebuildProjectIndex(storage);
+    try {
+      storage.setItem(INDEX_KEY, JSON.stringify(rebuilt));
+    } catch (e) {
+      console.warn("[projectStore] rebuilt index could not be persisted:", e);
+    }
+    return rebuilt;
   } catch (e) {
-    console.warn("[projectStore] rebuilt index could not be persisted:", e);
+    console.warn("[projectStore] project index could not be read:", e);
+    return {};
   }
-  return rebuilt;
 }
 
 export function createRemix(originalId: string, _userId: string): string | null {
@@ -396,13 +413,13 @@ export function createRemix(originalId: string, _userId: string): string | null 
   if (!original) return null;
   const newId = `proj-${Date.now()}`;
   const saved = saveProject(newId, {
-  ...original,
-  title: `Remix: ${original.title}`,
-  parentProjectId: originalId,
-  isPublished: false,
-  coverUrl: undefined,
-});
-return saved ? newId : null;
+    ...original,
+    title: `Remix: ${original.title}`,
+    parentProjectId: originalId,
+    isPublished: false,
+    coverUrl: undefined,
+  });
+  return saved ? newId : null;
 }
 
 const FAVORITES_KEY = "openband_favorites";
