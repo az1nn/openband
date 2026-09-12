@@ -64,6 +64,27 @@ describe("persistence trust", () => {
     expect(loadProject("p1")?.title).toBe("Persistence");
   });
 
+  it("reports storage read failure without throwing or mutating the durable project", async () => {
+    const { saveProject } = await import("../src/lib/projectStore");
+    expect(saveProject("p1", project)).toBe(true);
+    const nativeGet = Storage.prototype.getItem;
+    const previous = nativeGet.call(localStorage, "openband_project_p1");
+
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(function (this: Storage, key: string) {
+      if (key === "openband_project_p1") {
+        throw new DOMException("Storage access denied", "SecurityError");
+      }
+      return nativeGet.call(this, key);
+    });
+
+    let result = true;
+    expect(() => {
+      result = saveProject("p1", { ...project, title: "Must not persist" });
+    }).not.toThrow();
+    expect(result).toBe(false);
+    expect(nativeGet.call(localStorage, "openband_project_p1")).toBe(previous);
+  });
+
   it("preserves durable asset pointers through JSON export/import recovery", async () => {
     const { saveProject, exportProject, importProject, loadProject, deleteProject } = await import(
       "../src/lib/projectStore"
