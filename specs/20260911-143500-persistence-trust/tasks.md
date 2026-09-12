@@ -15,5 +15,5 @@
 - [x] T013 Add targeted persistence, quota/failure, reload and compatibility tests.
 - [x] T014 Implement browser behavioral persistence smoke with persistent storage and failure injection.
 - [x] T015 Run semantic convergence against spec/plan/tasks; no implementation gap remains inside the approved envelope.
-- [ ] T016 Run full system verification and reconcile normative knowledge against the implementation.
+- [x] T016 Run full system verification and reconcile normative knowledge against the implementation.
 - [ ] T017 Obtain human Merge Gate approval on the exact verified PR HEAD.
