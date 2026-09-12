@@ -10,5 +10,5 @@
 - [x] Playback/cache redesign excluded from this slice.
 - [x] Durable audio-export contract materialized.
 - [x] Verification strategy binds evidence to exact HEAD.
-- [ ] Design baseline CI / Graph / SDD checks pass.
+- [x] Design baseline CI / Graph / SDD checks pass.
 - [ ] Human Design Gate approved for the exact baseline SHA.
