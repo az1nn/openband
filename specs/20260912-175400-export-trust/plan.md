@@ -83,7 +83,7 @@ Keep T3 by changing the export orchestration and strict-render contract without 
 
 - Architecture: NO_BOUNDARY_CHANGE — existing Audio/DSP ownership remains authoritative.
 - Contract: ADD_REQUIRED — `docs/contracts/audio-export.md`.
-- ADR: NOT_REQUIRED unless implementation changes renderer architecture materially.
+- ADR: NOT REQUIRED — implementation remains inside the existing Audio/DSP renderer boundary; create an ADR only if that architectural premise changes.
 - Governance: UNCHANGED.
 - Historical note: merged #48 documentation mentions portable archive correctness under #49, but the current canonical #49 issue is explicitly the launch audio mixdown contract. Per flow-forward policy, do not rewrite merged #48 history and do not silently widen #49 to archive packaging.
 
