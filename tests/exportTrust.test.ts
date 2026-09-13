@@ -1,44 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TrackDef } from "../src/lib/types";
 
-const renderTrackStem = vi.fn();
+const renderTracksToWavBlob = vi.fn();
 const getProjectDurationSeconds = vi.fn();
-const applyPluginChain = vi.fn(async (buffer: globalThis.AudioBuffer) => buffer);
+
+class MockFullProjectRenderError extends Error {
+  constructor(
+    public readonly stage: "source" | "track-effect" | "master-effect" | "offline",
+    message: string,
+  ) {
+    super(message);
+    this.name = "FullProjectRenderError";
+  }
+}
 
 vi.mock("../src/lib/midiSynth", () => ({
-  renderTrackStem,
+  FullProjectRenderError: MockFullProjectRenderError,
+  renderTracksToWavBlob,
   getProjectDurationSeconds,
 }));
-vi.mock("../src/lib/pluginChain", () => ({ applyPluginChain }));
-
-function makeBuffer(leftValues: number[], rightValues = leftValues, sampleRate = 44100): globalThis.AudioBuffer {
-  const left = new Float32Array(leftValues);
-  const right = new Float32Array(rightValues);
-  return {
-    numberOfChannels: 2,
-    length: left.length,
-    sampleRate,
-    duration: left.length / sampleRate,
-    getChannelData: (channel: number) => (channel === 0 ? left : right),
-  } as globalThis.AudioBuffer;
-}
-
-class BufferFactoryContext {
-  destination = {};
-  constructor(_channels: number, _length: number, _sampleRate: number) {}
-  createBuffer(channels: number, length: number, sampleRate: number) {
-    const data = Array.from({ length: channels }, () => new Float32Array(length));
-    return {
-      numberOfChannels: channels,
-      length,
-      sampleRate,
-      duration: length / sampleRate,
-      getChannelData: (channel: number) => data[channel],
-    } as globalThis.AudioBuffer;
-  }
-  close() { return Promise.resolve(); }
-}
-vi.stubGlobal("OfflineAudioContext", BufferFactoryContext as unknown as typeof OfflineAudioContext);
 
 function track(overrides: Partial<TrackDef> = {}): TrackDef {
   return {
@@ -59,40 +39,46 @@ function track(overrides: Partial<TrackDef> = {}): TrackDef {
   };
 }
 
-async function pcmPeak(blob: Blob): Promise<number> {
-  const bytes = await blob.arrayBuffer();
-  const view = new DataView(bytes);
-  let offset = 12;
-  while (offset + 8 <= view.byteLength) {
-    const id = String.fromCharCode(
-      view.getUint8(offset), view.getUint8(offset + 1),
-      view.getUint8(offset + 2), view.getUint8(offset + 3),
-    );
-    const size = view.getUint32(offset + 4, true);
-    if (id === "data") {
-      let peak = 0;
-      for (let p = offset + 8; p + 1 < Math.min(view.byteLength, offset + 8 + size); p += 2) {
-        peak = Math.max(peak, Math.abs(view.getInt16(p, true) / 32768));
-      }
-      return peak;
-    }
-    offset += 8 + size + (size % 2);
-  }
-  return 0;
+function validWavBlob(samples = [0.5, -0.5, 0.25, -0.25]): Blob {
+  const dataSize = samples.length * 2;
+  const ab = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(ab);
+  const write = (offset: number, value: string) => {
+    for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i));
+  };
+  write(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  write(8, "WAVE");
+  write(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, 44100, true);
+  view.setUint32(28, 88200, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  write(36, "data");
+  view.setUint32(40, dataSize, true);
+  samples.forEach((sample, index) => {
+    view.setInt16(44 + index * 2, Math.round(Math.max(-1, Math.min(1, sample)) * 32767), true);
+  });
+  return new Blob([ab], { type: "audio/wav" });
 }
 
-describe("export trust", () => {
+describe("export trust boundary", () => {
   beforeEach(() => {
-    renderTrackStem.mockReset();
+    renderTracksToWavBlob.mockReset();
     getProjectDurationSeconds.mockReset();
-    applyPluginChain.mockClear();
-    getProjectDurationSeconds.mockReturnValue(4 / 44100);
-    renderTrackStem.mockResolvedValue(makeBuffer([0.5, 0.25, -0.5, -0.25], [0.1, 0.05, -0.1, -0.05]));
+    getProjectDurationSeconds.mockReturnValue(1);
+    renderTracksToWavBlob.mockResolvedValue(validWavBlob());
   });
 
   it("snapshots render input without later UI mutation", async () => {
     const { createExportSnapshot } = await import("../src/lib/exportTrust");
-    const source = track({ volume: 65, midiNotes: [{ pitch: 60, start: 0, duration: 1, velocity: 100 }] });
+    const source = track({
+      volume: 65,
+      midiNotes: [{ pitch: 60, start: 0, duration: 1, velocity: 100 }],
+    });
     const snapshot = createExportSnapshot({ tracks: [source], bpm: 120 });
     source.volume = 5;
     source.midiNotes![0].pitch = 72;
@@ -100,36 +86,38 @@ describe("export trust", () => {
     expect(snapshot.tracks[0].midiNotes![0].pitch).toBe(60);
   });
 
-  it("honors mute/solo and forwards percentage volume/pan to strict stem rendering", async () => {
+  it("passes the complete immutable project snapshot to strict full-project rendering", async () => {
     const { renderProjectWav } = await import("../src/lib/exportTrust");
-    const solo = track({ id: "solo", solo: true, volume: 42, pan: -75, midiNotes: [{ pitch: 60, start: 0, duration: 1, velocity: 100 }] });
-    const other = track({ id: "other", volume: 90, pan: 80, midiNotes: [{ pitch: 64, start: 0, duration: 1, velocity: 100 }] });
-    const result = await renderProjectWav({ tracks: [solo, other], bpm: 120 });
-    expect(renderTrackStem).toHaveBeenCalledTimes(1);
-    expect(renderTrackStem).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "solo", volume: 42, pan: -75 }),
-      120,
-      expect.any(Number),
-      [],
-      { strict: true },
+    const plugin = { id: "p1", name: "EQ", type: "eq" as const, enabled: true, params: {} };
+    const source = track({
+      volume: 42,
+      pan: -75,
+      plugins: [plugin],
+      midiNotes: [{ pitch: 60, start: 0, duration: 1, velocity: 100 }],
+    });
+    const master = [{ id: "m1", name: "Limiter", type: "limiter" as const, enabled: true, params: {} }];
+    const buses = [{ id: "b1", name: "Bus", color: "#fff", volume: 0.8, muted: false, plugins: [] }];
+    await renderProjectWav({ tracks: [source], bpm: 128, buses, masterPlugins: master });
+    expect(renderTracksToWavBlob).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: "t1", volume: 42, pan: -75, plugins: [plugin] })],
+      128,
+      undefined,
+      buses,
+      master,
+      { strict: true, normalizeMixerUnits: true },
     );
-    expect(await pcmPeak(result.blob)).toBeGreaterThan(0.1);
   });
 
-  it("applies bus routing gain without destroying stereo pan energy", async () => {
-    const { mixRenderedStems } = await import("../src/lib/exportTrust");
-    const source = track({ outputId: "bus-a", sends: {} });
-    const mixed = mixRenderedStems(
-      [{ track: source, buffer: makeBuffer([0.8, 0.8], [0.2, 0.2]) }],
-      [{ id: "bus-a", name: "Bus A", color: "#fff", volume: 0.5, muted: false, plugins: [] }],
-      2,
-      44100,
-    );
-    expect(mixed.getChannelData(0)[0]).toBeCloseTo(0.4, 5);
-    expect(mixed.getChannelData(1)[0]).toBeCloseTo(0.1, 5);
+  it("rejects a mute/solo state with no audible renderable content", async () => {
+    const { renderProjectWav } = await import("../src/lib/exportTrust");
+    await expect(renderProjectWav({
+      tracks: [track({ muted: true, regions: [{ id: "r", start: 0, duration: 1, url: "asset://x" }] })],
+      bpm: 120,
+    })).rejects.toMatchObject({ code: "NO_RENDERABLE_CONTENT" });
+    expect(renderTracksToWavBlob).not.toHaveBeenCalled();
   });
 
-  it("produces a non-empty decodable RIFF/WAVE with audible deterministic PCM", async () => {
+  it("accepts a structurally valid non-empty RIFF/WAVE result", async () => {
     const { renderProjectWav, validateWavBlob } = await import("../src/lib/exportTrust");
     const result = await renderProjectWav({
       tracks: [track({ midiNotes: [{ pitch: 60, start: 0, duration: 1, velocity: 100 }] })],
@@ -138,39 +126,34 @@ describe("export trust", () => {
     await expect(validateWavBlob(result.blob)).resolves.toBeUndefined();
     expect(result.blob.type).toBe("audio/wav");
     expect(result.blob.size).toBeGreaterThan(44);
-    expect(await pcmPeak(result.blob)).toBeGreaterThan(0.1);
   });
 
-  it("runs the active master-rack chain and propagates master failures", async () => {
-    const { renderProjectWav, ExportTrustError } = await import("../src/lib/exportTrust");
-    const master = [{ id: "m1", name: "Limiter", type: "limiter" as const, enabled: true, params: {} }];
-    await renderProjectWav({
-      tracks: [track({ midiNotes: [{ pitch: 60, start: 0, duration: 1, velocity: 100 }] })],
-      bpm: 120,
-      masterPlugins: master,
-    });
-    expect(applyPluginChain).toHaveBeenCalledWith(expect.anything(), master, 44100, expect.any(Object));
-
-    applyPluginChain.mockRejectedValueOnce(new Error("master exploded"));
-    await expect(renderProjectWav({
-      tracks: [track({ midiNotes: [{ pitch: 60, start: 0, duration: 1, velocity: 100 }] })],
-      bpm: 120,
-      masterPlugins: master,
-    })).rejects.toMatchObject({ name: ExportTrustError.name, code: "MASTER_RENDER_FAILED" });
-  });
-
-  it("fails explicitly and leaves the caller snapshot untouched when a required track cannot render", async () => {
+  it("maps strict source and master failures to explicit export errors", async () => {
     const { renderProjectWav } = await import("../src/lib/exportTrust");
-    const source = track({ regions: [{ id: "r1", start: 0, duration: 1, url: "asset://missing" }] });
+    const input = {
+      tracks: [track({ regions: [{ id: "r", start: 0, duration: 1, url: "asset://missing" }] })],
+      bpm: 120,
+    };
+    renderTracksToWavBlob.mockRejectedValueOnce(new MockFullProjectRenderError("source", "missing asset"));
+    await expect(renderProjectWav(input)).rejects.toMatchObject({ code: "TRACK_RENDER_FAILED" });
+
+    renderTracksToWavBlob.mockRejectedValueOnce(new MockFullProjectRenderError("master-effect", "master failed"));
+    await expect(renderProjectWav(input)).rejects.toMatchObject({ code: "MASTER_RENDER_FAILED" });
+  });
+
+  it("leaves caller project state untouched when rendering fails", async () => {
+    const { renderProjectWav } = await import("../src/lib/exportTrust");
+    const source = track({ regions: [{ id: "r", start: 0, duration: 1, url: "asset://missing" }] });
     const before = JSON.stringify(source);
-    renderTrackStem.mockRejectedValueOnce(new Error("missing durable asset"));
-    await expect(renderProjectWav({ tracks: [source], bpm: 120 })).rejects.toMatchObject({ code: "TRACK_RENDER_FAILED" });
+    renderTracksToWavBlob.mockRejectedValueOnce(new MockFullProjectRenderError("offline", "render failed"));
+    await expect(renderProjectWav({ tracks: [source], bpm: 120 })).rejects.toMatchObject({ code: "PROJECT_RENDER_FAILED" });
     expect(JSON.stringify(source)).toBe(before);
   });
 
-  it("does not fabricate a header-only success for an empty project", async () => {
-    const { renderProjectWav } = await import("../src/lib/exportTrust");
+  it("does not fabricate success for an empty project or invalid WAV", async () => {
+    const { renderProjectWav, validateWavBlob } = await import("../src/lib/exportTrust");
     getProjectDurationSeconds.mockReturnValueOnce(0);
     await expect(renderProjectWav({ tracks: [], bpm: 120 })).rejects.toMatchObject({ code: "NO_RENDERABLE_CONTENT" });
+    await expect(validateWavBlob(new Blob([new Uint8Array(44)], { type: "audio/wav" }))).rejects.toMatchObject({ code: "INVALID_WAV" });
   });
 });

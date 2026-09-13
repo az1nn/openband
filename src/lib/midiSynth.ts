@@ -758,13 +758,36 @@ export function getProjectDurationSeconds(
   return Math.max(totalBeats * beatDuration, regionMaxEnd) + 2;
 }
 
-export async function renderTracksToUrl(
+export type FullProjectRenderStage =
+  | "source"
+  | "track-effect"
+  | "master-effect"
+  | "offline";
+
+export class FullProjectRenderError extends Error {
+  constructor(
+    public readonly stage: FullProjectRenderStage,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
+    super(message, options);
+    this.name = "FullProjectRenderError";
+  }
+}
+
+export interface RenderTracksOptions {
+  strict?: boolean;
+  normalizeMixerUnits?: boolean;
+}
+
+export async function renderTracksToWavBlob(
   tracks: TrackDef[],
   bpm: number,
   mood?: Mood,
   buses?: BusDef[],
   masterPlugins?: Plugin[],
-): Promise<string | null> {
+  options: RenderTracksOptions = {},
+): Promise<Blob | null> {
   const safeBpm = Math.max(1, bpm);
   const beatDuration = 60 / safeBpm;
 
@@ -831,6 +854,13 @@ export async function renderTracksToUrl(
             const buffer = await decodeCtx.decodeAudioData(ab);
             decoded.push({ buffer, start: region.start, duration: region.duration });
           } catch (e) {
+            if (options.strict) {
+              throw new FullProjectRenderError(
+                "source",
+                `Failed to decode source for track "${track.name}".`,
+                { cause: e },
+              );
+            }
             console.warn("Failed to decode region for track", track.name, e);
           }
         }
@@ -841,10 +871,14 @@ export async function renderTracksToUrl(
         if (track.muted || (anySolo && !track.solo)) continue;
 
         const trackGain = ctx.createGain();
-        trackGain.gain.value = track.volume ?? 1;
+        trackGain.gain.value = options.normalizeMixerUnits
+          ? (track.volume ?? 100) / 100
+          : (track.volume ?? 1);
 
         const panNode = ctx.createStereoPanner();
-        panNode.pan.value = track.pan ?? 0;
+        panNode.pan.value = options.normalizeMixerUnits
+          ? (track.pan ?? 0) / 100
+          : (track.pan ?? 0);
         panNode.connect(trackGain);
 
         const outputId = track.outputId || "master";
@@ -873,6 +907,7 @@ export async function renderTracksToUrl(
               sampleRate,
               numSamples,
               decodedRegions.get(track.id) || [],
+              options.strict ?? false,
             );
             const procBuf = await applyPluginChain(
               trackBuf,
@@ -887,6 +922,13 @@ export async function renderTracksToUrl(
             out.buffer = procBuf;
             out.connect(panNode);
           } catch (e) {
+            if (options.strict) {
+              throw new FullProjectRenderError(
+                "track-effect",
+                `Track effect render failed for "${track.name}".`,
+                { cause: e },
+              );
+            }
             console.warn("Plugin chain render failed for track", track.name, e);
           }
         } else {
@@ -1003,15 +1045,37 @@ export async function renderTracksToUrl(
             duration,
           });
         } catch (e) {
+          if (options.strict) {
+            throw new FullProjectRenderError(
+              "master-effect",
+              "Master effect render failed.",
+              { cause: e },
+            );
+          }
           console.warn("Master plugin chain failed, using dry mix:", e);
         }
       }
       const blob = audioBufferToWavBlob(buffer);
-      return createTrackedBlob(blob);
+      return blob;
     } catch (e) {
-      console.warn("OfflineAudioContext renderTracksToUrl failed:", e);
+      if (options.strict) {
+        if (e instanceof FullProjectRenderError) throw e;
+        throw new FullProjectRenderError(
+          "offline",
+          "Offline project render failed.",
+          { cause: e },
+        );
+      }
+      console.warn("OfflineAudioContext renderTracksToWavBlob failed:", e);
       // Fall through to native path
     }
+  }
+
+  if (options.strict) {
+    throw new FullProjectRenderError(
+      "offline",
+      "OfflineAudioContext is unavailable for strict Web export.",
+    );
   }
 
   // Native path: pure JS MIDI synthesis (no OfflineAudioContext)
@@ -1033,11 +1097,28 @@ export async function renderTracksToUrl(
       bpm,
     );
     const blob = interleaveToWavBlob(interleaved, sampleRate);
-    return createTrackedBlob(blob);
+    return blob;
   } catch (e) {
     console.warn("Native MIDI render failed:", e);
     return null;
   }
+}
+
+export async function renderTracksToUrl(
+  tracks: TrackDef[],
+  bpm: number,
+  mood?: Mood,
+  buses?: BusDef[],
+  masterPlugins?: Plugin[],
+): Promise<string | null> {
+  const blob = await renderTracksToWavBlob(
+    tracks,
+    bpm,
+    mood,
+    buses,
+    masterPlugins,
+  );
+  return blob ? createTrackedBlob(blob) : null;
 }
 
 export interface RenderTrackStemOptions {
