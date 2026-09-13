@@ -40,7 +40,7 @@ jobs:
             sleep 1
           done
           exit 1
-      - name: Run persistent asset and missing asset smoke
+      - name: Run persistent asset and strict failure smoke
         shell: bash
         run: |
           git fetch origin agent/49-export-trust-verify --depth=1
@@ -54,6 +54,7 @@ jobs:
           end = text.index(end_marker, start)
           lines = text[start:end].splitlines()
           script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines) + '\n'
+
           early = 'const before = await page.evaluate((id) => localStorage.getItem(`openband_project_${id}`), missing.id);\n'
           script = script.replace(early, '')
           hydrated = 'await page.getByText("Missing Audio", { exact: true }).first().waitFor({ timeout: 20000 });\n'
@@ -61,11 +62,47 @@ jobs:
           if hydrated not in script:
               raise SystemExit('missing hydration anchor')
           script = script.replace(hydrated, hydrated + helper, 1)
+
           old_after = 'const after = await page.evaluate((id) => localStorage.getItem(`openband_project_${id}`), missing.id);\nif (before !== after) throw new Error("failed export mutated persisted project state");'
           new_after = 'const after = await waitStableProject(missing.id);\nif (before !== after) { console.error("before", before); console.error("after", after); throw new Error("failed export mutated persisted project state"); }'
           if old_after not in script:
               raise SystemExit('missing post-export comparison anchor')
           script = script.replace(old_after, new_after, 1)
+
+          old_signal = '''if (!dialogs.some((message) => /Error|Failed|Falha|Could not|source|asset/i.test(message))) {
+  throw new Error(`missing asset did not surface an explicit dialog: ${JSON.stringify(dialogs)}`);
+}
+console.log("missing asset failure ok", dialogs);'''
+          new_signal = '''if (!consoleErrors.some((message) => /Export failed/i.test(message))) {
+  throw new Error(`missing asset did not reach strict export failure: ${JSON.stringify(consoleErrors)}`);
+}
+console.log("missing asset failure ok", consoleErrors.filter((message) => /Export failed/i.test(message)));
+consoleErrors.length = 0;
+
+const corrupt = project("export-corrupt", "Corrupt Audio", "asset://corrupt");
+await seed(page, corrupt, { id: "corrupt", base64: Buffer.from("not-a-valid-wav").toString("base64") });
+await page.goto(`${baseUrl}/studio/export-corrupt?bpm=120&title=Corrupt%20Audio`, { waitUntil: "networkidle" });
+await page.getByText("Corrupt Audio", { exact: true }).first().waitFor({ timeout: 20000 });
+await page.waitForTimeout(2500);
+const corruptBefore = await waitStableProject(corrupt.id);
+await openBounce(page);
+const corruptUnexpectedDownload = page.waitForEvent("download", { timeout: 5000 }).then(() => true).catch(() => false);
+await page.getByText("Exportar", { exact: true }).last().click();
+const corruptDidDownload = await corruptUnexpectedDownload;
+if (corruptDidDownload) throw new Error("corrupt asset export unexpectedly downloaded a file");
+const corruptAfter = await waitStableProject(corrupt.id);
+if (corruptBefore !== corruptAfter) {
+  console.error("corrupt before", corruptBefore);
+  console.error("corrupt after", corruptAfter);
+  throw new Error("corrupt asset export mutated persisted project state");
+}
+if (!consoleErrors.some((message) => /Export failed/i.test(message))) {
+  throw new Error(`corrupt asset did not reach strict export failure: ${JSON.stringify(consoleErrors)}`);
+}
+console.log("corrupt asset failure ok", consoleErrors.filter((message) => /Export failed/i.test(message)));'''
+          if old_signal not in script:
+              raise SystemExit('missing explicit failure signal anchor')
+          script = script.replace(old_signal, new_signal, 1)
           Path('export-smoke.mjs').write_text(script)
           PY
           node ./export-smoke.mjs
