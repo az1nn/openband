@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This directory is the marketing source of truth for OpenBand. It translates the product's launch contract into a coherent market position, message system, go-to-market plan, community motion, and measurement model.
+This directory is the marketing source of truth for OpenBand. It translates product truth into a traceable system of **research → decisions → positioning → execution → measurement → learning**.
 
 It is intentionally narrower than the full technical feature inventory. Marketing must sell what a new user can trust today, not everything the repository can theoretically do.
 
@@ -62,6 +62,30 @@ The repository `LICENSE` currently carries the Expo/650 Industries copyright tex
 
 The README exposes a very broad feature inventory while the launch issues explicitly narrow the public MVP to the core creative loop. Public-facing copy should use launch-gated proof points and move the full inventory to a technical/features reference.
 
+## Knowledge architecture
+
+The marketing system has five layers. Each layer answers a different question and should not silently take ownership of another layer's job.
+
+| Layer | Question | Canonical artifacts |
+| --- | --- | --- |
+| Product truth | What can the product honestly promise now? | `../product.md`, feature status, launch issues/specs |
+| Evidence | What do we know, observe, assume, or still need to test? | [`research-register.md`](./research-register.md), [`competitive-landscape.md`](./competitive-landscape.md) |
+| Decisions | What durable choices constrain marketing? | [`decision-log.md`](./decision-log.md) |
+| Strategy & execution | Who, why, what message, which channels, what launch motion? | positioning, audiences, messaging, brand, GTM, launch kit/assets |
+| Learning | Did the strategy create creator value and what changes next? | [`measurement.md`](./measurement.md), [`experiments.md`](./experiments.md) |
+
+```mermaid
+flowchart LR
+  PT[Product truth] --> R[Research / evidence]
+  PT --> D[Decisions]
+  R --> D
+  D --> S[Positioning / audiences / brand]
+  S --> M[Messaging / GTM / launch execution]
+  M --> X[Measurement / experiments]
+  X --> R
+  X --> D
+```
+
 ## Marketing operating model
 
 ```mermaid
@@ -74,21 +98,89 @@ flowchart LR
   F --> G[Public Web beta]
   G --> H[Community + content loop]
   H --> I[Retention + contribution + referral]
-  I --> B
+  I --> A
 ```
 
-## Files
+## Canonical files
 
-- [`positioning.md`](./positioning.md) — category, audiences, JTBD, differentiation, competitive frame.
+### Evidence and decisions
+
+- [`research-register.md`](./research-register.md) — hypotheses, observations, evidence state, freshness and next validation.
+- [`decision-log.md`](./decision-log.md) — durable strategic decisions, rationale, authority and supersession history.
+- [`competitive-landscape.md`](./competitive-landscape.md) — strategic competitor map and dated external-source notes.
+
+### Strategy
+
+- [`positioning.md`](./positioning.md) — category, JTBD, differentiation and competitive frame.
 - [`audiences.md`](./audiences.md) — IUP/ICP model, persona fit, anti-segments, messaging matrix and future B2B hypotheses.
+- [`brand.md`](./brand.md) — brand idea, visual territory, naming gate and identity rules.
 - [`messaging.md`](./messaging.md) — message house, copy bank, voice, claims and landing architecture.
-- [`brand.md`](./brand.md) — brand idea, visual territory, naming gate, identity rules.
-- [`go-to-market.md`](./go-to-market.md) — launch phases, channels, content engine, community, SEO and repository growth.
-- [`measurement.md`](./measurement.md) — activation funnel, north-star metrics, event taxonomy and experiment model.
+
+### Go-to-market and execution
+
+- [`go-to-market.md`](./go-to-market.md) — launch phases, channels, content engine, community, SEO and growth progression.
 - [`launch-checklist.md`](./launch-checklist.md) — marketing/release gates mapped to product launch truth.
-- [`launch-kit.md`](./launch-kit.md) — localized, channel-ready copy templates governed by the launch gates.
+- [`launch-kit.md`](./launch-kit.md) — localized, channel-ready copy templates governed by launch gates.
 - [`launch-assets.md`](./launch-assets.md) — current visual evidence audit, production brief and rights record.
-- [`competitive-landscape.md`](./competitive-landscape.md) — strategic competitor map and source notes.
+
+### Measurement and learning
+
+- [`measurement.md`](./measurement.md) — activation funnel, north-star model, event taxonomy and privacy rules.
+- [`experiments.md`](./experiments.md) — experiment backlog, hypotheses, metrics, guardrails, results and knowledge-base feedback loop.
+
+## Knowledge governance
+
+### Evidence labels
+
+Research uses explicit states:
+
+`VERIFIED | OBSERVED | HYPOTHESIS | UNKNOWN | STALE`
+
+Do not convert a hypothesis into a fact by repeating it across documents.
+
+### Decision labels
+
+Durable choices use:
+
+`ACTIVE | PROVISIONAL | SUPERSEDED | RETIRED`
+
+Material strategy changes must update the decision log rather than silently rewriting the old rationale.
+
+### Freshness
+
+Re-check time-sensitive evidence before it is used externally. This includes:
+
+- competitor positioning/features;
+- pricing;
+- app-store availability;
+- platform support;
+- search demand;
+- naming/domain/social/trademark availability;
+- legal or policy-sensitive claims.
+
+Product behavior must be checked against the actual promoted release, not remembered implementation state.
+
+### Traceability rule
+
+A material campaign claim should be traceable backward:
+
+```text
+campaign claim
+→ messaging / launch artifact
+→ positioning / audience / decision
+→ research or product truth
+→ current evidence
+```
+
+If that path breaks, qualify the claim or do not publish it.
+
+### Learning rule
+
+A completed experiment must not die in a dashboard. It should update:
+
+1. the relevant `R-*` research entry;
+2. the relevant `MD-*` decision if the evidence changes strategy;
+3. downstream positioning/messaging/GTM only after the knowledge layer is reconciled.
 
 ## Decision hierarchy
 
@@ -96,7 +188,9 @@ When marketing artifacts disagree, use this order:
 
 1. verified current product behavior;
 2. approved Spec Kit feature/launch contract and GitHub issue acceptance criteria;
-3. this marketing foundation;
-4. campaign copy and channel-specific assets.
+3. active decisions in [`decision-log.md`](./decision-log.md);
+4. current research/evidence state;
+5. positioning, audience, brand and messaging strategy;
+6. campaign copy and channel-specific assets.
 
 A campaign may simplify language, but it must not widen the product promise.
