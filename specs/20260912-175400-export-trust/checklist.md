@@ -11,4 +11,4 @@
 - [x] Durable audio-export contract materialized.
 - [x] Verification strategy binds evidence to exact HEAD.
 - [x] Design baseline CI / Graph / SDD checks pass.
-- [ ] Human Design Gate approved for the exact baseline SHA.
+- [x] Human Design Gate approved for exact design baseline `ce9de194de49146b0b9db2c0e62efe8d4d6da6aa`; design artifacts later landed through PR #60 as `c439d8fdf6f2bf58816239967198dccc384e90db`.
