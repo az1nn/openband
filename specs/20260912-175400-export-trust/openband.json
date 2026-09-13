@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "tier": "T3",
+  "issue": 49,
+  "riskTriggers": ["audio-export", "rendering", "output-integrity", "web-audio"],
+  "dependsOn": ["20260911-143500-persistence-trust"]
+}
