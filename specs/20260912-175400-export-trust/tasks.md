@@ -29,13 +29,18 @@
 - [x] Add BounceDialog tests proving WAV-only truthful launch controls and explicit empty/failure behavior.
 - [x] Prove ordinary playback renderer compatibility when strict export mode is absent.
 - [x] Run targeted export/render tests, including `playbackEngine` and legacy `audioExport` compatibility coverage.
-- [ ] Run browser export smoke with durable `asset://` source and injected missing/corrupt asset.
-- [ ] Run frontend/backend typecheck, full Vitest/legacy tests, Web build, `sdd:check`, Graph tests and `graph:ci` on the final clean HEAD.
-- [ ] Re-run Architecture Graph impact against the implemented production surfaces and confirm T3 remains valid.
-- [ ] Record exact verified HEAD and freeze it for Human Merge Gate.
+- [x] Run browser export smoke against product commit `ad293ecca532c4a4121c661709c59f76557ceb42`: durable IndexedDB `asset://` source exported as audible RIFF/WAV; missing and corrupt assets produced no download, reached the strict export failure boundary and preserved the stabilized functional project payload. Evidence: Actions run `34758195121`.
+- [ ] Run frontend/backend typecheck, full Vitest/legacy tests, Web build, `sdd:check`, Graph tests and `graph:ci` on the final clean PR #63 HEAD.
+- [x] Re-run Architecture Graph impact against the implemented production surfaces and confirm T3 remains valid. Evidence remains HIGH for `exportTrust`, `midiSynth`, `BounceDialog` and Studio integration surfaces; Actions run `34758100698` passed.
+- [ ] Record exact verified PR #63 HEAD in PR evidence and freeze it for Human Merge Gate without mutating the verified commit.
 
 ## Merge / cleanup
 
-- [ ] Human Merge Gate on the exact verified HEAD.
+- [ ] Human Merge Gate on the exact verified PR #63 HEAD.
 - [ ] Human merge only.
 - [ ] Confirm #49 / #46 status and remove/reset any temporary verification scaffolding.
+
+## Process exception
+
+- PR #61 merged as product commit `ad293ecca532c4a4121c661709c59f76557ceb42` before the planned Human Merge Gate. This file does **not** retroactively claim that gate occurred.
+- PR #63 is the post-merge verification/reconciliation follow-up. Its Human Merge Gate is independent and remains required before merging PR #63.
