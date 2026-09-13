@@ -6,6 +6,8 @@ The first marketing objective is not scale. It is to prove that a new creator un
 
 The GTM should therefore move through **proof → focused community → public beta → repeatable distribution**.
 
+Audience selection, fit signals, and persona-specific messaging live in [`audiences.md`](./audiences.md).
+
 ## Launch sequence
 
 ### Phase 0 — Naming and launch truth
@@ -47,6 +49,12 @@ Collect:
 
 Do not lead testers with a feature tour before the task.
 
+Exit criteria:
+- the core journey is completed repeatedly without facilitator rescue;
+- the dominant first-session failure modes are understood;
+- creator language converges enough to sharpen acquisition copy;
+- the team can distinguish product-quality failures from messaging failures.
+
 ### Phase 2 — Public Web beta
 
 Launch package:
@@ -66,6 +74,12 @@ Public beta CTA hierarchy:
 2. **View source**
 3. Star / contribute / report feedback
 
+Exit criteria:
+- acquisition traffic can enter the studio without explanatory hand-holding;
+- the landing → studio → first-sound path is measurable;
+- save/reopen/export trust is strong enough for public proof content;
+- support and limitation documentation matches the promoted release.
+
 ### Phase 3 — Community compounding
 
 Once activation is healthy, build loops around reusable creator value:
@@ -82,6 +96,59 @@ Once activation is healthy, build loops around reusable creator value:
 
 The community should create material that helps the next user make music, not only discuss development.
 
+Exit criteria:
+- at least one acquisition channel generates repeat visitors rather than launch-only spikes;
+- returning creators represent meaningful product usage, not only repository interest;
+- community output helps new creators activate;
+- support load remains compatible with the size of the project.
+
+### Phase 4 — First 1,000 successful creators
+
+The target is not 1,000 signups. OpenBand should count creators who reach meaningful product value.
+
+Use **successful creator** as the working unit: a unique creator who starts or opens a project, produces sound, makes a meaningful change, and saves or exports.
+
+Focus:
+- double down on the best-performing workflow wedge from guitar, beatmaking, songwriting, or general independent production;
+- publish repeatable proof content around that workflow;
+- improve activation before buying or chasing more traffic;
+- build lightweight referral and sharing loops around actual output;
+- collect structured reasons for return, abandonment, and recommendation;
+- identify whether creator ownership is understood without lengthy explanation.
+
+Do not broaden positioning merely to increase top-of-funnel traffic. A smaller high-fit audience with strong activation is more useful than a large ambiguous audience.
+
+Suggested milestone checks:
+- 100 successful creators: qualitative fit and first-session reliability;
+- 250 successful creators: channel/message comparison becomes meaningful;
+- 500 successful creators: identify the strongest acquisition wedge and retention pattern;
+- 1,000 successful creators: decide whether the next constraint is product depth, distribution, retention, or monetizable hosted demand.
+
+Exit criteria:
+- one or more repeatable acquisition motions exist;
+- activation and completion rates are stable enough to compare cohorts;
+- D7 return is measurable and not dominated by developers/testers;
+- the leading persona/wedge is supported by behavior, not only survey preference;
+- the next product-growth bottleneck is explicit.
+
+### Phase 5 — Repeatable growth
+
+Growth starts only after the product can absorb it.
+
+Possible motions:
+- creator-led tutorials and remix/challenge loops;
+- SEO pages for proven workflows, not speculative feature keywords;
+- creator partnerships around real production tasks;
+- integrations that reduce workflow switching;
+- templates/presets that shorten time to first useful output;
+- contributor ecosystem and technical credibility;
+- selective paid acquisition only when activation economics can be measured;
+- future hosted collaboration/compute experiments when organizational demand appears.
+
+Growth rule:
+
+> Scale the path that produces successful returning creators, not the channel that produces the most clicks.
+
 ## Funnel
 
 ```mermaid
@@ -89,12 +156,13 @@ flowchart LR
   A[Discovery] --> B[Landing / README]
   B --> C[Open Studio]
   C --> D[First sound <60s]
-  D --> E[Save / reopen]
-  E --> F[Export <10m]
-  F --> G[Return to create]
-  F --> H[Share / star / feedback]
-  H --> I[Contribution / referral]
-  I --> A
+  D --> E[Meaningful edit]
+  E --> F[Save / reopen]
+  F --> G[Export <10m]
+  G --> H[Return to create]
+  G --> I[Share / star / feedback]
+  I --> J[Contribution / referral]
+  J --> A
 ```
 
 The critical marketing conversion is **landing → first sound**, not landing → signup.
@@ -174,6 +242,19 @@ Start with micro-creators whose audience overlaps the actual workflow:
 
 Offer a real test brief, not a scripted positive review.
 
+## Acquisition wedge experiments
+
+Run small, comparable experiments before declaring a segment primary. Each test should use a real workflow, the same measurement window, and a single CTA.
+
+| Hypothesis | Proof asset | Primary audience | Success signal |
+| --- | --- | --- | --- |
+| Guitar is the strongest wedge | riff → recorded/arranged track | guitar/home recording | high studio-open + first-sound rate |
+| Beatmaking distributes best | sample → beat → export | beatmakers | strong short-form completion + activation |
+| Songwriting has strongest emotional pull | voice memo → arranged song | singer-songwriters | high qualified click + return intent |
+| Open source creates advocates | architecture/local-first deep dive | developer-musicians | stars/contributions that also produce product usage |
+
+Do not choose the winner by impressions alone. Prefer the wedge that produces successful creators and return behavior.
+
 ## Content engine
 
 ### Pillar A — Create in minutes
@@ -244,6 +325,57 @@ Do not optimize for volume. A sustainable baseline:
 - community reply/support continuously during beta.
 
 If product quality work consumes the week, skip content rather than publish filler.
+
+## Growth KPI gates
+
+Use [`measurement.md`](./measurement.md) as the event source of truth. GTM decisions should be based on cohorts and successful creation, not vanity totals.
+
+### Acquisition
+- qualified landing sessions by channel;
+- Start Creating CTR;
+- studio-open rate;
+- cost per qualified studio open if paid distribution is tested.
+
+### Activation
+- first-sound completion rate;
+- median time to first sound;
+- meaningful-edit rate;
+- save/reopen completion;
+- valid-export completion;
+- median blank-project → valid-export time.
+
+### Retention
+- D1 return;
+- D7 return;
+- project reopened and continued;
+- successful creators with multiple sessions.
+
+### Advocacy
+- creator shares/referrals;
+- GitHub stars that correlate with product usage;
+- issues and actionable feedback;
+- contributor conversion;
+- user-created tutorials, presets, templates, or demos.
+
+### North-star candidate
+
+**Weekly Successful Creators** — unique creators in a week who open/create a project, produce sound, make a meaningful change, and save or export.
+
+Treat this as a candidate until instrumentation and cohort behavior show that it correlates with retention and creator value.
+
+## Experiment discipline
+
+For each marketing experiment record:
+- audience hypothesis;
+- channel;
+- creative/proof asset;
+- CTA;
+- expected funnel movement;
+- measurement window;
+- result;
+- decision: scale, iterate, stop, or inconclusive.
+
+Do not change audience, hook, CTA, and landing experience at the same time and then claim to know what worked.
 
 ## SEO strategy
 
