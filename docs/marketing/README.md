@@ -43,6 +43,7 @@ The product experience has to prove that claim in minutes.
 6. **No competitor distortion.** Never imply another DAW is universally paid, closed in every workflow, or incapable of features it demonstrably supports.
 7. **No AI slop positioning.** AI is an optional accelerator. The brand is music creation and ownership, not "AI music".
 8. **Privacy claims must match implementation.** Do not claim "nothing leaves your device" if a user invokes cloud collaboration, stem separation, hosted services, or external AI providers.
+9. **No fake market precision.** Platform users, recorded-music revenue and creator-economy statistics are context/proxies until OpenBand measures its own addressable behavior.
 
 ## P0 risks before public brand investment
 
@@ -69,14 +70,16 @@ The marketing system has five layers. Each layer answers a different question an
 | Layer | Question | Canonical artifacts |
 | --- | --- | --- |
 | Product truth | What can the product honestly promise now? | `../product.md`, feature status, launch issues/specs |
-| Evidence | What do we know, observe, assume, or still need to test? | [`research-register.md`](./research-register.md), [`competitive-landscape.md`](./competitive-landscape.md) |
+| Evidence & intelligence | What do we know, observe, assume, or still need to test about users and market? | [`research-register.md`](./research-register.md), [`source-registry.md`](./source-registry.md), [`market-intelligence.md`](./market-intelligence.md), [`competitive-landscape.md`](./competitive-landscape.md), [`pricing-landscape.md`](./pricing-landscape.md), [`creator-research.md`](./creator-research.md) |
 | Decisions | What durable choices constrain marketing? | [`decision-log.md`](./decision-log.md) |
 | Strategy & execution | Who, why, what message, which channels, what launch motion? | positioning, audiences, messaging, brand, GTM, launch kit/assets |
 | Learning | Did the strategy create creator value and what changes next? | [`measurement.md`](./measurement.md), [`experiments.md`](./experiments.md) |
 
 ```mermaid
 flowchart LR
-  PT[Product truth] --> R[Research / evidence]
+  PT[Product truth] --> SI[Sources / market intelligence]
+  SI --> R[Research register]
+  CR[Creator research] --> R
   PT --> D[Decisions]
   R --> D
   D --> S[Positioning / audiences / brand]
@@ -103,11 +106,18 @@ flowchart LR
 
 ## Canonical files
 
-### Evidence and decisions
+### Evidence and market intelligence
 
+- [`source-registry.md`](./source-registry.md) — dated external sources, source quality, freshness, supported claims and caveats.
 - [`research-register.md`](./research-register.md) — hypotheses, observations, evidence state, freshness and next validation.
+- [`market-intelligence.md`](./market-intelligence.md) — category structure, market segmentation, geographic signals and disciplined TAM/SAM/SOM model.
+- [`competitive-landscape.md`](./competitive-landscape.md) — strategic competitor map and dated source notes.
+- [`pricing-landscape.md`](./pricing-landscape.md) — adjacent monetization/pricing models and OpenBand pricing guardrails.
+- [`creator-research.md`](./creator-research.md) — participant model, interview/usability protocol, synthesis taxonomy and research-to-strategy loop.
+
+### Decisions
+
 - [`decision-log.md`](./decision-log.md) — durable strategic decisions, rationale, authority and supersession history.
-- [`competitive-landscape.md`](./competitive-landscape.md) — strategic competitor map and dated external-source notes.
 
 ### Strategy
 
@@ -146,6 +156,19 @@ Durable choices use:
 
 Material strategy changes must update the decision log rather than silently rewriting the old rationale.
 
+### Source discipline
+
+Reusable external evidence should have an `S-*` entry in [`source-registry.md`](./source-registry.md) containing:
+
+- source owner and URL;
+- date checked;
+- authority/quality grade;
+- proposition(s) the source supports;
+- caveats / what it does not prove;
+- linked `R-*` research items.
+
+This is especially important for market size, pricing, user counts and competitor claims.
+
 ### Freshness
 
 Re-check time-sensitive evidence before it is used externally. This includes:
@@ -160,6 +183,22 @@ Re-check time-sensitive evidence before it is used externally. This includes:
 
 Product behavior must be checked against the actual promoted release, not remembered implementation state.
 
+### Market-sizing rule
+
+Do not present a numeric OpenBand TAM/SAM by copying a generic music-software report or a platform user count.
+
+A defensible model should distinguish:
+
+```text
+macro music economy
+≠ creator-platform population
+≠ digital music creators
+≠ browser-first addressable creators
+≠ OpenBand activated/retained creators
+```
+
+Until beta evidence exists, use the operational SOM milestone defined in [`market-intelligence.md`](./market-intelligence.md) rather than invented market-share precision.
+
 ### Traceability rule
 
 A material campaign claim should be traceable backward:
@@ -168,8 +207,8 @@ A material campaign claim should be traceable backward:
 campaign claim
 → messaging / launch artifact
 → positioning / audience / decision
-→ research or product truth
-→ current evidence
+→ R-* research item
+→ S-* source or product/creator evidence
 ```
 
 If that path breaks, qualify the claim or do not publish it.
@@ -182,6 +221,8 @@ A completed experiment must not die in a dashboard. It should update:
 2. the relevant `MD-*` decision if the evidence changes strategy;
 3. downstream positioning/messaging/GTM only after the knowledge layer is reconciled.
 
+Creator interviews and usability studies follow the same rule: sanitized synthesis updates the public knowledge layer; raw participant material stays out of the public repository.
+
 ## Decision hierarchy
 
 When marketing artifacts disagree, use this order:
@@ -189,7 +230,7 @@ When marketing artifacts disagree, use this order:
 1. verified current product behavior;
 2. approved Spec Kit feature/launch contract and GitHub issue acceptance criteria;
 3. active decisions in [`decision-log.md`](./decision-log.md);
-4. current research/evidence state;
+4. current research/evidence state and registered sources;
 5. positioning, audience, brand and messaging strategy;
 6. campaign copy and channel-specific assets.
 
