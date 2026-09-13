@@ -54,6 +54,13 @@ jobs:
           end = text.index(end_marker, start)
           lines = text[start:end].splitlines()
           script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines) + '\n'
+          early = 'const before = await page.evaluate((id) => localStorage.getItem(`openband_project_${id}`), missing.id);\n'
+          script = script.replace(early, '')
+          hydrated = 'await page.getByText("Missing Audio", { exact: true }).first().waitFor({ timeout: 20000 });\n'
+          replacement = hydrated + 'const before = await page.evaluate((id) => localStorage.getItem(`openband_project_${id}`), missing.id);\n'
+          if hydrated not in script:
+              raise SystemExit('missing hydration anchor')
+          script = script.replace(hydrated, replacement, 1)
           Path('export-smoke.mjs').write_text(script)
           PY
           node ./export-smoke.mjs
