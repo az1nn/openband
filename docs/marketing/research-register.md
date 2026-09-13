@@ -20,6 +20,7 @@ A research item may inform a decision without becoming a public claim. Public cl
 - Competitor/product claims: re-check before any campaign, comparison page, press pitch, or launch post that depends on them.
 - User research: preserve date, sample, task, and method; do not silently generalize from a small sample.
 - Search demand, pricing, app-store status, platform support, and legal/name availability are time-sensitive by default.
+- External evidence should be registered in [`source-registry.md`](./source-registry.md) when it becomes reusable decision evidence.
 
 ## Research ledger
 
@@ -37,6 +38,12 @@ A research item may inform a decision without becoming a public claim. Public cl
 | R-010 | Current `OpenBand` naming creates same-category confusion risk. | VERIFIED | Same-name music/collaboration product observed in major app stores; see [`competitive-landscape.md`](./competitive-landscape.md) and [`brand.md`](./brand.md). | Complete formal naming clearance before significant identity/media investment. | Brand gate. |
 | R-011 | First-sound and blank-project → export time are useful activation quality indicators. | HYPOTHESIS | Targets exist in the product contract and measurement model. | Instrument distributions and correlate with D7 return/reuse intent. | Activation KPI design. |
 | R-012 | “Weekly Successful Creators” is a better north-star than registrations or raw traffic. | HYPOTHESIS | Metric combines creation, persistence and output trust. | Validate correlation with retention after enough beta cohorts exist. | Growth operating model. |
+| R-013 | The broader music economy is large and growing, but recorded-music revenue is context rather than OpenBand TAM. | VERIFIED | IFPI 2026 reports US$31.7B global recorded-music revenue in 2025, +6.4%; see S-001. | Refresh with annual IFPI release; never convert directly into DAW TAM. | Market narrative and sizing discipline. |
+| R-014 | Accessible digital music creation has demonstrated mass-scale participation. | VERIFIED | BandLab publicly describes a 100M+ creator/community scale; see S-003/S-005. | Refresh company-scale claim quarterly; measure OpenBand's own qualified creator reach. | Confirms category scale, not OpenBand market share. |
+| R-015 | Brazil/Latin America is worth a dedicated early creator-acquisition/research cohort. | HYPOTHESIS | IFPI reports LatAm +17.1% and Brazil +14.1%/#8 in 2025; Spotify reports ~R$2B Brazilian artist royalties; see S-001/S-002. | Run a localized cohort and compare activated creator + retention after controlling for channel/community access. | Geographic content/research allocation. |
+| R-016 | Adjacent music-creation products validate multiple monetization archetypes while OpenBand's own willingness-to-pay remains unproven. | OBSERVED | BandLab/Soundtrap freemium; Ardour paid convenience/support; LMMS free/open; see S-003–S-010 and [`pricing-landscape.md`](./pricing-landscape.md). | After retention proof, research concrete hosted sync/compute/team jobs and current spend. | Future business model; prevents premature pricing. |
+| R-017 | The numeric size of OpenBand's browser-first/local-first serviceable market is currently unknown. | UNKNOWN | Large creator and music-economy proxies exist, but none measure the exact preference/device/workflow intersection. | Build bottom-up SAM from beta traffic, activation, browser/device compatibility, persona mix, geography and retention. | TAM/SAM/SOM credibility. |
+| R-018 | An operational SOM milestone is more useful now than a percentage of an unvalidated market estimate. | HYPOTHESIS | GTM already targets the first 1,000 successful creators; WSC is tied to delivered value. | Validate WSC against D7/D30 retention and cohort growth; graduate to forecast model after 1,000 WSC. | Growth planning and investor/strategy narrative. |
 
 ## Research capture template
 
@@ -62,6 +69,7 @@ Links:
 - Separate product facts from market interpretation.
 - Small qualitative samples are directional, not population estimates.
 - A competitor screenshot or pricing page proves only what was visible at the observation date.
+- Recorded-music revenue, platform users and artist economics are market context/proxies, not interchangeable TAM inputs.
 - Absence of evidence is not negative evidence.
 - A failed experiment should update the register instead of disappearing from history.
 
@@ -69,7 +77,9 @@ Links:
 
 ```mermaid
 flowchart LR
-  R[Research register] --> D[Decision log]
+  S[Source registry] --> R[Research register]
+  CR[Creator research] --> R
+  R --> D[Decision log]
   R --> P[Positioning / Audiences]
   D --> P
   P --> M[Messaging]
