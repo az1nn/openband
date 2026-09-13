@@ -1,0 +1,59 @@
+name: Verify #49 export smoke v2
+
+on:
+  push:
+    branches:
+      - agent/49-export-trust-verify
+
+jobs:
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 1e7783137b6aea2542ebadcd9ca9e344a9e2b841
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Serve built Web app
+        shell: bash
+        run: |
+          cat >/tmp/openband_server.py <<'PY'
+          import http.server, os, socketserver
+          from urllib.parse import urlparse
+          root = os.path.abspath("dist")
+          class H(http.server.SimpleHTTPRequestHandler):
+              def translate_path(self, path):
+                  candidate = os.path.join(root, urlparse(path).path.lstrip("/"))
+                  return candidate if os.path.isfile(candidate) else os.path.join(root, "index.html")
+              def log_message(self, *args): pass
+          with socketserver.TCPServer(("127.0.0.1", 4173), H) as server: server.serve_forever()
+          PY
+          python3 /tmp/openband_server.py >/tmp/openband-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          exit 1
+      - name: Run smoke script from repository module scope
+        shell: bash
+        run: |
+          git fetch origin agent/49-export-trust-verify --depth=1
+          git show FETCH_HEAD:.github/workflows/verify-49-export-smoke.yml >/tmp/original-smoke.yml
+          python3 <<'PY'
+          from pathlib import Path
+          text = Path('/tmp/original-smoke.yml').read_text()
+          start_marker = "          cat >/tmp/export-smoke.mjs <<'JS'\n"
+          end_marker = "\n          JS\n          node /tmp/export-smoke.mjs"
+          start = text.index(start_marker) + len(start_marker)
+          end = text.index(end_marker, start)
+          lines = text[start:end].splitlines()
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines) + '\n'
+          Path('export-smoke.mjs').write_text(script)
+          PY
+          node ./export-smoke.mjs
