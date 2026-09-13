@@ -2,140 +2,187 @@
 
 ## Classification
 
-**Tier:** T2
+**Tier:** T2  
+**Issue:** #50  
+**Depends on:** #48 Persistence Trust, #49 Export Trust
 
-The change is bounded UX orchestration plus launch verification. It reuses existing visitor auth, project starter, Studio tools, persistence, and strict WAV export. It does not introduce a new runtime boundary or durable data contract.
+The implementation is bounded UX orchestration plus launch verification. It reuses existing visitor auth, project starter, Studio tools, persistence and strict WAV export. It does not introduce a new runtime boundary or durable data contract.
 
-Architecture Graph preflight on `aadb015e465beba5549c711a9663f5a3221f9c9e`:
+ADR: NOT REQUIRED — implementation remains inside existing authentication, project, Studio, persistence and export boundaries; create an ADR only if that premise changes.
 
-- `app/(auth)/login.tsx`: MEDIUM — 2 direct / 2 transitive dependents.
-- `src/components/OnboardingFlow.tsx`: HIGH — 3 direct / 92 transitive dependents. Most transitive spread comes through the component barrel and app composition; preserve its export and avoid unrelated component API churn.
-- `app/tabs/index.tsx`: HIGH — 4 direct / 90 transitive dependents. Keep the change to first-run orchestration only.
-- `app/studio/[id].tsx`: HIGH — 5 direct / 5 transitive dependents.
-- `app/studio/hooks.ts`: HIGH — 8 direct / 10 transitive dependents. The approved implementation should avoid changing this surface unless convergence proves necessary.
+### T3 escalation boundary
 
-Graph build at preflight: 504 nodes / 1364 edges.
+Stop and reclassify to T3 with a fresh Design Gate if implementation requires changing any of the following:
 
-The Graph evidence increases required regression breadth but does not by itself change the semantic tier. If the implementation crosses the Risk boundary from `spec.md`, stop and reclassify to T3.
+- authentication identity/session semantics;
+- project schema or persistence ownership;
+- `asset://` durable identity semantics;
+- Web/native bridge or runtime boundaries;
+- export renderer architecture or DSP algorithms.
 
-ADR: NOT REQUIRED — the design stays inside existing authentication, project, Studio, persistence, and export boundaries; create an ADR only if that premise changes.
+No such escalation was required during implementation.
 
-## Design
+## Implemented design
 
-### 1. Guest entry clarity
+### 1. Explicit no-account entry
 
-Keep `AuthContext.signInAsVisitor()` unchanged. Adjust `app/(auth)/login.tsx` so the no-account path is explicit and launch-oriented (for example, “Começar sem conta”), while account sign-in remains available.
-
-No automatic anonymous session is introduced. The user still makes an explicit choice.
+`app/(auth)/login.tsx` exposes the existing visitor path as **Começar sem conta**. `AuthContext.signInAsVisitor()` remains unchanged and authoritative; no automatic anonymous session was introduced.
 
 ### 2. Action-first onboarding
 
-Refactor `src/components/OnboardingFlow.tsx` so the first decision is the creative action, not genre/mood.
+`src/components/OnboardingFlow.tsx` now asks for the creative action first and exposes exactly four primary choices:
 
-Define a small first-run action union local to this feature, conceptually:
+1. **Gravar áudio**
+2. **Instrumento**
+3. **Bateria / sample**
+4. **Importar áudio**
 
-- `record`
-- `instrument`
-- `drums`
-- `import`
+The existing `NewProject` genre/mood wizard remains available as a secondary advanced path and continues to serve normal project creation.
 
-The component forwards the selected action to the Feed orchestration. The existing `NewProject` wizard remains intact for normal project creation and is not deleted.
+### 3. Fast scratch project
 
-### 3. Fast local project creation
+`src/lib/firstRun.ts` uses the existing project-starter boundary with safe defaults:
 
-In `app/tabs/index.tsx`, create a scratch/local project result using the existing project-starter boundary and safe defaults, then route to Studio with:
+- title: `Meu primeiro projeto`;
+- genre: pop;
+- BPM: 120;
+- key: C;
+- 8 bars;
+- 4/4;
+- scratch start enabled.
 
-- `fromOnboarding=1`
-- a launch-action query value (`tool` or an equivalently bounded route parameter)
-- existing title/BPM/key/time-signature fields required by the Studio route.
+The generated Studio route carries `fromOnboarding=1`, `scratch=1` and a bounded `tool` value. No first-run intent is added to persisted `ProjectData`.
 
-Do not add launch-action state to persisted `ProjectData`; it is ephemeral navigation intent.
+### 4. Existing Studio capability dispatch
 
-### 4. Studio action dispatch
+`app/studio/[id].tsx` reuses existing capabilities:
 
-Use existing Studio capabilities only:
+- Record → `recordOptions`;
+- Instrument → Synth;
+- Drums / sample → Sampler;
+- Import → existing persistent `handleImportAudio` path.
 
-- Record → `recordOptions`
-- Instrument → Synth
-- Drums / sample → Sampler
-- Import → existing `handleImportAudio` path
+Action consumption is ephemeral in Web `sessionStorage`, preventing the same first-run action from reopening after reload without changing durable project data.
 
-For record/synth/sampler, opening the existing modal/flow from route intent is sufficient.
+### 5. Browser user activation for Import
 
-For Import, do **not** auto-open the browser file chooser after navigation. Present an action-aware Studio prompt/button whose click calls the existing import handler so browser user activation is preserved.
+Import never auto-opens a browser file chooser after navigation. Studio renders an explicit **Importar áudio agora** CTA and that click directly invokes the existing persistent importer, preserving browser user-activation requirements.
 
-When a launch action is present, suppress or adapt the generic `StudioOnboardingCoachmark` so it cannot cover the intended action.
+Generic Studio onboarding coachmarks are suppressed for action-specific routes so they cannot obscure the intended action.
 
-Avoid modifying `app/studio/hooks.ts` if the route can dispatch with its existing `rawTool` string and stable `openModal` API.
+### 6. Desktop overlay convergence
 
-### 5. Launch-critical E2E
+The first launch E2E found a real stacking defect: the persistent desktop sidebar intercepted pointer events over a visible onboarding action. The product overlay was fixed to own the intended stacking layer. Playwright was not weakened with `force: true` or another bypass.
 
-Add a dedicated Playwright launch spec rather than extending shallow screen-presence tests.
+## Launch-critical Playwright
 
-Deterministic E2E path:
+PR CI runs `e2e/launch-first-run.spec.ts` after the Web build using a deterministic audible generated WAV fixture.
 
-1. Start with clean browser storage.
-2. Load the app and choose the explicit no-account visitor path.
-3. Choose **Import audio** from first-run.
-4. Verify Studio opens for the new project and presents the import action.
-5. Generate/provide a small valid audible WAV fixture in test code and import it through the real file chooser.
-6. Assert the track appears and its persisted region URL becomes `asset://...` with durable IndexedDB bytes.
-7. Perform one real user-visible persisted edit. Prefer a stable existing mixer/arrangement control; if the UI lacks a reliable accessible selector, add only an accessibility label/test ID to the real control rather than a test-only behavior path.
-8. Wait for save/autosave completion, reload, and reopen the same project.
-9. Assert the audio and edit survived.
-10. Export through the real Bounce UI.
-11. Validate the downloaded file as RIFF/WAVE with non-empty data and non-zero PCM energy.
-12. Record elapsed time to first imported sound and export, asserting `< 60s` and `< 10m` respectively.
+The journey proves:
 
-Add focused component/integration tests for the four first-run action dispatches so CI proves Record, Instrument, Drums/sample, and Import mapping even though only Import is the deterministic full journey.
+1. browser begins unauthenticated for the launch test;
+2. user chooses **Começar sem conta**;
+3. user chooses **Importar áudio**;
+4. Studio presents the action-aware import CTA;
+5. a real Playwright file chooser receives the WAV fixture;
+6. the imported track becomes visible;
+7. persisted region identity becomes `asset://...`;
+8. referenced IndexedDB Blob has non-zero bytes;
+9. first imported audible material is reached in <60 seconds;
+10. project title is edited through real UI and persisted;
+11. reload retains title, track, `asset://` identity and non-empty IndexedDB bytes;
+12. real Bounce UI exports a browser download;
+13. downloaded file is RIFF/WAVE, 16-bit, contains a non-empty data chunk and non-zero PCM energy;
+14. export completes within the <10 minute launch target.
 
-### 6. CI
+The E2E CI job uses synthetic Supabase public env values only so `getSession()` starts empty instead of using the repository's no-env development mock session. Product auth behavior is unchanged.
 
-Extend `.github/workflows/ci.yml` with a Web launch-E2E job that:
+## Focused tests
 
-- installs dependencies;
-- installs Playwright Chromium/deps;
-- runs only the launch-critical first-run spec;
-- fails normally on E2E failure (no `|| true` or equivalent masking).
+Focused tests cover:
 
-Keep native build conditions unchanged.
+- exactly four first-run actions;
+- action → Studio tool mapping;
+- route parameters;
+- advanced/full-project wizard availability;
+- onboarding completion / don't-show behavior;
+- explicit visitor CTA copy.
 
-## Planned implementation surface
+## Architecture Graph
 
-Expected product/test files:
+### Preflight
+
+Workflow `34763778745`:
+
+- Graph: 504 nodes / 1364 edges;
+- login: MEDIUM 2/2;
+- onboarding: HIGH 3/92;
+- Feed entry: HIGH 4/90;
+- Studio route: HIGH 5/5;
+- Studio hooks: HIGH 8/10.
+
+### Post-implementation
+
+Workflow `34768180405` on `0e0c114b097a2e14a305d17f614373c7affeb32e`:
+
+- Graph: 506 nodes / 1373 edges;
+- login: MEDIUM 2/2;
+- onboarding: HIGH 4/93;
+- first-run helper: HIGH 4/94;
+- Feed entry: HIGH 4/91;
+- Studio route: HIGH 6/6.
+
+The HIGH classifications reflect graph centrality/composition. The implementation did not cross the semantic T3 boundary.
+
+## Implementation surface
+
+Production:
 
 - `app/(auth)/login.tsx`
-- `src/components/OnboardingFlow.tsx`
 - `app/tabs/index.tsx`
+- `src/components/OnboardingFlow.tsx`
+- `src/lib/firstRun.ts`
 - `app/studio/[id].tsx`
-- possibly `app/studio/parts.tsx` for action-aware coachmark/prompt behavior
-- `tests/onboarding.test.tsx` and/or focused first-run tests
+
+Verification / CI:
+
+- `tests/onboarding.test.tsx`
+- `tests/screens2.test.tsx`
 - `e2e/launch-first-run.spec.ts`
 - `.github/workflows/ci.yml`
 
-Avoid unless required by convergence:
+Explicitly unchanged architectural ownership:
 
 - `src/context/AuthContext.tsx`
-- `src/lib/projectStore.ts`
+- project persistence schema/contracts
+- `assetStore`
 - `app/studio/persistenceTrust.ts`
-- `app/studio/hooks.ts`
 - `src/lib/exportTrust.ts`
 - bridge/runtime code
+- DSP algorithms
 
-## Verification
+## Final convergence
 
-Before Human Merge Gate:
+Before requesting human microphone evidence, the exact final PR HEAD must pass:
 
-1. focused first-run/component tests;
-2. deterministic Playwright launch journey;
-3. frontend and backend typecheck;
-4. full Vitest + legacy tests;
+1. frontend typecheck;
+2. backend typecheck;
+3. full Vitest;
+4. legacy tests;
 5. Web build;
-6. `npm run sdd:check`;
-7. `npm run test:graph-sdd`;
-8. `npm run graph:ci`;
-9. post-implementation Graph impact on touched production surfaces;
-10. exact-HEAD PR CI;
-11. human real-microphone Web smoke with evidence recorded on the PR.
+6. launch-critical Playwright;
+7. `npm run sdd:check`;
+8. `npm run test:graph-sdd`;
+9. `npm run graph:ci`.
 
-Any product-code change after verification invalidates affected evidence and requires re-verification before Merge Gate.
+Temporary evidence workflows must be absent from the final diff and the PR must remain current with `master` and mergeable.
+
+## Human release evidence
+
+Microphone behavior cannot be honestly replaced by imported-audio CI. Before Human Merge Gate, a human must validate on Web with a real microphone:
+
+**Começar sem conta → Gravar áudio → grant mic → record audible material → stop → playback → reload/reopen → playback → export WAV**.
+
+The human result is recorded in the PR conversation against the exact verified HEAD without changing that HEAD afterward.
+
+After automated convergence, stop for the real-microphone evidence. After that evidence is green, present Human Merge Gate. Merge remains human-only.
