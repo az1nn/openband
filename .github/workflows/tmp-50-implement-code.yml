@@ -1,0 +1,48 @@
+name: Temporary #50 code implementation
+
+on:
+  push:
+    branches:
+      - agent/50-first-run-e2e
+
+permissions:
+  contents: write
+
+jobs:
+  implement-code:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/50-first-run-e2e
+          fetch-depth: 0
+      - name: Apply product and test changes from approved implementation script
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          workflow = Path('.github/workflows/tmp-50-implement.yml').read_text()
+          start_marker = "          python <<'PY'\n"
+          end_marker = "          PY\n\n          git config user.name"
+          start = workflow.index(start_marker) + len(start_marker)
+          end = workflow.index(end_marker, start)
+          code = workflow[start:end]
+
+          # YAML block indentation is ten spaces. Restore the original Python source.
+          code = '\n'.join(line[10:] if line.startswith('          ') else line for line in code.splitlines()) + '\n'
+
+          # The GitHub Actions token may push ordinary contents but cannot mutate
+          # workflow files. Execute the approved patch only through product/tests;
+          # CI mutation and temporary-workflow cleanup are handled by the GitHub connector.
+          cut = code.index("ci = Path('.github/workflows/ci.yml')")
+          code = code[:cut]
+          exec(compile(code, '<approved-50-implementation>', 'exec'))
+          PY
+
+          git config user.name "OpenBand Agent"
+          git config user.email "actions@openband.local"
+          git add app src tests e2e
+          git diff --cached --check
+          git commit -m "feat(mvp): implement first-run launch journey"
+          git push origin HEAD:agent/50-first-run-e2e
