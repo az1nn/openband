@@ -1,0 +1,69 @@
+name: Temporary #49 implementation v2
+
+on:
+  push:
+    branches:
+      - agent/49-export-trust-implementation
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/49-export-trust-implementation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - name: Apply approved implementation and type fixes
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          if Path("src/lib/exportTrust.ts").exists():
+              print("Implementation already present; skipping patch application")
+          else:
+              workflow = Path(".github/workflows/tmp-49-implement.yml").read_text()
+              marker = "          python <<'PY'\n"
+              start = workflow.index(marker) + len(marker)
+              end = workflow.index("\n          PY\n", start)
+              code = textwrap.dedent(workflow[start:end])
+              exec(compile(code, "tmp-49-implement.py", "exec"), {})
+
+              test_path = Path("tests/exportTrust.test.ts")
+              test_text = test_path.read_text()
+              test_text = test_text.replace('import type { AudioBuffer } from "standardized-audio-context";\n', '')
+              test_path.write_text(test_text)
+
+              bounce_path = Path("src/components/BounceDialog.tsx")
+              bounce = bounce_path.read_text()
+              old = '''        blob = await audioSystem.renderMixdown(\n          tracks,\n          duration,'''
+              new = '''        blob = await audioSystem.renderMixdown(\n          tracks.map((track) => ({\n            ...track,\n            outputId: track.outputId ?? undefined,\n          })),\n          duration,'''
+              if bounce.count(old) != 1:
+                  raise SystemExit(f"BounceDialog native renderMixdown patch count={bounce.count(old)}")
+              bounce_path.write_text(bounce.replace(old, new, 1))
+          PY
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Targeted tests
+        run: npx vitest run tests/exportTrust.test.ts tests/components5.test.tsx
+      - name: Commit product implementation and remove temporary workflows
+        shell: bash
+        run: |
+          git config user.name "OpenBand Agent"
+          git config user.email "80423834+az1nn@users.noreply.github.com"
+          git rm -f .github/workflows/tmp-49-implement.yml .github/workflows/tmp-49-implement-v2.yml
+          git add src/lib/exportTrust.ts src/lib/midiSynth.ts src/components/BounceDialog.tsx app/studio/StudioModals.tsx 'app/studio/[id].tsx' tests/exportTrust.test.ts tests/components5.test.tsx
+          if git diff --cached --quiet; then
+            echo "No implementation changes to commit"
+            exit 0
+          fi
+          git commit -m "feat(mvp): implement trusted WAV export"
+          git push origin HEAD:agent/49-export-trust-implementation
