@@ -25,7 +25,11 @@ function audibleWav(durationSec = 0.5, sampleRate = 44100): Buffer {
   return out;
 }
 
-function wavData(bytes: Buffer): { dataOffset: number; dataSize: number; bits: number } {
+function wavData(bytes: Buffer): {
+  dataOffset: number;
+  dataSize: number;
+  bits: number;
+} {
   expect(bytes.subarray(0, 4).toString("ascii")).toBe("RIFF");
   expect(bytes.subarray(8, 12).toString("ascii")).toBe("WAVE");
   let offset = 12;
@@ -33,90 +37,175 @@ function wavData(bytes: Buffer): { dataOffset: number; dataSize: number; bits: n
   while (offset + 8 <= bytes.length) {
     const id = bytes.subarray(offset, offset + 4).toString("ascii");
     const size = bytes.readUInt32LE(offset + 4);
-    if (id === "fmt " && size >= 16) bits = bytes.readUInt16LE(offset + 8 + 14);
-    if (id === "data") return { dataOffset: offset + 8, dataSize: size, bits };
+    if (id === "fmt " && size >= 16) {
+      bits = bytes.readUInt16LE(offset + 8 + 14);
+    }
+    if (id === "data") {
+      return { dataOffset: offset + 8, dataSize: size, bits };
+    }
     offset += 8 + size + (size % 2);
   }
   throw new Error("WAV data chunk not found");
 }
 
-async function persistedTrackPointer(page: Page, projectId: string, trackName: string) {
+async function persistedTrackPointer(
+  page: Page,
+  projectId: string,
+  trackName: string,
+) {
   return page.evaluate(
     ({ projectId, trackName }) => {
       const raw = localStorage.getItem(`openband_project_${projectId}`);
       if (!raw) return null;
       const project = JSON.parse(raw);
-      return project.tracks?.find((track: any) => track.name === trackName)?.regions?.[0]?.url ?? null;
+      return (
+        project.tracks?.find((track: any) => track.name === trackName)
+          ?.regions?.[0]?.url ?? null
+      );
     },
     { projectId, trackName },
   );
 }
 
-test("visitor first-run imports durable audio, persists an edit, reloads and exports audible WAV", async ({ page }) => {
-  test.setTimeout(120000);
-  const startedAt = Date.now();
-  page.on("dialog", (dialog) => void dialog.accept());
+async function persistedAssetSize(page: Page, assetPointer: string) {
+  return page.evaluate(
+    (pointer) =>
+      new Promise<number>((resolve, reject) => {
+        const assetId = pointer.slice("asset://".length);
+        const open = indexedDB.open("openband_assets", 1);
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const get = db
+            .transaction("assets", "readonly")
+            .objectStore("assets")
+            .get(assetId);
+          get.onerror = () => reject(get.error);
+          get.onsuccess = () => resolve(get.result?.blob?.size ?? 0);
+        };
+      }),
+    assetPointer,
+  );
+}
 
-  await page.goto("/");
-  await expect(page.getByText("Começar sem conta")).toBeVisible({ timeout: 15000 });
-  await page.getByText("Começar sem conta").click();
+test(
+  "visitor first-run imports durable audio, persists an edit, reloads and exports audible WAV",
+  async ({ page }) => {
+    test.setTimeout(120000);
+    const startedAt = Date.now();
+    page.on("dialog", (dialog) => void dialog.accept());
 
-  await expect(page.getByText("O que você quer fazer primeiro?")).toBeVisible({ timeout: 15000 });
-  await page.getByTestId("onboarding-action-import").click();
-  await expect(page.getByTestId("first-run-import-prompt")).toBeVisible({ timeout: 15000 });
+    await page.goto("/");
+    await expect(page.getByText("Começar sem conta")).toBeVisible({
+      timeout: 15000,
+    });
+    await page.getByText("Começar sem conta").click();
 
-  const studioUrl = new URL(page.url());
-  const projectId = studioUrl.pathname.split("/").pop();
-  expect(projectId).toBeTruthy();
+    await expect(
+      page.getByText("O que você quer fazer primeiro?"),
+    ).toBeVisible({ timeout: 15000 });
+    await page.getByTestId("onboarding-action-import").click();
+    await expect(page.getByTestId("first-run-import-prompt")).toBeVisible({
+      timeout: 15000,
+    });
 
-  const chooserPromise = page.waitForEvent("filechooser");
-  await page.getByTestId("first-run-import-audio").click();
-  const chooser = await chooserPromise;
-  await chooser.setFiles({
-    name: "launch-audible.wav",
-    mimeType: "audio/wav",
-    buffer: audibleWav(),
-  });
+    const studioUrl = new URL(page.url());
+    const projectId = studioUrl.pathname.split("/").pop();
+    expect(projectId).toBeTruthy();
 
-  await expect(page.getByText("launch-audible", { exact: true }).first()).toBeVisible({ timeout: 15000 });
-  await expect
-    .poll(() => persistedTrackPointer(page, projectId!, "launch-audible"), { timeout: 10000 })
-    .toMatch(/^asset:\/\//);
-  expect(Date.now() - startedAt).toBeLessThan(60000);
+    const chooserPromise = page.waitForEvent("filechooser");
+    await page.getByTestId("first-run-import-audio").click();
+    const chooser = await chooserPromise;
+    await chooser.setFiles({
+      name: "launch-audible.wav",
+      mimeType: "audio/wav",
+      buffer: audibleWav(),
+    });
 
-  await page.getByLabel("Edit project title").click();
-  const titleInput = page.getByLabel("Project title");
-  await titleInput.fill("Launch E2E Edited");
-  await titleInput.press("Enter");
-  await expect
-    .poll(() => page.evaluate((id) => JSON.parse(localStorage.getItem(`openband_project_${id}`) || "{}").title, projectId), { timeout: 5000 })
-    .toBe("Launch E2E Edited");
+    await expect(
+      page.getByText("launch-audible", { exact: true }).first(),
+    ).toBeVisible({ timeout: 15000 });
+    await expect
+      .poll(() => persistedTrackPointer(page, projectId!, "launch-audible"), {
+        timeout: 10000,
+      })
+      .toMatch(/^asset:\/\//);
 
-  await page.reload();
-  await expect(page.getByText("Launch E2E Edited", { exact: true })).toBeVisible({ timeout: 15000 });
-  await expect(page.getByText("launch-audible", { exact: true }).first()).toBeVisible({ timeout: 15000 });
-  const pointerAfterReload = await persistedTrackPointer(page, projectId!, "launch-audible");
-  expect(pointerAfterReload).toMatch(/^asset:\/\//);
-  expect(pointerAfterReload).not.toMatch(/^blob:/);
+    const assetPointer = await persistedTrackPointer(
+      page,
+      projectId!,
+      "launch-audible",
+    );
+    expect(assetPointer).toMatch(/^asset:\/\//);
+    await expect
+      .poll(() => persistedAssetSize(page, assetPointer!), { timeout: 10000 })
+      .toBeGreaterThan(0);
+    expect(Date.now() - startedAt).toBeLessThan(60000);
 
-  await page.keyboard.press("Control+Shift+E");
-  await expect(page.getByText("Exportar Mix", { exact: true })).toBeVisible({ timeout: 10000 });
-  const downloadPromise = page.waitForEvent("download", { timeout: 30000 });
-  await page.getByText("Exportar", { exact: true }).click();
-  const download = await downloadPromise;
-  const downloadPath = await download.path();
-  expect(downloadPath).toBeTruthy();
-  const bytes = fs.readFileSync(downloadPath!);
-  const info = wavData(bytes);
-  expect(info.dataSize).toBeGreaterThan(0);
-  expect(info.bits).toBe(16);
-  let nonZeroEnergy = false;
-  for (let offset = info.dataOffset; offset + 1 < info.dataOffset + info.dataSize; offset += 2) {
-    if (bytes.readInt16LE(offset) !== 0) {
-      nonZeroEnergy = true;
-      break;
+    await page.getByLabel("Edit project title").click();
+    const titleInput = page.getByLabel("Project title");
+    await titleInput.fill("Launch E2E Edited");
+    await titleInput.press("Enter");
+    await expect
+      .poll(
+        () =>
+          page.evaluate(
+            (id) =>
+              JSON.parse(
+                localStorage.getItem(`openband_project_${id}`) || "{}",
+              ).title,
+            projectId,
+          ),
+        { timeout: 5000 },
+      )
+      .toBe("Launch E2E Edited");
+
+    await page.reload();
+    await expect(
+      page.getByText("Launch E2E Edited", { exact: true }),
+    ).toBeVisible({ timeout: 15000 });
+    await expect(
+      page.getByText("launch-audible", { exact: true }).first(),
+    ).toBeVisible({ timeout: 15000 });
+    const pointerAfterReload = await persistedTrackPointer(
+      page,
+      projectId!,
+      "launch-audible",
+    );
+    expect(pointerAfterReload).toMatch(/^asset:\/\//);
+    expect(pointerAfterReload).not.toMatch(/^blob:/);
+    await expect
+      .poll(() => persistedAssetSize(page, pointerAfterReload!), {
+        timeout: 10000,
+      })
+      .toBeGreaterThan(0);
+
+    await page.keyboard.press("Control+Shift+E");
+    await expect(page.getByText("Exportar Mix", { exact: true })).toBeVisible({
+      timeout: 10000,
+    });
+    const downloadPromise = page.waitForEvent("download", { timeout: 30000 });
+    await page.getByText("Exportar", { exact: true }).click();
+    const download = await downloadPromise;
+    const downloadPath = await download.path();
+    expect(downloadPath).toBeTruthy();
+    const bytes = fs.readFileSync(downloadPath!);
+    const info = wavData(bytes);
+    expect(info.dataSize).toBeGreaterThan(0);
+    expect(info.bits).toBe(16);
+
+    let nonZeroEnergy = false;
+    for (
+      let offset = info.dataOffset;
+      offset + 1 < info.dataOffset + info.dataSize;
+      offset += 2
+    ) {
+      if (bytes.readInt16LE(offset) !== 0) {
+        nonZeroEnergy = true;
+        break;
+      }
     }
-  }
-  expect(nonZeroEnergy).toBe(true);
-  expect(Date.now() - startedAt).toBeLessThan(10 * 60 * 1000);
-});
+    expect(nonZeroEnergy).toBe(true);
+    expect(Date.now() - startedAt).toBeLessThan(10 * 60 * 1000);
+  },
+);
