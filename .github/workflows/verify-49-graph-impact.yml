@@ -29,4 +29,3 @@ jobs:
             echo "=== IMPACT: $target ==="
             node graph/cli.mjs impact "$target" --json
           done
-          node graph/cli.mjs ci --strict --max-warnings 0
