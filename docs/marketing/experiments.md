@@ -172,6 +172,50 @@ Do not run message or channel tests that cannot change a decision.
 **Guardrail:** maintainer support cost and issue quality.  
 **Decision:** Determine which repository-discovery investments deserve ongoing maintenance.
 
+### EXP-013 — Post-export referral invitation
+
+**Status:** BACKLOG  
+**Research:** R-027  
+**Hypothesis:** A single optional referral/share invitation shown after successful export produces higher-quality referred creators without harming completion trust.  
+**Audience:** Creators who have successfully exported.  
+**Single variable:** Optional post-export invitation vs no referral prompt.  
+**Primary metric:** referred visitor → Successful Creator.  
+**Guardrail:** export completion satisfaction, dismissal rate, D7 return of referrer.  
+**Decision:** Determine whether referral belongs in the default post-success experience.
+
+### EXP-014 — Release-note reactivation
+
+**Status:** BACKLOG  
+**Research:** R-028  
+**Hypothesis:** Concrete creator-job release notes generate more return-to-successful-creation than generic “new version” announcements among users who have opted into a reachable channel.  
+**Audience:** Eligible opt-in/community/release subscribers.  
+**Single variable:** Job/problem framing vs generic release framing.  
+**Primary metric:** message exposure → return → Successful Creator.  
+**Guardrail:** unsubscribe/dismissal, support burden, no forced identity capture.  
+**Decision:** Set the reactivation role of release communications.
+
+### EXP-015 — Community asset activation test
+
+**Status:** BACKLOG  
+**Research:** R-029  
+**Hypothesis:** A high-quality workflow template/preset reduces time to first meaningful output and improves D7 return for the matching creator job.  
+**Audience:** New creators entering one validated workflow wedge.  
+**Single variable:** Start from proven community asset vs blank project.  
+**Primary metric:** time to first sound / successful creator rate.  
+**Guardrail:** D7 return, creator understanding of the workflow, asset rights/compatibility.  
+**Decision:** Decide whether community assets deserve a maintained growth program.
+
+### EXP-016 — Async community sufficiency
+
+**Status:** BACKLOG  
+**Research:** R-030, R-031  
+**Hypothesis:** Issues/docs/Discussions can handle early creator and contributor needs through the first growth milestones without a separate synchronous chat surface.  
+**Audience:** Early creator/contributor community.  
+**Single variable:** Observational service-quality analysis; do not open a chat merely to run the test.  
+**Primary metric:** actionable questions resolved + median useful-response time.  
+**Guardrail:** unanswered recurring needs, maintainer load, evidence of users seeking synchronous help elsewhere.  
+**Decision:** Keep asynchronous surfaces or justify opening a moderated synchronous community.
+
 ## Results discipline
 
 When an experiment closes:
@@ -180,7 +224,7 @@ When an experiment closes:
 2. record the actual result even if it contradicts strategy;
 3. update affected `R-*` entries in [`research-register.md`](./research-register.md);
 4. update [`decision-log.md`](./decision-log.md) if the evidence changes a durable choice;
-5. reconcile positioning/messaging/GTM only after the knowledge layer is updated;
+5. reconcile positioning/messaging/GTM/growth/community only after the knowledge layer is updated;
 6. preserve inconclusive and negative tests to prevent repetition.
 
 ## Decision quality
@@ -195,6 +239,7 @@ qualified discovery
 → save/reopen
 → export
 → return
+→ optional advocacy/contribution
 ```
 
-The farther a result travels through this chain without damaging trust or retention, the more strategically useful it is.
+The farther a result travels through this chain without damaging trust, support health or retention, the more strategically useful it is.
