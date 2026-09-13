@@ -23,6 +23,9 @@ vi.stubGlobal("URL", {
 
 vi.mock("../src/lib/universalAudio", () => ({
   getSharedAudioContext: vi.fn(() => ({ currentTime: 0 })),
+  createTrackedBlob: vi.fn((_blob: unknown) => "blob:mock"),
+  markBlobActive: vi.fn(),
+  revokeTrackedBlob: vi.fn(),
 }));
 
 vi.mock("../src/lib/apiUrl", () => ({
