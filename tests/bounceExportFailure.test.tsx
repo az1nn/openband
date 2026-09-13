@@ -74,6 +74,7 @@ describe("BounceDialog strict export failure", () => {
                 url: "asset://missing",
               },
             ],
+            sidechainSource: null,
             plugins: [],
             automation: {},
             outputId: null,
