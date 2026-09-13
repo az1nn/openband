@@ -57,7 +57,7 @@ jobs:
           early = 'const before = await page.evaluate((id) => localStorage.getItem(`openband_project_${id}`), missing.id);\n'
           script = script.replace(early, '')
           hydrated = 'await page.getByText("Missing Audio", { exact: true }).first().waitFor({ timeout: 20000 });\n'
-          helper = 'const waitStableProject = async (id) => { let previous = null; for (let i = 0; i < 20; i++) { const current = await page.evaluate((projectId) => { const raw = localStorage.getItem(`openband_project_${projectId}`); if (!raw) return null; const value = JSON.parse(raw); delete value.lastSaved; return JSON.stringify(value); }, id); if (current === previous) return current; previous = current; await page.waitForTimeout(250); } throw new Error("project state did not stabilize"); };\nconst before = await waitStableProject(missing.id);\n'
+          helper = 'const waitStableProject = async (id) => { let previous = null; for (let i = 0; i < 20; i++) { const current = await page.evaluate((projectId) => { const raw = localStorage.getItem(`openband_project_${projectId}`); if (!raw) return null; const value = JSON.parse(raw); delete value.lastSaved; return JSON.stringify(value); }, id); if (current === previous) return current; previous = current; await page.waitForTimeout(250); } throw new Error("project state did not stabilize"); };\nawait page.waitForTimeout(2500);\nconst before = await waitStableProject(missing.id);\n'
           if hydrated not in script:
               raise SystemExit('missing hydration anchor')
           script = script.replace(hydrated, hydrated + helper, 1)
