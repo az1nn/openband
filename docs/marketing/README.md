@@ -46,6 +46,9 @@ The product experience has to prove that claim in minutes.
 9. **No fake market precision.** Platform users, recorded-music revenue and creator-economy statistics are context/proxies until OpenBand measures its own addressable behavior.
 10. **Proof before content volume.** Publish real creator workflows, first-hand education and transparent engineering evidence instead of maintaining a filler calendar or keyword factory.
 11. **Scale creator value, not channel vanity.** Views, impressions, rankings, stars, upvotes and clicks are inputs; successful creators and return behavior decide whether a channel scales.
+12. **Retention is creative return.** Reopening the app or clicking a message is weaker evidence than returning to meaningful creation.
+13. **Lifecycle requires permission and value.** Do not convert a local-first product into mandatory CRM identity capture for reminders/referral.
+14. **Community utility before community size.** Open surfaces/programs only when they help creators/contributors and the project can steward them well.
 
 ## P0 risks before public brand investment
 
@@ -74,7 +77,7 @@ The marketing system has five layers. Each layer answers a different question an
 | Product truth | What can the product honestly promise now? | `../product.md`, feature status, launch issues/specs |
 | Evidence & intelligence | What do we know, observe, assume, or still need to test about users, market, demand and platforms? | [`research-register.md`](./research-register.md), [`source-registry.md`](./source-registry.md), [`market-intelligence.md`](./market-intelligence.md), [`demand-intelligence.md`](./demand-intelligence.md), [`competitive-landscape.md`](./competitive-landscape.md), [`pricing-landscape.md`](./pricing-landscape.md), [`creator-research.md`](./creator-research.md) |
 | Decisions | What durable choices constrain marketing? | [`decision-log.md`](./decision-log.md) |
-| Strategy & execution | Who, why, what message, which channels, what launch/content motion? | positioning, audiences, messaging, brand, GTM, content system, channel playbooks, launch kit/assets |
+| Strategy & execution | Who, why, what message, which channels, what launch/content/growth/community motion? | positioning, audiences, messaging, brand, GTM, content system, channel playbooks, growth OS, lifecycle, community, launch kit/assets |
 | Learning | Did the strategy create creator value and what changes next? | [`measurement.md`](./measurement.md), [`experiments.md`](./experiments.md) |
 
 ```mermaid
@@ -86,7 +89,8 @@ flowchart LR
   R --> D
   D --> S[Positioning / audiences / brand]
   S --> M[Messaging / GTM / content / channels]
-  M --> X[Measurement / experiments]
+  M --> G[Growth / lifecycle / community]
+  G --> X[Measurement / experiments]
   X --> R
   X --> D
 ```
@@ -101,9 +105,10 @@ flowchart LR
   D --> E[Alpha creator recruitment]
   E --> F[Activation proof]
   F --> G[Public Web beta]
-  G --> H[Demand + content + community loop]
-  H --> I[Retention + contribution + referral]
-  I --> A
+  G --> H[Demand + content acquisition]
+  H --> I[Creative return + referral + community]
+  I --> J[Reusable evidence / assets / contributions]
+  J --> A
 ```
 
 ## Canonical files
@@ -134,13 +139,16 @@ flowchart LR
 - [`go-to-market.md`](./go-to-market.md) — launch phases, growth progression and allocation logic.
 - [`content-operating-system.md`](./content-operating-system.md) — proof hierarchy, editorial gates, content briefs, asset ladder and measurement rules.
 - [`channel-playbooks.md`](./channel-playbooks.md) — channel roles, native proof formats, operating rules, metrics and stop/scale criteria.
+- [`growth-operating-system.md`](./growth-operating-system.md) — activation/retention/referral loops, milestone gates and weekly growth operating cadence.
+- [`lifecycle-messaging.md`](./lifecycle-messaging.md) — permissioned in-product/release/opt-in lifecycle messaging and reactivation guardrails.
+- [`community-operations.md`](./community-operations.md) — support/discussion/contribution surfaces, stewardship, moderation and community-health gates.
 - [`launch-checklist.md`](./launch-checklist.md) — marketing/release gates mapped to product launch truth.
 - [`launch-kit.md`](./launch-kit.md) — localized, channel-ready copy templates governed by launch gates.
 - [`launch-assets.md`](./launch-assets.md) — current visual evidence audit, production brief and rights record.
 
 ### Measurement and learning
 
-- [`measurement.md`](./measurement.md) — activation funnel, north-star model, event taxonomy and privacy rules.
+- [`measurement.md`](./measurement.md) — activation, retention, referral/community health, north-star model, event taxonomy and privacy rules.
 - [`experiments.md`](./experiments.md) — experiment backlog, hypotheses, metrics, guardrails, results and knowledge-base feedback loop.
 
 ## Knowledge governance
@@ -222,13 +230,25 @@ Search volume, platform reach or trendiness alone does not justify publishing. S
 
 A durable content asset should trace back to product/research evidence and forward to one measurable creator action. See [`content-operating-system.md`](./content-operating-system.md).
 
+### Growth rule
+
+Scale only loops that produce successful returning creators without degrading product trust or support health. See [`growth-operating-system.md`](./growth-operating-system.md).
+
+### Lifecycle rule
+
+Local creation must not depend on marketing identity. In-product context and public release notes come before opt-in email/push; permissioned channels remain optional. See [`lifecycle-messaging.md`](./lifecycle-messaging.md).
+
+### Community rule
+
+A new community surface/program requires both a recurring creator/contributor job and stewardship capacity. Activity/member counts alone are not sufficient. See [`community-operations.md`](./community-operations.md).
+
 ### Traceability rule
 
-A material campaign/content claim should be traceable backward:
+A material campaign/content/lifecycle claim should be traceable backward:
 
 ```text
-campaign/content claim
-→ messaging / content / launch artifact
+claim / intervention
+→ messaging / content / lifecycle / community artifact
 → positioning / audience / decision
 → R-* research item
 → S-* source or product/creator evidence
@@ -242,7 +262,7 @@ A completed experiment must not die in a dashboard. It should update:
 
 1. the relevant `R-*` research entry;
 2. the relevant `MD-*` decision if the evidence changes strategy;
-3. downstream positioning/messaging/GTM/content only after the knowledge layer is reconciled.
+3. downstream positioning/messaging/GTM/content/growth/community only after the knowledge layer is reconciled.
 
 Creator interviews and usability studies follow the same rule: sanitized synthesis updates the public knowledge layer; raw participant material stays out of the public repository.
 
@@ -255,7 +275,7 @@ When marketing artifacts disagree, use this order:
 3. active decisions in [`decision-log.md`](./decision-log.md);
 4. current research/evidence state and registered sources;
 5. positioning, audience, brand and messaging strategy;
-6. GTM/content/channel playbooks;
+6. GTM/content/channel/growth/community playbooks;
 7. campaign copy and channel-specific assets.
 
 A campaign may simplify language, but it must not widen the product promise.
