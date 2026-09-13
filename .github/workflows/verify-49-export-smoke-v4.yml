@@ -1,0 +1,102 @@
+name: "Verify #49 export smoke v4"
+
+on:
+  push:
+    branches:
+      - agent/49-export-trust-verify
+
+jobs:
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ad293ecca532c4a4121c661709c59f76557ceb42
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Serve built Web app
+        shell: bash
+        run: |
+          cat >/tmp/openband_server.py <<'PY'
+          import http.server, os, socketserver
+          from urllib.parse import urlparse
+          root = os.path.abspath("dist")
+          class H(http.server.SimpleHTTPRequestHandler):
+              def translate_path(self, path):
+                  candidate = os.path.join(root, urlparse(path).path.lstrip("/"))
+                  return candidate if os.path.isfile(candidate) else os.path.join(root, "index.html")
+              def log_message(self, *args): pass
+          with socketserver.TCPServer(("127.0.0.1", 4173), H) as server: server.serve_forever()
+          PY
+          python3 /tmp/openband_server.py >/tmp/openband-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          exit 1
+      - name: Run persistent asset and stabilized missing asset smoke
+        shell: bash
+        run: |
+          git fetch origin agent/49-export-trust-verify --depth=1
+          git show FETCH_HEAD:.github/workflows/verify-49-export-smoke.yml >/tmp/original-smoke.yml
+          python3 <<'PY'
+          from pathlib import Path
+          text = Path('/tmp/original-smoke.yml').read_text()
+          start_marker = "          cat >/tmp/export-smoke.mjs <<'JS'\n"
+          end_marker = "\n          JS\n          node /tmp/export-smoke.mjs"
+          start = text.index(start_marker) + len(start_marker)
+          end = text.index(end_marker, start)
+          lines = text[start:end].splitlines()
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines) + '\n'
+
+          early = 'const before = await page.evaluate((id) => localStorage.getItem(`openband_project_${id}`), missing.id);\n'
+          script = script.replace(early, '')
+          hydrated = 'await page.getByText("Missing Audio", { exact: true }).first().waitFor({ timeout: 20000 });\n'
+          stable_helper = r'''async function functionalProjectSnapshot(page, id) {
+  return page.evaluate((projectId) => {
+    const raw = localStorage.getItem(`openband_project_${projectId}`);
+    if (!raw) return null;
+    const value = JSON.parse(raw);
+    delete value.lastSaved;
+    return value;
+  }, id);
+}
+
+async function waitForStableProject(page, id) {
+  let previous = null;
+  for (let i = 0; i < 20; i++) {
+    const current = await functionalProjectSnapshot(page, id);
+    const serialized = JSON.stringify(current);
+    if (previous === serialized) return current;
+    previous = serialized;
+    await page.waitForTimeout(250);
+  }
+  throw new Error("project state did not stabilize before export");
+}
+
+'''
+          script = script.replace('async function openBounce(page) {\n', stable_helper + 'async function openBounce(page) {\n', 1)
+          baseline = 'const before = await waitForStableProject(page, missing.id);\n'
+          if hydrated not in script:
+              raise SystemExit('missing hydration anchor')
+          script = script.replace(hydrated, hydrated + baseline, 1)
+
+          old_after = 'const after = await page.evaluate((id) => localStorage.getItem(`openband_project_${id}`), missing.id);\nif (before !== after) throw new Error("failed export mutated persisted project state");'
+          new_after = r'''const after = await waitForStableProject(page, missing.id);
+if (JSON.stringify(before) !== JSON.stringify(after)) {
+  console.error("before functional project", JSON.stringify(before, null, 2));
+  console.error("after functional project", JSON.stringify(after, null, 2));
+  throw new Error("failed export mutated persisted project state");
+}'''
+          if old_after not in script:
+              raise SystemExit('missing post-export comparison anchor')
+          script = script.replace(old_after, new_after, 1)
+          Path('export-smoke.mjs').write_text(script)
+          PY
+          node ./export-smoke.mjs
