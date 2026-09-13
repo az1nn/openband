@@ -80,6 +80,7 @@ flowchart LR
 ## Files
 
 - [`positioning.md`](./positioning.md) — category, audiences, JTBD, differentiation, competitive frame.
+- [`audiences.md`](./audiences.md) — IUP/ICP model, persona fit, anti-segments, messaging matrix and future B2B hypotheses.
 - [`messaging.md`](./messaging.md) — message house, copy bank, voice, claims and landing architecture.
 - [`brand.md`](./brand.md) — brand idea, visual territory, naming gate, identity rules.
 - [`go-to-market.md`](./go-to-market.md) — launch phases, channels, content engine, community, SEO and repository growth.
