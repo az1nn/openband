@@ -1040,11 +1040,16 @@ export async function renderTracksToUrl(
   }
 }
 
+export interface RenderTrackStemOptions {
+  strict?: boolean;
+}
+
 export async function renderTrackStem(
   track: TrackDef,
   bpm: number,
   duration: number,
   _buses?: BusDef[],
+  options: RenderTrackStemOptions = {},
 ): Promise<AudioBuffer | null> {
   const safeBpm = Math.max(1, bpm);
   const beatDuration = 60 / safeBpm;
@@ -1110,6 +1115,7 @@ export async function renderTrackStem(
         const buffer = await decodeCtx.decodeAudioData(ab);
         decodedRegions.push({ buffer, start: region.start, duration: region.duration });
       } catch (e) {
+        if (options.strict) throw e;
         console.warn("Failed to decode region for stem", track.name, e);
       }
     }
@@ -1131,6 +1137,7 @@ export async function renderTrackStem(
         sampleRate,
         numSamples,
         decodedRegions,
+        options.strict ?? false,
       );
       const procBuf = await applyPluginChain(trackBuf, track.plugins, sampleRate, {
         duration,
@@ -1221,6 +1228,7 @@ export async function renderTrackStem(
           gainNode.connect(panNode);
           source.start(region.start, 0, playDur);
         } catch (e) {
+          if (options.strict) throw e;
           console.warn("Failed to schedule region for stem", track.name, e);
         }
       }
@@ -1233,6 +1241,7 @@ export async function renderTrackStem(
     }
     return buffer;
   } catch (e) {
+    if (options.strict) throw e;
     console.warn("renderTrackStem failed:", e);
     return null;
   }
@@ -1245,6 +1254,7 @@ async function renderTrackBuffer(
   sampleRate: number,
   numSamples: number,
   decodedRegions: { buffer: AudioBuffer; start: number; duration: number }[],
+  strict: boolean = false,
 ): Promise<AudioBuffer> {
   const ctx2 = new OfflineAudioContext(2, Math.max(1, numSamples), sampleRate);
 
@@ -1303,6 +1313,7 @@ async function renderTrackBuffer(
       source.connect(ctx2.destination);
       source.start(region.start, 0, Math.min(region.duration, Math.max(0, duration - region.start)));
     } catch (e) {
+      if (strict) throw e;
       console.warn("Failed to schedule region for track buffer", track.name, e);
     }
   }
