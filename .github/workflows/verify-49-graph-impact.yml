@@ -1,0 +1,32 @@
+name: "Verify #49 implemented graph impact"
+
+on:
+  push:
+    branches:
+      - agent/49-export-trust-verify
+
+jobs:
+  impact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ad293ecca532c4a4121c661709c59f76557ceb42
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - name: Rebuild graph and inspect implemented surfaces
+        shell: bash
+        run: |
+          node graph/cli.mjs build --fresh
+          for target in \
+            src/lib/exportTrust.ts \
+            src/lib/midiSynth.ts \
+            src/components/BounceDialog.tsx \
+            app/studio/StudioModals.tsx \
+            'app/studio/[id].tsx'
+          do
+            echo "=== IMPACT: $target ==="
+            node graph/cli.mjs impact "$target" --json
+          done
+          node graph/cli.mjs ci --strict --max-warnings 0
