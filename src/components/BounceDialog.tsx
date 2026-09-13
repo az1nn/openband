@@ -1,44 +1,18 @@
 import { useState, useCallback } from "react";
-import { View, Text, Modal, Pressable, Alert } from "react-native";
+import { View, Text, Modal, Pressable, Alert, Platform } from "react-native";
 import { ProgressBar } from "./ProgressBar";
 import { audioSystem } from "../lib/universalAudio";
+import type { BusDef, Plugin, TrackDef } from "../lib/types";
+import type { Mood } from "../lib/projectTemplates";
+import { ExportTrustError, renderProjectWav, validateWavBlob } from "../lib/exportTrust";
 import { exportVideo, downloadVideoFile, VideoExportOptions, isVideoExportSupported, renderVideoJob } from "../lib/videoExport";
 
-type ExportFormat = "wav" | "aiff" | "flac";
-type BitDepth = 16 | 24 | 32;
-type ExportSampleRate = 44100 | 48000 | 96000;
 type ExportMode = "audio" | "video";
-
-const FORMATS: { key: ExportFormat; label: string; ext: string }[] = [
-  { key: "wav", label: "WAV", ext: ".wav" },
-  { key: "aiff", label: "AIFF", ext: ".aiff" },
-  { key: "flac", label: "FLAC", ext: ".flac" },
-];
 
 const VIDEO_FORMATS: { key: "webm" | "mp4"; label: string; ext: string }[] = [
   { key: "webm", label: "WebM", ext: ".webm" },
   { key: "mp4", label: "MP4", ext: ".mp4" },
 ];
-
-const BIT_DEPTHS: BitDepth[] = [16, 24, 32];
-const SAMPLE_RATES: ExportSampleRate[] = [44100, 48000, 96000];
-
-interface BounceRegion {
-  id?: string;
-  start: number;
-  duration: number;
-  url?: string;
-}
-
-interface BounceTrack {
-  id: string;
-  name: string;
-  muted: boolean;
-  solo: boolean;
-  volume: number;
-  pan: number;
-  regions: BounceRegion[];
-}
 
 interface BounceDialogProps {
   visible: boolean;
@@ -46,8 +20,15 @@ interface BounceDialogProps {
   projectTitle: string;
   duration: number;
   bpm?: number;
-  tracks?: BounceTrack[];
+  tracks?: TrackDef[];
+  buses?: BusDef[];
+  masterPlugins?: Plugin[];
+  mood?: Mood;
   testID?: string;
+}
+
+function safeBaseName(title: string): string {
+  return title.replace(/[^a-zA-Z0-9_-]/g, "").replace(/\s+/g, "_") || "openband";
 }
 
 export function BounceDialog({
@@ -57,13 +38,13 @@ export function BounceDialog({
   duration,
   bpm = 120,
   tracks = [],
+  buses = [],
+  masterPlugins = [],
+  mood,
   testID,
 }: BounceDialogProps) {
   const [mode, setMode] = useState<ExportMode>("audio");
-  const [format, setFormat] = useState<ExportFormat>("wav");
   const [videoFormat, setVideoFormat] = useState<"webm" | "mp4">("webm");
-  const [bitDepth, setBitDepth] = useState<BitDepth>(24);
-  const [sampleRate, setSampleRate] = useState<ExportSampleRate>(48000);
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [videoColor, setVideoColor] = useState("#6366f1");
@@ -89,7 +70,6 @@ export function BounceDialog({
     try {
       await audioSystem.initialize();
       const ext = VIDEO_FORMATS.find((f) => f.key === videoFormat)?.ext || ".webm";
-
       const videoTracks = tracks.map((t) => ({
         id: t.id,
         name: t.name,
@@ -98,14 +78,13 @@ export function BounceDialog({
         muted: t.muted,
         solo: t.solo,
         regions: t.regions.map((r) => ({
-          ...r,
+...r,
           color: t.name.toLowerCase().includes("drum") ? "#f59e0b"
             : t.name.toLowerCase().includes("bass") ? "#10b981"
             : t.name.toLowerCase().includes("vocal") ? "#ec4899"
             : videoColor,
         })),
       }));
-
       const videoOptions: VideoExportOptions = {
         width: 1080,
         height: 1920,
@@ -113,7 +92,6 @@ export function BounceDialog({
         color: videoColor,
         format: videoFormat,
       };
-
       const result = await exportVideo(
         videoTracks,
         bpm,
@@ -121,30 +99,18 @@ export function BounceDialog({
         videoOptions,
         updateProgress,
       );
-
       updateProgress(95);
-      const filename = `${projectTitle.replace(/[^a-zA-Z0-9_-]/g, "").replace(/\s+/g, "_")}_video${ext}`;
+      const filename = `${safeBaseName(projectTitle)}_video${ext}`;
       await downloadVideoFile(result.blob, filename, updateProgress);
       updateProgress(100);
-
-      Alert.alert(
-        "Exportado",
-        `V\xeddeo exportado como ${videoFormat.toUpperCase()}`,
-      );
+      Alert.alert("Exportado", `Vídeo exportado como ${videoFormat.toUpperCase()}`);
     } catch (e) {
       console.error("Video export failed:", e);
-      Alert.alert("Erro", "Falha ao exportar v\xeddeo. O recurso requer um navegador web.");
+      Alert.alert("Erro", "Falha ao exportar vídeo. O recurso requer um navegador web compatível.");
+    } finally {
+      setExporting(false);
     }
-    setExporting(false);
-  }, [
-    videoFormat,
-    projectTitle,
-    duration,
-    bpm,
-    tracks,
-    videoColor,
-    updateProgress,
-  ]);
+  }, [videoFormat, projectTitle, duration, bpm, tracks, videoColor, updateProgress]);
 
   const handleExport = useCallback(async () => {
     if (mode === "video") {
@@ -154,36 +120,46 @@ export function BounceDialog({
 
     setExporting(true);
     setProgress(0);
-
     try {
       await audioSystem.initialize();
-      const ext = FORMATS.find((f) => f.key === format)?.ext || ".wav";
       let blob: Blob;
+      let sampleRate = 44100;
+      let bitDepth = Platform.OS === "web" ? 16 : 24;
 
-      if (tracks.length > 0) {
-        blob = await audioSystem.renderMixdown(
-          tracks,
-          Math.min(duration, 300),
-          sampleRate,
+      if (Platform.OS === "web") {
+        const result = await renderProjectWav(
+          { tracks, bpm, mood, buses, masterPlugins },
           updateProgress,
         );
-        updateProgress(75);
+        blob = result.blob;
+        sampleRate = result.sampleRate;
+        bitDepth = result.bitDepth;
       } else {
-        updateProgress(50);
-        const sampleCount = Math.floor(sampleRate * Math.min(duration, 30));
-        const raw = new ArrayBuffer(44 + sampleCount * 2);
-        blob = new Blob([raw], { type: "audio/wav" });
-        updateProgress(80);
+        if (tracks.length === 0) {
+          throw new ExportTrustError(
+            "NO_RENDERABLE_CONTENT",
+            "This project has no renderable content to export.",
+          );
+        }
+        blob = await audioSystem.renderMixdown(
+          tracks.map((track) => ({
+            ...track,
+            outputId: track.outputId ?? undefined,
+          })),
+          duration,
+          44100,
+          updateProgress,
+          buses,
+        );
+        await validateWavBlob(blob);
       }
 
-      updateProgress(92);
-      const filename = `${projectTitle.replace(/[^a-zA-Z0-9_-]/g, "").replace(/\s+/g, "_")}_mix${ext}`;
+      const filename = `${safeBaseName(projectTitle)}_mix.wav`;
       await audioSystem.exportToFile(blob, filename);
       updateProgress(100);
-
       Alert.alert(
         "Exportado",
-        `Mix exportado como ${format.toUpperCase()} (${bitDepth}bit, ${sampleRate}Hz)`,
+        `Mix exportado como WAV (${bitDepth}-bit, ${(sampleRate / 1000).toFixed(1)}kHz)`,
       );
 
       if (video) {
@@ -198,27 +174,21 @@ export function BounceDialog({
             fps: 30,
             onProgress: updateProgress,
           });
-          const filename = `${projectTitle.replace(/[^a-zA-Z0-9_-]/g, "").replace(/\s+/g, "_")}_video.webm`;
-          await audioSystem.exportToFile(result.blob, filename);
-          Alert.alert("Vídeo exportado", `Vídeo salvo como ${filename}`);
+          const videoFilename = `${safeBaseName(projectTitle)}_video.webm`;
+          await audioSystem.exportToFile(result.blob, videoFilename);
+          Alert.alert("Vídeo exportado", `Vídeo salvo como ${videoFilename}`);
         }
       }
     } catch (e) {
       console.error("Export failed:", e);
-      Alert.alert("Erro", "Falha ao exportar mix.");
+      const message = e instanceof ExportTrustError
+        ? e.message
+        : "Falha ao exportar mix. O projeto não foi alterado.";
+      Alert.alert("Erro", message);
+    } finally {
+      setExporting(false);
     }
-    setExporting(false);
-  }, [
-    mode,
-    format,
-    bitDepth,
-    sampleRate,
-    projectTitle,
-    duration,
-    tracks,
-    updateProgress,
-    video,
-  ]);
+  }, [mode, projectTitle, duration, tracks, bpm, mood, buses, masterPlugins, updateProgress, video, handleVideoExport]);
 
   return (
     <Modal
@@ -233,46 +203,22 @@ export function BounceDialog({
         onPress={onClose}
       >
         <Pressable className="w-full max-w-sm bg-dark-surface rounded-3xl border border-dark-border p-5">
-          <Text className="text-white text-lg font-bold mb-1">
-            Exportar Mix
-          </Text>
-          <Text className="text-gray-500 text-xs mb-5">
-            Escolha as configurações de exportação
-          </Text>
+          <Text className="text-white text-lg font-bold mb-1">Exportar Mix</Text>
+          <Text className="text-gray-500 text-xs mb-5">Exportação de áudio confiável para lançamento</Text>
 
           <Text className="label mb-2">Mode</Text>
           <View className="flex-row gap-2 mb-4">
             <Pressable
               onPress={() => setMode("audio")}
-              className={`flex-1 py-2.5 rounded-xl items-center border ${
-                mode === "audio"
-                  ? "bg-brand-primary/20 border-brand-primary"
-                  : "bg-dark-elevated border-dark-border"
-              }`}
+              className={`flex-1 py-2.5 rounded-xl items-center border ${mode === "audio" ? "bg-brand-primary/20 border-brand-primary" : "bg-dark-elevated border-dark-border"}`}
             >
-              <Text
-                className={`text-sm font-semibold ${
-                  mode === "audio" ? "text-brand-primary" : "text-white"
-                }`}
-              >
-                Audio
-              </Text>
+              <Text className={`text-sm font-semibold ${mode === "audio" ? "text-brand-primary" : "text-white"}`}>Audio</Text>
             </Pressable>
             <Pressable
               onPress={() => setMode("video")}
-              className={`flex-1 py-2.5 rounded-xl items-center border ${
-                mode === "video"
-                  ? "bg-brand-accent/20 border-brand-accent"
-                  : "bg-dark-elevated border-dark-border"
-              }`}
+              className={`flex-1 py-2.5 rounded-xl items-center border ${mode === "video" ? "bg-brand-accent/20 border-brand-accent" : "bg-dark-elevated border-dark-border"}`}
             >
-              <Text
-                className={`text-sm font-semibold ${
-                  mode === "video" ? "text-brand-accent" : "text-white"
-                }`}
-              >
-                Video
-              </Text>
+              <Text className={`text-sm font-semibold ${mode === "video" ? "text-brand-accent" : "text-white"}`}>Video</Text>
             </Pressable>
           </View>
 
@@ -280,47 +226,19 @@ export function BounceDialog({
             <Text className="label">Vídeo</Text>
             <Pressable
               onPress={() => setVideo(!video)}
-              className={`px-4 py-2 rounded-xl border ${
-                video
-                  ? "bg-brand-accent/20 border-brand-accent"
-                  : "bg-dark-elevated border-dark-border"
-              }`}
+              className={`px-4 py-2 rounded-xl border ${video ? "bg-brand-accent/20 border-brand-accent" : "bg-dark-elevated border-dark-border"}`}
             >
-              <Text
-                className={`text-sm font-semibold ${
-                  video ? "text-brand-accent" : "text-white"
-                }`}
-              >
-                {video ? "Ligado" : "Desligado"}
-              </Text>
+              <Text className={`text-sm font-semibold ${video ? "text-brand-accent" : "text-white"}`}>{video ? "Ligado" : "Desligado"}</Text>
             </Pressable>
           </View>
 
           {mode === "audio" ? (
-            <>
-              <Text className="label mb-2">Formato</Text>
-              <View className="flex-row gap-2 mb-4">
-                {FORMATS.map((f) => (
-                  <Pressable
-                    key={f.key}
-                    onPress={() => setFormat(f.key)}
-                    className={`flex-1 py-2.5 rounded-xl items-center border ${
-                      format === f.key
-                        ? "bg-brand-primary/20 border-brand-primary"
-                        : "bg-dark-elevated border-dark-border"
-                    }`}
-                  >
-                    <Text
-                      className={`text-sm font-semibold ${
-                        format === f.key ? "text-brand-primary" : "text-white"
-                      }`}
-                    >
-                      {f.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </>
+            <View className="mb-5 rounded-xl border border-brand-primary/30 bg-brand-primary/10 p-3">
+              <Text className="text-brand-primary font-bold text-sm">WAV</Text>
+              <Text className="text-gray-400 text-xs mt-1">
+                {Platform.OS === "web" ? "16-bit · 44.1kHz · full project mix" : "44.1kHz · native WAV mix"}
+              </Text>
+            </View>
           ) : (
             <>
               <Text className="label mb-2">Formato</Text>
@@ -329,89 +247,22 @@ export function BounceDialog({
                   <Pressable
                     key={f.key}
                     onPress={() => setVideoFormat(f.key)}
-                    className={`flex-1 py-2.5 rounded-xl items-center border ${
-                      videoFormat === f.key
-                        ? "bg-brand-accent/20 border-brand-accent"
-                        : "bg-dark-elevated border-dark-border"
-                    }`}
+                    className={`flex-1 py-2.5 rounded-xl items-center border ${videoFormat === f.key ? "bg-brand-accent/20 border-brand-accent" : "bg-dark-elevated border-dark-border"}`}
                   >
-                    <Text
-                      className={`text-sm font-semibold ${
-                        videoFormat === f.key ? "text-brand-accent" : "text-white"
-                      }`}
-                    >
-                      {f.label}
-                    </Text>
+                    <Text className={`text-sm font-semibold ${videoFormat === f.key ? "text-brand-accent" : "text-white"}`}>{f.label}</Text>
                   </Pressable>
                 ))}
               </View>
-
               <Text className="label mb-2">Cor do waveform</Text>
               <View className="flex-row gap-2 mb-5">
-                {["#6366f1", "#ec4899", "#10b981", "#f59e0b", "#ef4444", "#3b82f6"].map(
-                  (c) => (
-                    <Pressable
-                      key={c}
-                      onPress={() => setVideoColor(c)}
-                      className={`w-8 h-8 rounded-full items-center justify-center ${
-                        videoColor === c ? "border-2 border-white" : "border-2 border-transparent"
-                      }`}
-                      style={{ backgroundColor: c } as Record<string, string>}
-                    >
-                      {videoColor === c && (
-                        <Text className="text-white text-xs">{"\u2713"}</Text>
-                      )}
-                    </Pressable>
-                  ),
-                )}
-              </View>
-            </>
-          )}
-
-          {mode === "audio" && (
-            <>
-              <Text className="label mb-2">Bit Depth</Text>
-              <View className="flex-row gap-2 mb-4">
-                {BIT_DEPTHS.map((b) => (
+                {["#6366f1", "#ec4899", "#10b981", "#f59e0b", "#ef4444", "#3b82f6"].map((c) => (
                   <Pressable
-                    key={b}
-                    onPress={() => setBitDepth(b)}
-                    className={`flex-1 py-2.5 rounded-xl items-center border ${
-                      bitDepth === b
-                        ? "bg-brand-accent/20 border-brand-accent"
-                        : "bg-dark-elevated border-dark-border"
-                    }`}
+                    key={c}
+                    onPress={() => setVideoColor(c)}
+                    className={`w-8 h-8 rounded-full items-center justify-center ${videoColor === c ? "border-2 border-white" : "border-2 border-transparent"}`}
+                    style={{ backgroundColor: c } as Record<string, string>}
                   >
-                    <Text
-                      className={`text-sm font-semibold ${
-                        bitDepth === b ? "text-brand-accent" : "text-white"
-                      }`}
-                    >
-                      {b}-bit
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              <Text className="label mb-2">Sample Rate</Text>
-              <View className="flex-row gap-2 mb-5">
-                {SAMPLE_RATES.map((sr) => (
-                  <Pressable
-                    key={sr}
-                    onPress={() => setSampleRate(sr)}
-                    className={`flex-1 py-2.5 rounded-xl items-center border ${
-                      sampleRate === sr
-                        ? "bg-brand-accent/20 border-brand-accent"
-                        : "bg-dark-elevated border-dark-border"
-                    }`}
-                  >
-                    <Text
-                      className={`text-sm font-semibold ${
-                        sampleRate === sr ? "text-brand-accent" : "text-white"
-                      }`}
-                    >
-                      {sr / 1000}kHz
-                    </Text>
+                    {videoColor === c && <Text className="text-white text-xs">{"\u2713"}</Text>}
                   </Pressable>
                 ))}
               </View>
@@ -421,9 +272,7 @@ export function BounceDialog({
           {exporting && (
             <View className="mb-5">
               <ProgressBar progress={progress} className="mb-2" />
-              <Text className="text-gray-400 text-xs text-center">
-                {progress}%
-              </Text>
+              <Text className="text-gray-400 text-xs text-center">{progress}%</Text>
             </View>
           )}
           <View className="flex-row gap-3">
@@ -432,20 +281,14 @@ export function BounceDialog({
               className="flex-1 py-3 rounded-xl border border-dark-border items-center active:opacity-70"
               disabled={exporting}
             >
-              <Text className="text-gray-400 text-sm font-semibold">
-                Cancelar
-              </Text>
+              <Text className="text-gray-400 text-sm font-semibold">Cancelar</Text>
             </Pressable>
             <Pressable
               onPress={handleExport}
               className="flex-1 py-3 rounded-xl bg-brand-primary items-center active:opacity-80 disabled:opacity-50"
               disabled={exporting}
             >
-              <Text
-                className={`text-white text-sm font-bold ${
-                  exporting ? "opacity-70" : ""
-                }`}
-              >
+              <Text className={`text-white text-sm font-bold ${exporting ? "opacity-70" : ""}`}>
                 {exporting ? "Exportando..." : "Exportar"}
               </Text>
             </Pressable>

@@ -232,25 +232,13 @@ describe("BounceDialog deep", () => {
     expect(screen.getByText("Video")).toBeTruthy();
   });
 
-  it("shows audio format options WAV, AIFF, FLAC", () => {
+  it("shows only the truthful launch WAV option", () => {
     render(<BounceDialog visible={true} onClose={() => {}} projectTitle="Test" duration={120} />);
     expect(screen.getByText("WAV")).toBeTruthy();
-    expect(screen.getByText("AIFF")).toBeTruthy();
-    expect(screen.getByText("FLAC")).toBeTruthy();
-  });
-
-  it("shows bit depth options", () => {
-    render(<BounceDialog visible={true} onClose={() => {}} projectTitle="Test" duration={120} />);
-    expect(screen.getByText("16-bit")).toBeTruthy();
-    expect(screen.getByText("24-bit")).toBeTruthy();
-    expect(screen.getByText("32-bit")).toBeTruthy();
-  });
-
-  it("shows sample rate options", () => {
-    render(<BounceDialog visible={true} onClose={() => {}} projectTitle="Test" duration={120} />);
-    expect(screen.getByText("44.1kHz")).toBeTruthy();
-    expect(screen.getByText("48kHz")).toBeTruthy();
-    expect(screen.getByText("96kHz")).toBeTruthy();
+    expect(screen.getByText(/44.1kHz/)).toBeTruthy();
+    expect(screen.queryByText("AIFF")).toBeNull();
+    expect(screen.queryByText("FLAC")).toBeNull();
+    expect(screen.queryByText("96kHz")).toBeNull();
   });
 
   it("shows Cancelar and Exportar buttons", () => {

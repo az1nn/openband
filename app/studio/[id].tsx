@@ -2978,6 +2978,9 @@ export default function Studio() {
         projectTitle={projectTitle}
         duration={duration}
         tracks={tracks}
+        buses={buses}
+        masterPlugins={masterPlugins}
+        projectMood={projectMood}
         showCodeSampler={modals.codeSampler}
         handleCodeRender={handleCodeRender}
         showPromptSampler={modals.promptSampler}
