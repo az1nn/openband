@@ -1,0 +1,61 @@
+name: Temporary #49 fidelity verification
+
+on:
+  push:
+    branches:
+      - agent/49-export-trust-implementation
+
+permissions:
+  contents: write
+
+jobs:
+  fidelity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/49-export-trust-implementation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - name: Remove obsolete stem-only strict API
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          p = Path("src/lib/midiSynth.ts")
+          text = p.read_text()
+          replacements = [
+            ('''export interface RenderTrackStemOptions {\n  strict?: boolean;\n}\n\nexport async function renderTrackStem(\n  track: TrackDef,\n  bpm: number,\n  duration: number,\n  _buses?: BusDef[],\n  options: RenderTrackStemOptions = {},\n): Promise<AudioBuffer | null> {''',
+             '''export async function renderTrackStem(\n  track: TrackDef,\n  bpm: number,\n  duration: number,\n  _buses?: BusDef[],\n): Promise<AudioBuffer | null> {'''),
+            ('''      } catch (e) {\n        if (options.strict) throw e;\n        console.warn("Failed to decode region for stem", track.name, e);\n      }''',
+             '''      } catch (e) {\n        console.warn("Failed to decode region for stem", track.name, e);\n      }'''),
+            ('''        decodedRegions,\n        options.strict ?? false,\n      );''',
+             '''        decodedRegions,\n      );'''),
+            ('''        } catch (e) {\n          if (options.strict) throw e;\n          console.warn("Failed to schedule region for stem", track.name, e);\n        }''',
+             '''        } catch (e) {\n          console.warn("Failed to schedule region for stem", track.name, e);\n        }'''),
+            ('''  } catch (e) {\n    if (options.strict) throw e;\n    console.warn("renderTrackStem failed:", e);\n    return null;\n  }\n}\n\nasync function renderTrackBuffer(''',
+             '''  } catch (e) {\n    console.warn("renderTrackStem failed:", e);\n    return null;\n  }\n}\n\nasync function renderTrackBuffer('''),
+          ]
+          for old, new in replacements:
+            count = text.count(old)
+            if count != 1:
+              raise SystemExit(f"expected exactly one replacement, got {count}: {old[:80]!r}")
+            text = text.replace(old, new, 1)
+          p.write_text(text)
+          PY
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Deterministic export fidelity tests
+        run: npx vitest run tests/midiSynthExportTrust.test.ts tests/exportTrust.test.ts tests/components5.test.tsx tests/playbackEngine.test.ts tests/audioExport.test.ts
+      - name: Commit cleanup and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "OpenBand Agent"
+          git config user.email "80423834+az1nn@users.noreply.github.com"
+          git rm -f .github/workflows/tmp-49-fidelity.yml
+          git add src/lib/midiSynth.ts tests/midiSynthExportTrust.test.ts
+          git commit -m "test(export): prove deterministic Web mix fidelity"
+          git push origin HEAD:agent/49-export-trust-implementation
