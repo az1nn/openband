@@ -1121,16 +1121,11 @@ export async function renderTracksToUrl(
   return blob ? createTrackedBlob(blob) : null;
 }
 
-export interface RenderTrackStemOptions {
-  strict?: boolean;
-}
-
 export async function renderTrackStem(
   track: TrackDef,
   bpm: number,
   duration: number,
   _buses?: BusDef[],
-  options: RenderTrackStemOptions = {},
 ): Promise<AudioBuffer | null> {
   const safeBpm = Math.max(1, bpm);
   const beatDuration = 60 / safeBpm;
@@ -1196,7 +1191,6 @@ export async function renderTrackStem(
         const buffer = await decodeCtx.decodeAudioData(ab);
         decodedRegions.push({ buffer, start: region.start, duration: region.duration });
       } catch (e) {
-        if (options.strict) throw e;
         console.warn("Failed to decode region for stem", track.name, e);
       }
     }
@@ -1218,7 +1212,6 @@ export async function renderTrackStem(
         sampleRate,
         numSamples,
         decodedRegions,
-        options.strict ?? false,
       );
       const procBuf = await applyPluginChain(trackBuf, track.plugins, sampleRate, {
         duration,
@@ -1309,7 +1302,6 @@ export async function renderTrackStem(
           gainNode.connect(panNode);
           source.start(region.start, 0, playDur);
         } catch (e) {
-          if (options.strict) throw e;
           console.warn("Failed to schedule region for stem", track.name, e);
         }
       }
@@ -1322,7 +1314,6 @@ export async function renderTrackStem(
     }
     return buffer;
   } catch (e) {
-    if (options.strict) throw e;
     console.warn("renderTrackStem failed:", e);
     return null;
   }
