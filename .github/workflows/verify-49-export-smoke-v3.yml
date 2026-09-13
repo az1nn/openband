@@ -57,12 +57,12 @@ jobs:
           early = 'const before = await page.evaluate((id) => localStorage.getItem(`openband_project_${id}`), missing.id);\n'
           script = script.replace(early, '')
           hydrated = 'await page.getByText("Missing Audio", { exact: true }).first().waitFor({ timeout: 20000 });\n'
-          before = 'const before = await page.evaluate((id) => { const raw = localStorage.getItem(`openband_project_${id}`); if (!raw) return null; const value = JSON.parse(raw); delete value.lastSaved; return JSON.stringify(value); }, missing.id);\n'
+          helper = 'const waitStableProject = async (id) => { let previous = null; for (let i = 0; i < 20; i++) { const current = await page.evaluate((projectId) => { const raw = localStorage.getItem(`openband_project_${projectId}`); if (!raw) return null; const value = JSON.parse(raw); delete value.lastSaved; return JSON.stringify(value); }, id); if (current === previous) return current; previous = current; await page.waitForTimeout(250); } throw new Error("project state did not stabilize"); };\nconst before = await waitStableProject(missing.id);\n'
           if hydrated not in script:
               raise SystemExit('missing hydration anchor')
-          script = script.replace(hydrated, hydrated + before, 1)
+          script = script.replace(hydrated, hydrated + helper, 1)
           old_after = 'const after = await page.evaluate((id) => localStorage.getItem(`openband_project_${id}`), missing.id);\nif (before !== after) throw new Error("failed export mutated persisted project state");'
-          new_after = 'const after = await page.evaluate((id) => { const raw = localStorage.getItem(`openband_project_${id}`); if (!raw) return null; const value = JSON.parse(raw); delete value.lastSaved; return JSON.stringify(value); }, missing.id);\nif (before !== after) throw new Error("failed export mutated persisted project state");'
+          new_after = 'const after = await waitStableProject(missing.id);\nif (before !== after) { console.error("before", before); console.error("after", after); throw new Error("failed export mutated persisted project state"); }'
           if old_after not in script:
               raise SystemExit('missing post-export comparison anchor')
           script = script.replace(old_after, new_after, 1)
