@@ -125,6 +125,53 @@ Do not run message or channel tests that cannot change a decision.
 **Guardrail:** distinguish correlation from causation.  
 **Decision:** Confirm or revise the activation model and north-star candidate.
 
+### EXP-009 — Proof-rich workflow page vs generic explainer
+
+**Status:** BACKLOG  
+**Research:** R-019, R-021, R-025  
+**Hypothesis:** A workflow page containing real screenshots/video, exact steps, limitations and a direct product path produces higher creator activation than a generic text-only category explainer for comparable qualified intent.  
+**Audience:** Search/owned visitors with a concrete workflow job.  
+**Single variable:** Evidence depth / first-hand proof in the content experience.  
+**Primary metric:** page visit → first sound.  
+**Guardrail:** bounce/return-to-search signals where measurable; successful creator rate.  
+**Minimum evidence:** Comparable qualified traffic and clear query/landing attribution; do not overclaim from a few organic visits.  
+**Decision:** Set the minimum evidence standard for organic workflow pages.
+
+### EXP-010 — YouTube transformation packaging
+
+**Status:** BACKLOG  
+**Research:** R-022, R-025  
+**Hypothesis:** Packaging videos around a concrete creator transformation produces more qualified product use than packaging around release/features.  
+**Audience:** Musicians/producers on YouTube.  
+**Single variable:** Title/thumbnail narrative.  
+**Variant A:** creator transformation (`one riff → finished sketch`).  
+**Variant B:** feature/release framing (`OpenBand vX guitar features`).  
+**Primary metric:** viewer → Studio open → first sound.  
+**Guardrail:** audience retention and D7 return of acquired creators.  
+**Decision:** Set the default YouTube packaging doctrine.
+
+### EXP-011 — Organic-query cohort quality
+
+**Status:** BACKLOG  
+**Research:** R-020  
+**Hypothesis:** Workflow/problem queries that closely match a launch-grade path produce fewer visits but higher successful-creator and return rates than broad category queries.  
+**Audience:** Organic search visitors.  
+**Single variable:** Observational segmentation by query-intent cluster; not an A/B manipulation.  
+**Primary metric:** successful creator rate by query cluster.  
+**Guardrail:** D7 return and product-support burden.  
+**Decision:** Decide which demand clusters earn more content/technical SEO investment.
+
+### EXP-012 — GitHub discovery surface quality
+
+**Status:** BACKLOG  
+**Research:** R-007, R-023  
+**Hypothesis:** A repository surface optimized around product value, launch truth, topics, social preview and clear contribution paths increases meaningful creator/contributor actions more than a feature-heavy engineering-only presentation.  
+**Audience:** GitHub visitors.  
+**Single variable:** Repository presentation baseline over a defined before/after period.  
+**Primary metric:** meaningful action rate: demo open, reproducible issue, discussion or first PR.  
+**Guardrail:** maintainer support cost and issue quality.  
+**Decision:** Determine which repository-discovery investments deserve ongoing maintenance.
+
 ## Results discipline
 
 When an experiment closes:
