@@ -255,8 +255,8 @@ describe("Login Screen", () => {
 
   it("renders visitor entry button and triggers signInAsVisitor", () => {
     renderWithToast(<Login />);
-    expect(screen.getByText("Entrar como Visitante")).toBeTruthy();
-    fireEvent.click(screen.getByText("Entrar como Visitante"));
+    expect(screen.getByText("Começar sem conta")).toBeTruthy();
+    fireEvent.click(screen.getByText("Começar sem conta"));
     expect(mockSignInAsVisitor).toHaveBeenCalledOnce();
   });
 
