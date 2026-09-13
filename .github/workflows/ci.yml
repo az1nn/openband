@@ -77,6 +77,22 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+  web-launch-e2e:
+    needs: [web-build]
+    runs-on: ubuntu-latest
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'npm'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test e2e/launch-first-run.spec.ts
+
   android-build:
     needs: [graph-check, frontend-typecheck, backend-typecheck, vitest, legacy-tests, web-build]
     if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'native-build')
