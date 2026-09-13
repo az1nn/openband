@@ -136,6 +136,33 @@ When a decision changes, do not rewrite history silently. Add the replacement de
 **Evidence:** R-019, R-020, R-021; S-012–S-014.  
 **Implication:** Search Console/product cohort data should decide which demand clusters expand after launch.
 
+### MD-016 — Retention means return to creative value
+
+**Status:** ACTIVE  
+**Decision:** Retention is defined around creators returning to continue or create meaningful work, not merely reopening the app or engaging with lifecycle messages.  
+**Rationale:** A local-first creative tool exists to help people make music; notification engagement is not a substitute for repeated product value.  
+**Authority:** [`growth-operating-system.md`](./growth-operating-system.md), [`measurement.md`](./measurement.md)  
+**Evidence:** R-026, R-027.  
+**Implication:** D1/D7/D30 analysis should distinguish passive reopen from successful creative return whenever measurement supports it.
+
+### MD-017 — Lifecycle messaging is permissioned and value-triggered
+
+**Status:** ACTIVE  
+**Decision:** OpenBand lifecycle communication must prefer in-product context and public release notes; email/push require explicit opt-in and may not become prerequisites for local creation.  
+**Rationale:** Mandatory identity capture would conflict with the local-first/no-signup product contract and could optimize CRM engagement at the expense of creator trust.  
+**Authority:** [`lifecycle-messaging.md`](./lifecycle-messaging.md), [`../product.md`](../product.md)  
+**Evidence:** R-028.  
+**Implication:** No “growth” feature should force account creation merely to enable reminders, reactivation, or referral.
+
+### MD-018 — Community scales only with creator utility and stewardship capacity
+
+**Status:** ACTIVE  
+**Decision:** Open new community surfaces or programs only when they solve a recurring creator/contributor job and the project can support moderation, triage, and knowledge maintenance.  
+**Rationale:** Empty/noisy channels create support debt and fragmented knowledge; durable docs/issues/discussions should remain preferred until synchronous community clearly adds value.  
+**Authority:** [`community-operations.md`](./community-operations.md), [`growth-operating-system.md`](./growth-operating-system.md)  
+**Evidence:** R-029, R-030, R-031.  
+**Implication:** Member/message counts do not justify adding Discord/Matrix or expanding programs without measurable creator value.
+
 ## Decision template
 
 ```md
@@ -152,4 +179,4 @@ When a decision changes, do not rewrite history silently. Add the replacement de
 
 ## Change rule
 
-Campaign copy may specialize a decision for a channel, but cannot silently override this log. Material changes to audience priority, core promise, monetization boundary, naming posture, launch motion, content doctrine, or channel-scaling rules require an explicit decision update and reconciliation of downstream docs.
+Campaign copy may specialize a decision for a channel, but cannot silently override this log. Material changes to audience priority, core promise, monetization boundary, naming posture, launch motion, content doctrine, channel-scaling rules, lifecycle permission, retention definition, or community-surface strategy require an explicit decision update and reconciliation of downstream docs.
