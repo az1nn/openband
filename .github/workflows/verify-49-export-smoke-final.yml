@@ -1,0 +1,56 @@
+name: "Verify #49 final export smoke"
+
+on:
+  push:
+    branches:
+      - agent/49-export-trust-verify
+
+jobs:
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ad293ecca532c4a4121c661709c59f76557ceb42
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Serve built Web app
+        shell: bash
+        run: |
+          cat >/tmp/openband_server.py <<'PY'
+          import http.server
+          import os
+          import socketserver
+          from urllib.parse import urlparse
+
+          root = os.path.abspath("dist")
+
+          class Handler(http.server.SimpleHTTPRequestHandler):
+              def translate_path(self, path):
+                  candidate = os.path.join(root, urlparse(path).path.lstrip("/"))
+                  return candidate if os.path.isfile(candidate) else os.path.join(root, "index.html")
+              def log_message(self, *args):
+                  pass
+
+          with socketserver.TCPServer(("127.0.0.1", 4173), Handler) as server:
+              server.serve_forever()
+          PY
+          python3 /tmp/openband_server.py >/tmp/openband-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/openband-server.log
+          exit 1
+      - name: Run browser trust smoke
+        shell: bash
+        run: |
+          git fetch origin agent/49-export-trust-verify --depth=1
+          git show FETCH_HEAD:verification/export-49-smoke.mjs > export-49-smoke.mjs
+          node ./export-49-smoke.mjs
