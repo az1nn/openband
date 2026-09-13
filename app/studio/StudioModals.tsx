@@ -22,11 +22,13 @@ import {
 } from "../../src/components";
 import type {
   Plugin,
+  BusDef,
   RecordSettings,
   TrackDef,
   TrackRegion,
   MIDINote,
 } from "../../src/lib/types";
+import type { Mood } from "../../src/lib/projectTemplates";
 import { TRACK_COLORS, type PluginSource } from "./parts";
 import type { ModalId } from "./hooks";
 
@@ -48,6 +50,9 @@ interface StudioModalsProps {
   projectTitle: string;
   duration: number;
   tracks: TrackDef[];
+  buses: BusDef[];
+  masterPlugins: Plugin[];
+  projectMood?: Mood;
   // CodeSampler / PromptSampler
   showCodeSampler: boolean;
   handleCodeRender: ComponentProps<typeof CodeSampler>["onRender"];
@@ -108,6 +113,9 @@ export function StudioModals(props: StudioModalsProps) {
     projectTitle,
     duration,
     tracks,
+    buses,
+    masterPlugins,
+    projectMood,
     showCodeSampler,
     handleCodeRender,
     showPromptSampler,
@@ -166,15 +174,11 @@ export function StudioModals(props: StudioModalsProps) {
         onClose={() => closeModal("bounce")}
         projectTitle={projectTitle}
         duration={duration}
-        tracks={tracks.map((t) => ({
-          id: t.id,
-          name: t.name,
-          muted: t.muted,
-          solo: t.solo,
-          volume: t.volume,
-          pan: t.pan,
-          regions: t.regions,
-        }))}
+        bpm={bpm}
+        tracks={tracks}
+        buses={buses}
+        masterPlugins={masterPlugins}
+        mood={projectMood}
       />
       <CodeSampler
         visible={showCodeSampler}
