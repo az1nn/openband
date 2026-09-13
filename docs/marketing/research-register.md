@@ -52,6 +52,12 @@ A research item may inform a decision without becoming a public claim. Public cl
 | R-023 | GitHub can acquire valuable advocates/contributors when the repository is treated as a product/discovery surface rather than only source storage. | HYPOTHESIS | GitHub provides README/topics/social preview/search/explore/contribution discovery surfaces; see S-017/S-018. | Measure README/demo CTR, qualified repo visitors, reproducible issues, first PR and repeat contributor behavior. | OSS/community GTM. |
 | R-024 | Reddit can produce useful qualitative research and qualified niche acquisition only through authentic, community-specific participation. | OBSERVED | Current Reddit policy prohibits repeated unsolicited spam and emphasizes relevant/authentic participation; community rules can be stricter; see S-019/S-020. | Run small disclosed community posts only where allowed and compare feedback quality + activation against support/time cost. | Community-channel playbook. |
 | R-025 | Proof-first content should outperform high-volume feature/editorial output for early OpenBand growth. | HYPOTHESIS | Core positioning depends on demonstrable workflows; platform/search guidance rewards audience usefulness and satisfaction rather than output volume. | Compare cohorts from real workflow proof vs generic feature/news content using successful creator + retention. | Content operating model. |
+| R-026 | Returning to meaningful creation is a more useful retention signal than app reopen alone. | HYPOTHESIS | Product value is creative completion/continuation; current metrics already distinguish first sound, edit, save and export. | Compare D7/D30 cohorts using passive reopen vs repeated meaningful edit/save/export and correlate with qualitative reuse intent. | Retention definition and growth dashboard. |
+| R-027 | Value-triggered referral after successful output will produce higher-quality acquisition than early generic share prompts. | HYPOTHESIS | Referral logically follows delivered creator value; no OpenBand referral data exists yet. | Test an optional post-export/share invitation against no prompt and measure referral → successful creator → return. | Referral loop design. |
+| R-028 | Permissioned/contextual lifecycle messaging can improve return without requiring account-centric CRM. | HYPOTHESIS | Local-first product contract limits identity capture; release notes and in-product context can operate without mandatory email. | Test release-note/in-product reactivation on eligible cohorts and track return-to-successful-creation plus dismissal/opt-out. | Lifecycle channel strategy. |
+| R-029 | Reusable community assets can shorten activation and increase retention when they solve a real workflow job. | HYPOTHESIS | GTM already identifies templates/presets/recipes as possible community compounding loops. | Compare new-creator cohorts using a proven template/preset vs blank start; measure first sound, export and D7. | Community asset investment. |
+| R-030 | Durable asynchronous surfaces are sufficient for early community operations; synchronous chat should wait for recurring unmet demand. | HYPOTHESIS | Issues/docs/discussions preserve searchable knowledge and require less moderation fragmentation; no evidence yet that chat is necessary. | Track recurring support/discussion patterns and whether creators explicitly need synchronous interaction before opening a chat surface. | Community surface strategy. |
+| R-031 | Maintainer support/moderation capacity becomes a material growth constraint as creator/community participation scales. | HYPOTHESIS | Community programs create triage/review/moderation load; current scale is too early to quantify. | Track useful-response time, unresolved questions, review load and moderation incidents across 100/250/500/1,000 creator milestones. | Community scaling gates and stewardship model. |
 
 ## Research capture template
 
@@ -79,6 +85,7 @@ Links:
 - A competitor screenshot or pricing page proves only what was visible at the observation date.
 - Recorded-music revenue, platform users and artist economics are market context/proxies, not interchangeable TAM inputs.
 - Platform guidance explains mechanics/policies; it does not prove that a channel will work for OpenBand.
+- Community activity is not evidence of retention unless it connects to creator value.
 - Absence of evidence is not negative evidence.
 - A failed experiment should update the register instead of disappearing from history.
 
@@ -89,6 +96,7 @@ flowchart LR
   S[Source registry] --> R[Research register]
   MI[Market / demand intelligence] --> R
   CR[Creator research] --> R
+  GO[Growth / lifecycle / community ops] --> R
   R --> D[Decision log]
   R --> P[Positioning / Audiences]
   D --> P
