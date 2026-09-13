@@ -850,7 +850,7 @@ describe("BounceDialog", () => {
     expect(screen.getByText("Exportar Mix")).toBeTruthy();
   });
 
-  it("switches format", () => {
+  it("offers WAV as the only launch audio format", () => {
     render(
       <BounceDialog
         visible={true}
@@ -859,8 +859,10 @@ describe("BounceDialog", () => {
         duration={120}
       />,
     );
-    fireEvent.click(screen.getByText("AIFF"));
-    expect(screen.getByText("AIFF")).toBeTruthy();
+    expect(screen.getByText("WAV")).toBeTruthy();
+    expect(screen.queryByText("AIFF")).toBeNull();
+    expect(screen.queryByText("FLAC")).toBeNull();
+    expect(screen.queryByText("MP3")).toBeNull();
   });
 });
 
