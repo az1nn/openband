@@ -26,7 +26,7 @@ export function WebLaunchLanding({
 
   return (
     <ScrollView
-      style={styles.page}
+      style={[styles.page, { minHeight: height }]}
       contentContainerStyle={[styles.scrollContent, { minHeight: height }]}
       testID="web-launch-landing"
     >
@@ -121,6 +121,8 @@ export function WebLaunchLanding({
 const styles = StyleSheet.create({
   page: {
     flex: 1,
+    position: "relative",
+    zIndex: 1,
     backgroundColor: "#0a0a0d",
   },
   scrollContent: {
