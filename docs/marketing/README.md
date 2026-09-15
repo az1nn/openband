@@ -21,6 +21,8 @@ The current launch contract is defined by GitHub Issue #46 and its launch slices
 - save/reopen and export must be trustworthy before broad launch;
 - social feed, CRDT collaboration, stems, AI cover generation, advanced AutoMix, video export, MCU, DAWproject, and advanced mastering are not launch blockers.
 
+As of `master` commit `2aa887e3bd2ab4643407ae96532966ec1fed9767`, PR #67 has implemented the #50 first-run visitor journey: explicit no-account entry, four action-first starts, local project creation, and deterministic imported-audio persistence/reload/WAV-export E2E coverage. This is implementation evidence for that slice, not proof that every launch slice or real-microphone path is production-validated.
+
 Marketing copy must not imply that every implemented feature is launch-grade until its user journey is proven.
 
 ## Strategic thesis
