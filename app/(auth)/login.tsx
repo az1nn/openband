@@ -288,7 +288,7 @@ export default function Login() {
 
         <View className="mt-8 pt-6 border-t border-dark-border">
           <Button
-            title="Entrar como Visitante"
+            title="Começar sem conta"
             variant="secondary"
             icon="👤"
             onPress={async () => {
@@ -303,7 +303,7 @@ export default function Login() {
             disabled={visitorLoading || loading}
           />
           <Text className="text-gray-600 text-[10px] text-center mt-2">
-            Explore o app sem criar uma conta
+            Crie seu primeiro som sem cadastro
           </Text>
         </View>
       </View>

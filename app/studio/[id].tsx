@@ -142,6 +142,20 @@ export default function Studio() {
   const [editingTitle, setEditingTitle] = useState(false);
   const titleInputRef = useRef<TextInput>(null);
   const [tooltipDismissed, setTooltipDismissed] = useState(false);
+  const launchActionStorageKey =
+    Platform.OS === "web" && id && rawTool
+      ? `openband_first_run_action_${id}_${rawTool}`
+      : null;
+  const [launchActionConsumed, setLaunchActionConsumed] = useState(() => {
+    if (!launchActionStorageKey || typeof sessionStorage === "undefined") return false;
+    return sessionStorage.getItem(launchActionStorageKey) === "1";
+  });
+  const consumeLaunchAction = useCallback(() => {
+    if (launchActionStorageKey && typeof sessionStorage !== "undefined") {
+      sessionStorage.setItem(launchActionStorageKey, "1");
+    }
+    setLaunchActionConsumed(true);
+  }, [launchActionStorageKey]);
   const { completeOnboarding } = useAuth();
   const player = useAudioPlayer(null);
   const status = useAudioPlayerStatus(player);
@@ -181,9 +195,25 @@ export default function Studio() {
   const [selectedRegion, setSelectedRegion] = useState<{ trackId: string; regionId: string } | null>(null);
   const [bottomTab, setBottomTab] = useState<BottomTab>(initialBottomTab);
   const { modals, openModal, closeModal, toggleModal } = useStudioModals({
-    synth: rawTool === "synth",
+    synth: rawTool === "synth" && !launchActionConsumed,
     pianoRoll: rawTool === "piano",
   });
+  useEffect(() => {
+    if (launchActionConsumed) return;
+    if (rawTool === "record") {
+      openModal("recordOptions");
+      consumeLaunchAction();
+      return;
+    }
+    if (rawTool === "sampler") {
+      openModal("sampler");
+      consumeLaunchAction();
+      return;
+    }
+    if (rawTool === "synth") {
+      consumeLaunchAction();
+    }
+  }, [rawTool, launchActionConsumed, openModal, consumeLaunchAction]);
   const [colorPickerTrackId, setColorPickerTrackId] = useState<string | null>(null);
   const [oneKnobValues, setOneKnobValues] = useState<
     Record<string, Record<string, number>>
@@ -1494,7 +1524,7 @@ export default function Studio() {
           isPersistent
         />
       )}
-      {isFromOnboarding && !tooltipDismissed && (
+      {isFromOnboarding && !rawTool && !tooltipDismissed && (
         <StudioOnboardingCoachmark
           onDismiss={() => {
             setTooltipDismissed(true);
@@ -1502,6 +1532,35 @@ export default function Studio() {
           }}
         />
       )}
+      {isFromOnboarding &&
+        rawTool === "import" &&
+        !launchActionConsumed &&
+        tracks.length === 0 && (
+          <View
+            testID="first-run-import-prompt"
+            className="absolute inset-0 z-[60] bg-black/70 items-center justify-center px-6"
+          >
+            <View className="w-full max-w-sm rounded-2xl border border-brand-primary/40 bg-dark-elevated p-5">
+              <Text className="text-white text-lg font-bold mb-2">Importe seu primeiro áudio</Text>
+              <Text className="text-gray-300 text-sm leading-5 mb-4">
+                Selecione um arquivo local. O áudio será guardado no projeto antes de entrar na timeline.
+              </Text>
+              <Pressable
+                testID="first-run-import-audio"
+                accessibilityRole="button"
+                accessibilityLabel="Importar áudio agora"
+                onPress={() => {
+                  consumeLaunchAction();
+                  completeOnboarding();
+                  handleImportAudio();
+                }}
+                className="rounded-xl bg-brand-primary py-3 items-center active:opacity-80"
+              >
+                <Text className="text-white font-bold text-sm">Importar áudio agora</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
       {drawerOpen && (
         <StudioDrawer
           onClose={() => setDrawerOpen(false)}

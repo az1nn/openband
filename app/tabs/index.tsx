@@ -34,6 +34,7 @@ import { generatePreviewUrl, getCachedPreview, preloadPreview, SCREEN_BOTTOM_PAD
 import { LAYOUT_MAX_WIDTHS } from "../../src/lib/responsive";
 import { GENRES } from "../../src/lib/projectTemplates";
 import type { ProjectStarterResult } from "../../src/lib/projectStarter";
+import { buildFirstRunStudioRoute, type FirstRunAction } from "../../src/lib/firstRun";
 import { useResponsive } from "../../src/lib/responsive";
 import { checkTierAccess } from "../../src/lib/tier";
 import { listProjectIndex } from "../../src/lib/projectStore";
@@ -351,6 +352,15 @@ export default function Feed() {
     [handleCreateProject],
   );
 
+  const handleFirstRunAction = useCallback(
+    (action: FirstRunAction) => {
+      completeOnboarding();
+      setShowOnboarding(false);
+      router.push(buildFirstRunStudioRoute(action) as Parameters<typeof router.push>[0]);
+    },
+    [completeOnboarding, router],
+  );
+
   const handleShare = useCallback(async (post: FeedPost) => {
     const link = `https://openband.app/track/${post.id}`;
     if (Platform.OS === "web") {
@@ -426,6 +436,7 @@ export default function Feed() {
           visible={showOnboarding}
           onClose={() => setShowOnboarding(false)}
           onCreate={handleOnboardingCreate}
+          onAction={handleFirstRunAction}
           onStartFromScratch={handleOpenNewProject}
           onDontShowAgain={completeOnboarding}
         />
