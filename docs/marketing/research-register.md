@@ -20,6 +20,7 @@ A research item may inform a decision without becoming a public claim. Public cl
 - Competitor/product claims: re-check before any campaign, comparison page, press pitch, or launch post that depends on them.
 - User research: preserve date, sample, task, and method; do not silently generalize from a small sample.
 - Search demand, pricing, app-store status, platform support, and legal/name availability are time-sensitive by default.
+- Platform discovery/policy guidance should be refreshed before major distribution pushes.
 - External evidence should be registered in [`source-registry.md`](./source-registry.md) when it becomes reusable decision evidence.
 
 ## Research ledger
@@ -44,6 +45,13 @@ A research item may inform a decision without becoming a public claim. Public cl
 | R-016 | Adjacent music-creation products validate multiple monetization archetypes while OpenBand's own willingness-to-pay remains unproven. | OBSERVED | BandLab/Soundtrap freemium; Ardour paid convenience/support; LMMS free/open; see S-003–S-010 and [`pricing-landscape.md`](./pricing-landscape.md). | After retention proof, research concrete hosted sync/compute/team jobs and current spend. | Future business model; prevents premature pricing. |
 | R-017 | The numeric size of OpenBand's browser-first/local-first serviceable market is currently unknown. | UNKNOWN | Large creator and music-economy proxies exist, but none measure the exact preference/device/workflow intersection. | Build bottom-up SAM from beta traffic, activation, browser/device compatibility, persona mix, geography and retention. | TAM/SAM/SOM credibility. |
 | R-018 | An operational SOM milestone is more useful now than a percentage of an unvalidated market estimate. | HYPOTHESIS | GTM already targets the first 1,000 successful creators; WSC is tied to delivered value. | Validate WSC against D7/D30 retention and cohort growth; graduate to forecast model after 1,000 WSC. | Growth planning and investor/strategy narrative. |
+| R-019 | Organic discovery should prioritize creator jobs with product proof rather than broad keyword inventory. | HYPOTHESIS | Current Google guidance favors helpful, reliable, people-first content; OpenBand already has explicit creator jobs and proof requirements; see S-012/S-013. | Publish a small set of proof-led workflow pages after launch, then compare organic → successful-creator conversion. | SEO/content prioritization. |
+| R-020 | Search demand should be qualified by downstream activation, not impressions or ranking alone. | HYPOTHESIS | Product-led funnel already makes first sound/successful creation the value event; search guidance does not imply traffic itself equals usefulness. | Track Search Console/query cohorts through Studio open, first sound, save/export and return. | Organic growth KPI design. |
+| R-021 | Original first-hand product evidence is a durable advantage for both traditional and generative search discovery. | OBSERVED | Google Search/AI guidance emphasizes useful, original, non-commodity, first-hand material; see S-013/S-014. | Compare proof-rich workflow/engineering content against generic explanatory pages once enough organic data exists. | Content production doctrine. |
+| R-022 | YouTube is likely the strongest early proof channel because real music workflows are audiovisual and the platform rewards audience-relevant packaging/satisfaction. | HYPOTHESIS | Product proof maps naturally to video; current YouTube guidance emphasizes relevance, engagement, quality, viewer satisfaction and clear packaging; see S-015/S-016. | Publish matched proof formats and track viewer → Studio open → successful creator → D7 return. | Channel allocation and content format. |
+| R-023 | GitHub can acquire valuable advocates/contributors when the repository is treated as a product/discovery surface rather than only source storage. | HYPOTHESIS | GitHub provides README/topics/social preview/search/explore/contribution discovery surfaces; see S-017/S-018. | Measure README/demo CTR, qualified repo visitors, reproducible issues, first PR and repeat contributor behavior. | OSS/community GTM. |
+| R-024 | Reddit can produce useful qualitative research and qualified niche acquisition only through authentic, community-specific participation. | OBSERVED | Current Reddit policy prohibits repeated unsolicited spam and emphasizes relevant/authentic participation; community rules can be stricter; see S-019/S-020. | Run small disclosed community posts only where allowed and compare feedback quality + activation against support/time cost. | Community-channel playbook. |
+| R-025 | Proof-first content should outperform high-volume feature/editorial output for early OpenBand growth. | HYPOTHESIS | Core positioning depends on demonstrable workflows; platform/search guidance rewards audience usefulness and satisfaction rather than output volume. | Compare cohorts from real workflow proof vs generic feature/news content using successful creator + retention. | Content operating model. |
 
 ## Research capture template
 
@@ -70,6 +78,7 @@ Links:
 - Small qualitative samples are directional, not population estimates.
 - A competitor screenshot or pricing page proves only what was visible at the observation date.
 - Recorded-music revenue, platform users and artist economics are market context/proxies, not interchangeable TAM inputs.
+- Platform guidance explains mechanics/policies; it does not prove that a channel will work for OpenBand.
 - Absence of evidence is not negative evidence.
 - A failed experiment should update the register instead of disappearing from history.
 
@@ -78,6 +87,7 @@ Links:
 ```mermaid
 flowchart LR
   S[Source registry] --> R[Research register]
+  MI[Market / demand intelligence] --> R
   CR[Creator research] --> R
   R --> D[Decision log]
   R --> P[Positioning / Audiences]
