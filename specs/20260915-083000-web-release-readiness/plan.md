@@ -16,7 +16,7 @@ ADR: **NOT REQUIRED** while the implementation preserves current deployment/runt
 Stop and reclassify before implementation if the work requires:
 
 - a new hosting/deployment topology or backend routing boundary;
-- authentication/session contract changes;
+- authentication identity/session changes or protection-semantics changes beyond the single public Web root;
 - project schema, persistence ownership, or durable asset identity changes;
 - export renderer/DSP changes;
 - Web/native bridge changes;
@@ -35,6 +35,8 @@ Security-sensitive credential handling or data-loss/recovery changes are T4 trig
 - Native/non-Web keeps the current direct app navigation behavior.
 - The landing is intentionally shallow: promise, alpha status, proof row, one primary CTA, one source CTA, and concise limitation/trust links.
 
+The existing `RootLayoutProtected` currently redirects every unauthenticated non-auth route to `/login`. To make the landing genuinely public, `app/_layout.tsx` must exempt **only** the Web root route from that redirect. All other route protection and all session/visitor identity semantics remain unchanged. This is route orchestration, not a new authentication contract.
+
 Prefer a focused component under `src/components/` if keeping the route file small improves testability. Do not turn the release landing into another feature inventory.
 
 ### 2. Canonical launch message
@@ -52,7 +54,7 @@ Copy must follow `docs/marketing/messaging.md` and `docs/marketing/launch-kit.md
 
 ### 3. CTA integration
 
-The primary CTA reuses the existing auth/visitor and first-run path. It must not create a new anonymous identity, project schema, starter, persistence path, or Studio boot contract.
+The primary CTA enters the existing auth/visitor path, then the #50 first-run path. It must not create a new anonymous identity, project schema, starter, persistence path, or Studio boot contract.
 
 The source CTA opens the canonical `az1nn/openband` repository through a normal Web link / existing cross-platform linking primitive.
 
@@ -118,15 +120,31 @@ The existing CI contract remains intact:
 - Web build;
 - `web-launch-e2e`.
 
-Add only focused landing/release-document tests needed to prove new behavior. Do not weaken or duplicate the #50 E2E.
+Add only focused landing/auth-shell/release-document tests needed to prove new behavior. Do not weaken or duplicate the #50 E2E.
+
+## Architecture Graph preflight
+
+Run `34963915926` on the initial design branch produced a 507-node / 1373-edge graph:
+
+- `app/index.tsx`: MEDIUM, blast radius 0;
+- `app/(auth)/login.tsx`: MEDIUM, blast radius 2;
+- `app/tabs/index.tsx`: HIGH, blast radius 91;
+- `src/components/OnboardingFlow.tsx`: HIGH, blast radius 93.
+
+The HIGH results are existing shared-surface centrality. The #51 design does not require structural changes to Feed or Onboarding. A separate preflight measures `app/_layout.tsx` after discovering that its current unauthenticated redirect must explicitly allow the Web root.
+
+### Graph interpretation
+
+The semantic tier remains T2 if implementation is limited to the public-root exception, landing composition, docs and release verification. Elevate before implementation if the root-shell change broadens protection semantics, changes identity/session ownership, or creates a new runtime/deployment boundary.
 
 ## Expected implementation surface
 
 Likely production/docs surface:
 
 - `app/index.tsx`
+- `app/_layout.tsx` — narrowly scoped public-Web-root exception only
 - optional focused landing component under `src/components/`
-- focused landing tests under `tests/`
+- focused landing/auth-shell tests under `tests/`
 - `README.md`
 - `docs/product.md` only where release wording needs convergence
 - new `docs/release/web-alpha.md` (or equivalent concise runbook)
@@ -135,6 +153,7 @@ Likely production/docs surface:
 Expected unchanged ownership:
 
 - `src/context/AuthContext.tsx`
+- login/visitor identity implementation
 - project persistence and `asset://` contracts
 - Studio save/reopen implementation
 - export renderer / DSP
@@ -154,7 +173,7 @@ Before Human Merge Gate, exact candidate HEAD must pass:
 7. legacy tests;
 8. production Web build;
 9. launch-critical Playwright;
-10. focused landing/CTA tests;
+10. focused landing/auth-shell/CTA tests, including proof that only Web `/` is public and other protected routes retain current behavior;
 11. deployed release smoke on the canonical URL;
 12. human real-microphone smoke on a browser recorded as supported;
 13. documentation/claim reconciliation against exact deployed HEAD;
