@@ -14,7 +14,7 @@ A new visitor lands on a concise Web entry page, understands the product promise
 
 ## Requirements
 
-- **WR-001 — Public Web entry.** On Web, `/` MUST present a concise product entry instead of immediately redirecting to `/tabs`. Non-Web runtimes MUST retain their existing navigation behavior unless separately approved.
+- **WR-001 — Public Web entry.** On Web, `/` MUST present a concise product entry instead of immediately redirecting to `/tabs` or `/login`. The root auth shell MAY exempt only the Web `/` landing from the existing unauthenticated redirect; this MUST NOT change session identity, visitor identity, or protection of any other route. Non-Web runtimes MUST retain their existing navigation behavior unless separately approved.
 - **WR-002 — Creation-first CTA.** The primary Web CTA MUST be **Start creating** (or the active locale equivalent) and route into the existing auth/visitor → first-run journey. It MUST NOT introduce another project-creation or authentication path.
 - **WR-003 — Source CTA.** A secondary **View source** action MUST link to the canonical public repository.
 - **WR-004 — Evidence-backed positioning.** Public copy MUST center on the current contract: local-first project ownership, free core creation, no mandatory signup for the local launch path, and open source. It MUST NOT claim mature-DAW parity, universal offline behavior, universal privacy, unlimited service capacity, or that BandLab Studio is universally paid.
@@ -43,7 +43,7 @@ A new visitor lands on a concise Web entry page, understands the product promise
 
 ## Acceptance
 
-1. Web `/` presents a concise launch page with a creation-first primary CTA and source secondary CTA; non-Web entry behavior is preserved.
+1. Web `/` presents a concise launch page with a creation-first primary CTA and source secondary CTA; unauthenticated Web `/` is publicly reachable while all other existing protected routes keep their current auth behavior, and non-Web entry behavior is preserved.
 2. The creation CTA enters the existing no-account/first-run flow rather than creating a parallel flow.
 3. Launch copy, README, and product documentation state the current alpha scope without parity or blanket privacy claims.
 4. Browser/microphone/storage limitations are documented from release-specific evidence.
@@ -51,12 +51,12 @@ A new visitor lands on a concise Web entry page, understands the product promise
 6. CI, including `web-launch-e2e`, is green on the exact candidate HEAD.
 7. A production smoke proves the launch-critical path on the deployed revision, including real-microphone human evidence and a valid WAV export.
 8. A rollback runbook names a previous known-good revision/deployment and includes a post-rollback smoke procedure.
-9. No implementation change crosses an auth, persistence, export/DSP, backend, security, or cross-runtime architectural boundary without reclassification and a fresh Design Gate.
+9. No implementation change crosses an auth identity/session, persistence, export/DSP, backend, security, or cross-runtime architectural boundary without reclassification and a fresh Design Gate.
 
 ## Risk boundary
 
-This feature starts at **T2** because it adds a bounded Web release surface and release verification around already-approved product contracts.
+This feature starts at **T2** because it adds a bounded Web release surface and release verification around already-approved product contracts. The Web `/` auth-shell exception is route orchestration only; it does not authorize a change to identity/session semantics or protection of any other route.
 
-Escalate to **T3 + fresh Human Design Gate** if implementation changes deployment topology, durable runtime contracts, auth/session semantics, project/persistence ownership, cross-runtime bridges, or backend routing architecture.
+Escalate to **T3 + fresh Human Design Gate** if implementation changes deployment topology, durable runtime contracts, auth identity/session semantics, protection semantics beyond the single public Web root, project/persistence ownership, cross-runtime bridges, or backend routing architecture.
 
 Escalate to **T4** if the change introduces security-sensitive credential handling, credible data-loss risk, destructive migration/recovery behavior, or another T4 trigger defined by `AGENTS.md`.
