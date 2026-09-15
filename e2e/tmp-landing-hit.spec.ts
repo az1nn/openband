@@ -23,6 +23,14 @@ test("diagnose landing CTA hit target", async ({ page }) => {
         pointerEvents: style.pointerEvents,
         position: style.position,
         zIndex: style.zIndex,
+        display: style.display,
+        flexDirection: style.flexDirection,
+        alignSelf: style.alignSelf,
+        alignItems: style.alignItems,
+        justifyContent: style.justifyContent,
+        padding: style.padding,
+        margin: style.margin,
+        backgroundColor: style.backgroundColor,
         overflow: style.overflow,
         rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
         parent: node.parentElement
@@ -34,15 +42,21 @@ test("diagnose landing CTA hit target", async ({ page }) => {
           : null,
       };
     };
+    const target = document.querySelector('[data-testid="launch-start-creating"]');
+    const ancestors: ReturnType<typeof describe>[] = [];
+    let current: Element | null = target;
+    while (current && ancestors.length < 10) {
+      ancestors.push(describe(current));
+      current = current.parentElement;
+    }
     return {
       point: { x, y },
+      target: target ? describe(target) : null,
+      ancestors,
       elementFromPoint: document.elementFromPoint(x, y)
         ? describe(document.elementFromPoint(x, y)!)
         : null,
       stack: document.elementsFromPoint(x, y).slice(0, 12).map(describe),
-      flexViews: Array.from(document.querySelectorAll("div.r-13awgt0"))
-        .map(describe)
-        .filter((item) => item.rect.width > 0 && item.rect.height > 0),
     };
   }, { x, y });
   console.log("HIT_DIAGNOSTIC", JSON.stringify(hit, null, 2));
