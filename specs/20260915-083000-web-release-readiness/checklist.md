@@ -22,21 +22,21 @@
 
 ## Architecture / risk guardrails
 
-- [x] No auth identity/session semantic change is planned.
-- [x] No protection-semantics change beyond the single public Web root is planned.
-- [x] No project schema/persistence ownership change is planned.
-- [x] No `asset://` or durable audio contract change is planned.
-- [x] No export/DSP architecture change is planned.
-- [x] No backend hosting topology change is planned.
-- [x] No Web/native bridge change is planned.
+- [x] No auth identity/session semantic change is planned or implemented.
+- [x] No protection-semantics change beyond the single public Web root is planned or implemented.
+- [x] No project schema/persistence ownership change is planned or implemented.
+- [x] No `asset://` or durable audio contract change is planned or implemented.
+- [x] No export/DSP architecture change is planned or implemented.
+- [x] No backend hosting topology change is planned or implemented.
+- [x] No Web/native bridge change is planned or implemented.
 - [x] New deployment/security/data-loss behavior requires reclassification before implementation.
-- [x] Architecture Graph preflight recorded for root, root auth shell, login and reused first-run surfaces; no tier escalation required.
+- [x] Architecture Graph preflight and post-implementation evidence show no tier escalation requirement.
 
 ## Verification quality
 
 - [x] Exact candidate HEAD is required for automated evidence.
-- [x] Existing launch-critical Playwright remains required.
-- [x] Focused landing/auth-shell/CTA tests are planned.
+- [x] Existing launch-critical Playwright remains required and includes the new public landing step.
+- [x] Focused landing/auth-shell/CTA tests are implemented.
 - [x] Frontend/backend typecheck, Vitest, legacy, build, SDD and Graph gates remain required.
 - [x] Real microphone evidence cannot be replaced by import-only CI.
 - [x] Browser labels require release-specific evidence.
@@ -44,7 +44,7 @@
 - [x] Required evidence uses PASS/FAIL/BLOCKED/FLAKY/NOT_REQUIRED semantics.
 - [x] Human Merge Gate is against the exact verified PR HEAD.
 
-## Human Design Gate prerequisites
+## Human Design Gate
 
 - [x] `spec.md` defines WHAT.
 - [x] `plan.md` defines HOW and escalation boundaries.
@@ -52,5 +52,5 @@
 - [x] `verification.md` defines PROOF.
 - [x] Spec Kit analysis has no unresolved material contradiction or Constitution conflict; 16/16 requirements have task coverage.
 - [x] Graph preflight has no unresolved tier escalation.
-- [ ] Exact Design Baseline SHA is recorded in the PR/GitHub gate evidence.
-- [ ] Human Design Gate approval is recorded in GitHub before product implementation.
+- [x] Exact Design Baseline SHA `e2ea8f8fd2ea192afcc395e30bb1bd53d81b2640` is recorded in PR #69.
+- [x] Human Design Gate approval is recorded in PR #69 before product implementation.
