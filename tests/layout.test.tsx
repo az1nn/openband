@@ -103,6 +103,23 @@ describe("Root Layout", () => {
     expect(mockReplace).toHaveBeenCalledWith("/login");
   });
 
+  it("allows the unauthenticated Web root without weakening protected routes", () => {
+    Object.defineProperty(Platform, "OS", { get: () => "web", configurable: true });
+    mockSegments.mockReturnValue([]);
+
+    render(<RootLayout />);
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(screen.getByTestId("stack")).toBeTruthy();
+  });
+
+  it("keeps the unauthenticated native root protected", () => {
+    Object.defineProperty(Platform, "OS", { get: () => "ios", configurable: true });
+    mockSegments.mockReturnValue([]);
+
+    render(<RootLayout />);
+    expect(mockReplace).toHaveBeenCalledWith("/login");
+  });
+
   it("redirects to /tabs when authenticated and in auth group", () => {
     mockSegments.mockReturnValue(["(auth)"]);
     mockAuthFn.mockReturnValue({
