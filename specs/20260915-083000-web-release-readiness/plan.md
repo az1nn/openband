@@ -131,11 +131,13 @@ Run `34963915926` on the initial design branch produced a 507-node / 1373-edge g
 - `app/tabs/index.tsx`: HIGH, blast radius 91;
 - `src/components/OnboardingFlow.tsx`: HIGH, blast radius 93.
 
-The HIGH results are existing shared-surface centrality. The #51 design does not require structural changes to Feed or Onboarding. A separate preflight measures `app/_layout.tsx` after discovering that its current unauthenticated redirect must explicitly allow the Web root.
+After preflight exposed the root-auth-shell constraint, run `34964085935` measured `app/_layout.tsx` as MEDIUM with blast radius 1 (its direct/transitive dependent is the existing layout test).
+
+The HIGH results are existing shared-surface centrality. The approved design does not require structural changes to Feed or Onboarding. The only auth-shell change is a narrow Web-root public-route exception; identity/session ownership remains untouched.
 
 ### Graph interpretation
 
-The semantic tier remains T2 if implementation is limited to the public-root exception, landing composition, docs and release verification. Elevate before implementation if the root-shell change broadens protection semantics, changes identity/session ownership, or creates a new runtime/deployment boundary.
+The semantic tier remains **T2**. Graph evidence does not show a cross-runtime or persistence blast radius that requires T3. Elevate before implementation if the root-shell change broadens protection semantics, changes identity/session ownership, or creates a new runtime/deployment boundary.
 
 ## Expected implementation surface
 
