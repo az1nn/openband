@@ -3,9 +3,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import RootLayout from "../app/_layout";
 import { Platform } from "react-native";
 
-const { mockReplace, mockSegments, mockAudioInit, mockDisposeAudio, mockAuthFn } = vi.hoisted(() => ({
+const { mockReplace, mockSegments, mockPathname, mockAudioInit, mockDisposeAudio, mockAuthFn } = vi.hoisted(() => ({
   mockReplace: vi.fn(),
   mockSegments: vi.fn((): string[] => []),
+  mockPathname: vi.fn(() => "/"),
   mockAudioInit: vi.fn(() => Promise.resolve()),
   mockDisposeAudio: vi.fn(),
   mockAuthFn: vi.fn((): any => ({
@@ -31,6 +32,7 @@ vi.mock("expo-router", () => {
   return {
     useRouter: () => ({ push: vi.fn(), replace: mockReplace, back: vi.fn() }),
     useSegments: () => mockSegments(),
+    usePathname: () => mockPathname(),
     useLocalSearchParams: () => ({}),
     Stack,
     Tabs: { Screen: vi.fn() },
@@ -60,6 +62,7 @@ describe("Root Layout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSegments.mockReturnValue([]);
+    mockPathname.mockReturnValue("/");
     mockAuthFn.mockReturnValue({
       session: null, user: null, loading: false, isVisitor: false,
       visitorId: null, signOut: vi.fn(), signInAsVisitor: vi.fn(),
@@ -99,6 +102,7 @@ describe("Root Layout", () => {
 
   it("redirects to /login when unauthenticated and not in auth group", () => {
     mockSegments.mockReturnValue(["tabs"]);
+    mockPathname.mockReturnValue("/tabs");
     render(<RootLayout />);
     expect(mockReplace).toHaveBeenCalledWith("/login");
   });
@@ -106,15 +110,26 @@ describe("Root Layout", () => {
   it("allows the unauthenticated Web root without weakening protected routes", () => {
     Object.defineProperty(Platform, "OS", { get: () => "web", configurable: true });
     mockSegments.mockReturnValue([]);
+    mockPathname.mockReturnValue("/");
 
     render(<RootLayout />);
     expect(mockReplace).not.toHaveBeenCalled();
     expect(screen.getByTestId("stack")).toBeTruthy();
   });
 
+  it("keeps other unauthenticated Web routes protected", () => {
+    Object.defineProperty(Platform, "OS", { get: () => "web", configurable: true });
+    mockSegments.mockReturnValue(["tabs"]);
+    mockPathname.mockReturnValue("/tabs");
+
+    render(<RootLayout />);
+    expect(mockReplace).toHaveBeenCalledWith("/login");
+  });
+
   it("keeps the unauthenticated native root protected", () => {
     Object.defineProperty(Platform, "OS", { get: () => "ios", configurable: true });
     mockSegments.mockReturnValue([]);
+    mockPathname.mockReturnValue("/");
 
     render(<RootLayout />);
     expect(mockReplace).toHaveBeenCalledWith("/login");
@@ -122,6 +137,7 @@ describe("Root Layout", () => {
 
   it("redirects to /tabs when authenticated and in auth group", () => {
     mockSegments.mockReturnValue(["(auth)"]);
+    mockPathname.mockReturnValue("/login");
     mockAuthFn.mockReturnValue({
       session: { user: { email: "test@test.com" } }, user: null, loading: false,
       isVisitor: false, visitorId: null, signOut: vi.fn(), signInAsVisitor: vi.fn(),
@@ -133,6 +149,7 @@ describe("Root Layout", () => {
 
   it("does not redirect when in auth group without session (login accessible)", () => {
     mockSegments.mockReturnValue(["(auth)"]);
+    mockPathname.mockReturnValue("/login");
     render(<RootLayout />);
     expect(mockReplace).not.toHaveBeenCalled();
     expect(screen.getByTestId("stack")).toBeTruthy();
@@ -140,6 +157,7 @@ describe("Root Layout", () => {
 
   it("does not redirect when authenticated outside auth group (tabs accessible)", () => {
     mockSegments.mockReturnValue(["tabs"]);
+    mockPathname.mockReturnValue("/tabs");
     mockAuthFn.mockReturnValue({
       session: { user: { email: "test@test.com" } }, user: null, loading: false,
       isVisitor: false, visitorId: null, signOut: vi.fn(), signInAsVisitor: vi.fn(),
