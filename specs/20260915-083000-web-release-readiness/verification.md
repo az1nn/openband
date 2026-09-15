@@ -13,13 +13,13 @@ Release evidence is valid only when it identifies the exact PR HEAD or exact dep
 | Issue/feature identity | yes | PASS | #51 / `20260915-083000-web-release-readiness` |
 | Base revision | yes | PASS | branch created from `master` after PR #67 merge |
 | Tier classification | yes | PASS | T2 with explicit T3/T4 escalation triggers |
-| Existing Web root reviewed | yes | PASS | current `/` redirects to `/tabs` |
+| Existing Web root reviewed | yes | PASS | current `/` redirects to `/tabs`; root shell redirects unauthenticated non-auth routes to `/login` |
 | Existing deployment config reviewed | yes | PASS | reuse current Vercel Web export topology |
 | Existing CI launch E2E reviewed | yes | PASS | `web-launch-e2e` already required in PR CI |
 | Marketing/product guardrails reviewed | yes | PASS | launch kit/checklist/product docs are source material |
-| Architecture Graph preflight | yes | BLOCKED | must be recorded before Human Design Gate |
-| Spec Kit analysis | yes | BLOCKED | run after full design baseline is committed |
-| Human Design Gate | yes | BLOCKED | cannot occur until preflight/analyze evidence converges |
+| Architecture Graph preflight | yes | PASS | runs `34963915926` + `34964085935`: root MEDIUM/0, root shell MEDIUM/1, login MEDIUM/2, Feed HIGH/91, Onboarding HIGH/93; no semantic T3 trigger |
+| Spec Kit analysis | yes | BLOCKED | run after graph-refined design baseline is complete |
+| Human Design Gate | yes | BLOCKED | cannot occur until analyze evidence converges |
 
 ## Automated candidate verification
 
@@ -36,8 +36,10 @@ The exact final PR HEAD must pass:
 | legacy tests | PASS |
 | production Web build | PASS |
 | existing `web-launch-e2e` | PASS |
-| focused Web landing/root tests | PASS |
+| focused Web landing/root-auth-shell tests | PASS |
 | focused primary/source CTA tests | PASS |
+
+The root-auth-shell tests must prove that unauthenticated Web `/` is public while existing protected routes keep their current redirect behavior and non-Web root behavior is preserved.
 
 No required job may be converted to a soft failure, skipped through a release-only condition, or satisfied by stale evidence from another HEAD.
 
@@ -54,7 +56,7 @@ Record:
 
 Required smoke:
 
-1. `/` loads the public launch entry.
+1. `/` loads the public launch entry without requiring a session.
 2. Alpha status and core promise are visible.
 3. **Start creating** enters the existing login/visitor path.
 4. Visitor/no-account entry succeeds.
@@ -63,6 +65,7 @@ Required smoke:
 7. WAV export downloads and is valid/audible under the existing #49/#50 contract.
 8. **View source** resolves to the canonical repository.
 9. A failure in permission/storage/export surfaces visibly rather than fabricating success.
+10. A representative existing protected route still redirects an unauthenticated visitor according to the current auth contract.
 
 ## Real microphone evidence
 
@@ -76,7 +79,7 @@ Record browser/version/OS and exact deployed SHA. Imported-audio Playwright does
 
 The release document must use only:
 
-- `SUPPORTED` — complete release-specific smoke evidence exists for launch-critical behavior;
+- `SUPPORTED` — complete release-specific smoke evidence exists;
 - `EXPERIMENTAL` — partial evidence exists or known limitations remain;
 - `UNVERIFIED` — no release claim.
 
@@ -118,7 +121,7 @@ A hypothetical rollback statement without a concrete known-good target is insuff
 
 ## Architecture convergence
 
-Post-implementation Graph evidence must be compared with preflight. High centrality alone does not force T3, but new cross-runtime, backend, auth, persistence, export/DSP, or deployment-boundary coupling requires re-analysis and a fresh Design Gate.
+Post-implementation Graph evidence must be compared with preflight. High centrality alone does not force T3, but new cross-runtime, backend, auth identity/session, broader route-protection, persistence, export/DSP, or deployment-boundary coupling requires re-analysis and a fresh Design Gate.
 
 ## Human Merge Gate
 
