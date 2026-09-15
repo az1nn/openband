@@ -4,15 +4,15 @@
 
 - [x] **T001** Confirm #51 as the next #46 delivery slice and create `agent/51-web-release-readiness` from current `master`.
 - [x] **T002** Classify as T2 with explicit T3/T4 escalation boundaries.
-- [x] **T003** Inspect current Web root, Vercel config, CI launch E2E, README/product positioning, and launch marketing guardrails.
-- [ ] **T004** Run/record Architecture Graph preflight for the planned root/landing/docs surface and confirm no tier escalation.
+- [x] **T003** Inspect current Web root, root auth shell, Vercel config, CI launch E2E, README/product positioning, and launch marketing guardrails.
+- [ ] **T004** Run/record Architecture Graph preflight for `app/index.tsx`, `app/_layout.tsx`, and the reused first-run surfaces; confirm no tier escalation.
 - [x] **T005** Produce `openband.json`, `spec.md`, `plan.md`, `tasks.md`, `checklist.md`, and `verification.md`.
 - [ ] **T006** Run Spec Kit analysis over the baseline and resolve contradictions without widening scope.
 - [ ] **T007** Freeze the exact Design Baseline SHA and obtain Human Design Gate approval.
 
 ## Phase 2 — Public Web entry
 
-- [ ] **T101** Add a Web-only `/` landing surface while preserving current non-Web entry navigation.
+- [ ] **T101** Add a Web-only `/` landing surface and narrowly exempt only Web `/` from the existing unauthenticated root-shell redirect while preserving all other protected-route behavior and current non-Web entry navigation.
 - [ ] **T102** Implement launch copy from repository-owned messaging: product promise, Web alpha status, proof row, primary creation CTA, and source CTA.
 - [ ] **T103** Route the creation CTA into the existing auth/visitor → first-run flow without introducing a parallel auth/project path.
 - [ ] **T104** Make the source CTA open the canonical public repository.
@@ -28,10 +28,10 @@
 
 ## Phase 4 — Focused automated proof
 
-- [ ] **T301** Add focused tests proving Web root renders the launch entry and non-Web routing remains unchanged.
+- [ ] **T301** Add focused tests proving Web root is public, renders the launch entry, all other existing protected routes retain their current unauthenticated redirect behavior, and non-Web root navigation remains unchanged.
 - [ ] **T302** Test primary CTA destination/integration and source CTA target.
 - [ ] **T303** Test visible alpha status and core claim copy at the public entry.
-- [ ] **T304** Keep existing `web-launch-e2e` unchanged unless a legitimate route change requires an evidence-preserving update.
+- [ ] **T304** Keep existing `web-launch-e2e` unchanged unless the public-root route change requires an evidence-preserving navigation update.
 - [ ] **T305** Run focused tests, frontend/backend typecheck, Vitest, legacy tests, Web build, SDD checks, Graph checks, and launch Playwright.
 
 ## Phase 5 — Convergence and release evidence
