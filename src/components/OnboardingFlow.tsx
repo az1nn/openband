@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { NewProject } from "./NewProject";
 import type { ProjectStarterResult } from "../lib/projectStarter";
 import {
@@ -82,97 +82,101 @@ export function OnboardingFlow({
   }
 
   return (
-    <View testID={testID} style={styles.overlay}>
-      <View style={styles.card}>
-        <Pressable
-          onPress={handleClose}
-          style={({ pressed }) => [
-            styles.closeButton,
-            pressed && styles.pressed,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Fechar"
-          testID="onboarding-close"
-        >
-          <Text style={styles.closeText}>✕</Text>
-        </Pressable>
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      onRequestClose={handleClose}
+      testID={testID}
+    >
+      <View style={styles.overlay}>
+        <View style={styles.card}>
+          <Pressable
+            onPress={handleClose}
+            style={({ pressed }) => [
+              styles.closeButton,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Fechar"
+            testID="onboarding-close"
+          >
+            <Text style={styles.closeText}>✕</Text>
+          </Pressable>
 
-        <Text style={styles.title}>O que você quer fazer primeiro?</Text>
-        <Text style={styles.subtitle}>
-          Sem cadastro obrigatório. Escolha uma ação e entre direto no Studio.
-        </Text>
+          <Text style={styles.title}>O que você quer fazer primeiro?</Text>
+          <Text style={styles.subtitle}>
+            Sem cadastro obrigatório. Escolha uma ação e entre direto no Studio.
+          </Text>
 
-        <View style={styles.actions}>
-          {FIRST_RUN_ACTIONS.map((action) => (
-            <Pressable
-              key={action.id}
-              testID={`onboarding-action-${action.id}`}
-              onPress={() => handleAction(action.id)}
-              accessibilityRole="button"
-              accessibilityLabel={action.label}
-              style={({ pressed }) => [
-                styles.actionButton,
-                pressed && styles.pressed,
+          <View style={styles.actions}>
+            {FIRST_RUN_ACTIONS.map((action) => (
+              <Pressable
+                key={action.id}
+                testID={`onboarding-action-${action.id}`}
+                onPress={() => handleAction(action.id)}
+                accessibilityRole="button"
+                accessibilityLabel={action.label}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <View style={styles.actionIconBox}>
+                  <Text style={styles.actionIcon}>{action.icon}</Text>
+                </View>
+                <View style={styles.actionCopy}>
+                  <Text style={styles.actionLabel}>{action.label}</Text>
+                  <Text style={styles.actionDescription}>{action.description}</Text>
+                </View>
+                <Text style={styles.actionArrow}>›</Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Pressable
+            testID="onboarding-advanced-project"
+            onPress={() => setShowProject(true)}
+            style={({ pressed }) => [
+              styles.advancedButton,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Configurar projeto completo"
+          >
+            <Text style={styles.advancedText}>Configurar projeto completo</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => setDontShowAgain((value) => !value)}
+            style={({ pressed }) => [
+              styles.dontShowRow,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: dontShowAgain }}
+            accessibilityLabel="Não mostrar novamente"
+            testID="onboarding-dont-show"
+          >
+            <View
+              style={[
+                styles.checkbox,
+                dontShowAgain ? styles.checkboxChecked : styles.checkboxUnchecked,
               ]}
             >
-              <View style={styles.actionIconBox}>
-                <Text style={styles.actionIcon}>{action.icon}</Text>
-              </View>
-              <View style={styles.actionCopy}>
-                <Text style={styles.actionLabel}>{action.label}</Text>
-                <Text style={styles.actionDescription}>{action.description}</Text>
-              </View>
-              <Text style={styles.actionArrow}>›</Text>
-            </Pressable>
-          ))}
+              {dontShowAgain && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <Text style={styles.dontShowText}>Não mostrar novamente</Text>
+          </Pressable>
         </View>
-
-        <Pressable
-          testID="onboarding-advanced-project"
-          onPress={() => setShowProject(true)}
-          style={({ pressed }) => [
-            styles.advancedButton,
-            pressed && styles.pressed,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Configurar projeto completo"
-        >
-          <Text style={styles.advancedText}>Configurar projeto completo</Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => setDontShowAgain((value) => !value)}
-          style={({ pressed }) => [
-            styles.dontShowRow,
-            pressed && styles.pressed,
-          ]}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: dontShowAgain }}
-          accessibilityLabel="Não mostrar novamente"
-          testID="onboarding-dont-show"
-        >
-          <View
-            style={[
-              styles.checkbox,
-              dontShowAgain ? styles.checkboxChecked : styles.checkboxUnchecked,
-            ]}
-          >
-            {dontShowAgain && <Text style={styles.checkmark}>✓</Text>}
-          </View>
-          <Text style={styles.dontShowText}>Não mostrar novamente</Text>
-        </Pressable>
       </View>
-    </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
+    flex: 1,
     zIndex: 1000,
     backgroundColor: "rgba(0, 0, 0, 0.8)",
     justifyContent: "center",
