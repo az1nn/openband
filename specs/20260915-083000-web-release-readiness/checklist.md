@@ -6,6 +6,7 @@
 - [x] Tier is T2 with T3/T4 escalation boundaries.
 - [x] #47–#50 feature dependencies are represented in `openband.json`.
 - [x] Public Web root behavior is specified without changing native entry behavior.
+- [x] The root auth shell allows only Web `/` publicly; all other protection and identity/session semantics remain unchanged.
 - [x] Primary CTA reuses existing auth/visitor and first-run contracts.
 - [x] Source CTA and canonical repository are explicit.
 - [x] Launch copy is derived from repository-owned marketing guidance rather than invented in implementation.
@@ -21,20 +22,21 @@
 
 ## Architecture / risk guardrails
 
-- [x] No auth/session semantic change is planned.
+- [x] No auth identity/session semantic change is planned.
+- [x] No protection-semantics change beyond the single public Web root is planned.
 - [x] No project schema/persistence ownership change is planned.
 - [x] No `asset://` or durable audio contract change is planned.
 - [x] No export/DSP architecture change is planned.
 - [x] No backend hosting topology change is planned.
 - [x] No Web/native bridge change is planned.
 - [x] New deployment/security/data-loss behavior requires reclassification before implementation.
-- [ ] Architecture Graph preflight recorded for the existing entry surface and reviewed for tier impact.
+- [x] Architecture Graph preflight recorded for root, root auth shell, login and reused first-run surfaces; no tier escalation required.
 
 ## Verification quality
 
 - [x] Exact candidate HEAD is required for automated evidence.
 - [x] Existing launch-critical Playwright remains required.
-- [x] Focused landing/CTA tests are planned.
+- [x] Focused landing/auth-shell/CTA tests are planned.
 - [x] Frontend/backend typecheck, Vitest, legacy, build, SDD and Graph gates remain required.
 - [x] Real microphone evidence cannot be replaced by import-only CI.
 - [x] Browser labels require release-specific evidence.
@@ -49,6 +51,6 @@
 - [x] `tasks.md` defines WORK.
 - [x] `verification.md` defines PROOF.
 - [ ] Spec Kit analysis has no unresolved material contradiction.
-- [ ] Graph preflight has no unresolved tier escalation.
+- [x] Graph preflight has no unresolved tier escalation.
 - [ ] Exact Design Baseline SHA is recorded.
 - [ ] Human Design Gate approval is recorded before product implementation.
