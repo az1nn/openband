@@ -348,6 +348,9 @@ export default function Studio() {
   );
 
   const hydrateProject = useCallback((saved: ProjectData) => {
+    if (typeof saved.title === "string" && saved.title.trim()) {
+      setProjectTitle(saved.title);
+    }
     setTracks(saved.tracks as TrackDef[]);
     setGroups(saved.groups);
     setTrackAssignments(saved.trackAssignments);

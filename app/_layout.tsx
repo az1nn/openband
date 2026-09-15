@@ -1,4 +1,4 @@
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, usePathname, useRouter, useSegments } from "expo-router";
 import Head from "expo-router/head";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -16,18 +16,20 @@ import "../global.css";
 function RootLayoutProtected() {
   const { session, loading } = useAuth();
   const segments = useSegments();
+  const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
     const inAuthGroup = segments[0] === "(auth)";
+    const isPublicWebRoot = Platform.OS === "web" && pathname === "/";
 
-    if (!session && !inAuthGroup) {
+    if (!session && !inAuthGroup && !isPublicWebRoot) {
       router.replace("/login");
     } else if (session && inAuthGroup) {
       router.replace("/tabs");
     }
-  }, [session, loading, segments]);
+  }, [session, loading, segments, pathname, router]);
 
   if (loading) {
     return (
