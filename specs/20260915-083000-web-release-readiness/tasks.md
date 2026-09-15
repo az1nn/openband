@@ -5,7 +5,7 @@
 - [x] **T001** Confirm #51 as the next #46 delivery slice and create `agent/51-web-release-readiness` from current `master`.
 - [x] **T002** Classify as T2 with explicit T3/T4 escalation boundaries.
 - [x] **T003** Inspect current Web root, root auth shell, Vercel config, CI launch E2E, README/product positioning, and launch marketing guardrails.
-- [ ] **T004** Run/record Architecture Graph preflight for `app/index.tsx`, `app/_layout.tsx`, and the reused first-run surfaces; confirm no tier escalation.
+- [x] **T004** Run/record Architecture Graph preflight for `app/index.tsx`, `app/_layout.tsx`, and the reused first-run surfaces; confirm no tier escalation.
 - [x] **T005** Produce `openband.json`, `spec.md`, `plan.md`, `tasks.md`, `checklist.md`, and `verification.md`.
 - [ ] **T006** Run Spec Kit analysis over the baseline and resolve contradictions without widening scope.
 - [ ] **T007** Freeze the exact Design Baseline SHA and obtain Human Design Gate approval.
