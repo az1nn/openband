@@ -1,4 +1,12 @@
-import { Linking, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 
 export const OPENBAND_SOURCE_URL = "https://github.com/az1nn/openband";
 
@@ -11,78 +19,73 @@ export function WebLaunchLanding({
   onStartCreating,
   onViewSource,
 }: WebLaunchLandingProps) {
+  const { height, width } = useWindowDimensions();
+  const compact = width < 768;
   const openSource =
     onViewSource ?? (() => void Linking.openURL(OPENBAND_SOURCE_URL));
 
   return (
     <ScrollView
-      className="flex-1 bg-dark-bg"
-      contentContainerStyle={{ flexGrow: 1 }}
+      style={styles.page}
+      contentContainerStyle={[styles.scrollContent, { minHeight: height }]}
       testID="web-launch-landing"
     >
-      <View className="flex-1 px-6 py-8 md:px-10 md:py-10">
-        <View
-          className="w-full mx-auto flex-1"
-          style={{ maxWidth: 1120 }}
-        >
-          <View className="flex-row items-center justify-between mb-16">
-            <View className="flex-row items-center gap-3">
-              <View className="w-10 h-10 rounded-xl bg-brand-primary items-center justify-center">
-                <Text className="text-white text-xl">♫</Text>
+      <View style={[styles.shell, compact && styles.shellCompact]}>
+        <View style={styles.content}>
+          <View style={[styles.header, compact && styles.headerCompact]}>
+            <View style={styles.brandRow}>
+              <View style={styles.logoMark}>
+                <Text style={styles.logoGlyph}>♫</Text>
               </View>
-              <Text className="text-white text-xl font-bold tracking-tight">
-                OpenBand
-              </Text>
+              <Text style={styles.brandName}>OpenBand</Text>
             </View>
-            <View className="px-3 py-1.5 rounded-full border border-dark-border bg-dark-card">
-              <Text className="text-gray-300 text-xs font-semibold">Web alpha</Text>
+            <View style={styles.alphaBadge}>
+              <Text style={styles.alphaText}>Web alpha</Text>
             </View>
           </View>
 
-          <View className="flex-1 justify-center pb-16">
-            <Text className="text-brand-primary text-xs font-bold tracking-[3px] uppercase mb-5">
-              Open-source music studio
-            </Text>
+          <View style={styles.hero}>
+            <Text style={styles.eyebrow}>Open-source music studio</Text>
             <Text
-              className="text-white font-bold tracking-tight mb-6"
-              style={{ fontSize: 64, lineHeight: 68, maxWidth: 780 }}
+              style={[
+                styles.headline,
+                compact ? styles.headlineCompact : styles.headlineDesktop,
+              ]}
             >
               Make music. Keep the project.
             </Text>
-            <Text
-              className="text-gray-400 text-xl leading-8 mb-9"
-              style={{ maxWidth: 720 }}
-            >
+            <Text style={[styles.subhead, compact && styles.subheadCompact]}>
               Record, arrange, mix, and export in a local-first browser studio.
               Start creating without mandatory signup, then inspect the source whenever
               you want.
             </Text>
 
-            <View className="flex-row flex-wrap gap-3 mb-10">
+            <View style={styles.proofRow}>
               {[
                 "Web first",
                 "Local-first projects",
                 "Free core creation",
                 "Open source",
               ].map((item) => (
-                <View
-                  key={item}
-                  className="px-3 py-2 rounded-lg bg-dark-card border border-dark-border"
-                >
-                  <Text className="text-gray-300 text-sm">{item}</Text>
+                <View key={item} style={styles.proofPill}>
+                  <Text style={styles.proofText}>{item}</Text>
                 </View>
               ))}
             </View>
 
-            <View className="flex-row flex-wrap gap-3">
+            <View style={styles.ctaRow}>
               <Pressable
                 onPress={onStartCreating}
                 accessibilityRole="button"
                 accessibilityLabel="Start creating"
                 testID="launch-start-creating"
-                className="bg-brand-primary rounded-xl px-6 py-4 active:opacity-80"
+                style={({ pressed }) => [
+                  styles.cta,
+                  styles.primaryCta,
+                  pressed && styles.pressed,
+                ]}
               >
-                <Text className="text-white text-base font-bold">Start creating</Text>
+                <Text style={styles.primaryCtaText}>Start creating</Text>
               </Pressable>
 
               <Pressable
@@ -90,23 +93,231 @@ export function WebLaunchLanding({
                 accessibilityRole="link"
                 accessibilityLabel="View source"
                 testID="launch-view-source"
-                className="rounded-xl px-6 py-4 border border-dark-border bg-dark-card active:opacity-80"
+                style={({ pressed }) => [
+                  styles.cta,
+                  styles.sourceCta,
+                  pressed && styles.pressed,
+                ]}
               >
-                <Text className="text-white text-base font-semibold">View source</Text>
+                <Text style={styles.sourceCtaText}>View source</Text>
               </Pressable>
             </View>
           </View>
 
-          <View className="pt-6 border-t border-dark-border flex-row flex-wrap justify-between gap-4">
-            <Text className="text-gray-500 text-xs" style={{ maxWidth: 680 }}>
+          <View style={[styles.footer, compact && styles.footerCompact]}>
+            <Text style={styles.footerCopy}>
               Alpha software: keep an independent backup of important work. Local project
               creation is local-first; optional account, collaboration, processing, and AI
               workflows can use hosted services.
             </Text>
-            <Text className="text-gray-600 text-xs">Build in public · MIT source</Text>
+            <Text style={styles.footerMeta}>Build in public · MIT source</Text>
           </View>
         </View>
       </View>
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  page: {
+    flex: 1,
+    backgroundColor: "#0a0a0d",
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  shell: {
+    flex: 1,
+    width: "100%",
+    alignItems: "center",
+    paddingHorizontal: 40,
+    paddingVertical: 40,
+  },
+  shellCompact: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  content: {
+    flex: 1,
+    width: "100%",
+    maxWidth: 1120,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+    marginBottom: 64,
+  },
+  headerCompact: {
+    marginBottom: 40,
+  },
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  logoMark: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#ff3b30",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logoGlyph: {
+    color: "#ffffff",
+    fontSize: 20,
+    lineHeight: 24,
+  },
+  brandName: {
+    color: "#ffffff",
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: "700",
+  },
+  alphaBadge: {
+    minHeight: 30,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#2a2a32",
+    backgroundColor: "#141418",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  alphaText: {
+    color: "#d1d1d6",
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "600",
+  },
+  hero: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingBottom: 64,
+  },
+  eyebrow: {
+    color: "#ff3b30",
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "700",
+    letterSpacing: 3,
+    textTransform: "uppercase",
+    marginBottom: 20,
+  },
+  headline: {
+    color: "#ffffff",
+    maxWidth: 780,
+    fontWeight: "700",
+    letterSpacing: -1.5,
+    marginBottom: 24,
+  },
+  headlineDesktop: {
+    fontSize: 64,
+    lineHeight: 68,
+  },
+  headlineCompact: {
+    fontSize: 42,
+    lineHeight: 46,
+  },
+  subhead: {
+    color: "#a1a1aa",
+    fontSize: 20,
+    lineHeight: 32,
+    maxWidth: 720,
+    marginBottom: 36,
+  },
+  subheadCompact: {
+    fontSize: 17,
+    lineHeight: 27,
+  },
+  proofRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 40,
+  },
+  proofPill: {
+    minHeight: 36,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#2a2a32",
+    backgroundColor: "#141418",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  proofText: {
+    color: "#d1d1d6",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  ctaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 12,
+  },
+  cta: {
+    alignSelf: "flex-start",
+    minHeight: 52,
+    minWidth: 150,
+    flexGrow: 0,
+    flexShrink: 0,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryCta: {
+    backgroundColor: "#ff3b30",
+  },
+  sourceCta: {
+    backgroundColor: "#141418",
+    borderWidth: 1,
+    borderColor: "#2a2a32",
+  },
+  pressed: {
+    opacity: 0.8,
+  },
+  primaryCtaText: {
+    color: "#ffffff",
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: "700",
+  },
+  sourceCtaText: {
+    color: "#ffffff",
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: "600",
+  },
+  footer: {
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: "#2a2a32",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 16,
+  },
+  footerCompact: {
+    flexDirection: "column",
+  },
+  footerCopy: {
+    color: "#8e8e93",
+    fontSize: 12,
+    lineHeight: 18,
+    maxWidth: 680,
+  },
+  footerMeta: {
+    color: "#636366",
+    fontSize: 12,
+    lineHeight: 18,
+  },
+});
