@@ -16,7 +16,7 @@
 - [ ] **T102** Implement launch copy from repository-owned messaging: product promise, Web alpha status, proof row, primary creation CTA, and source CTA.
 - [ ] **T103** Route the creation CTA into the existing auth/visitor → first-run flow without introducing a parallel auth/project path.
 - [ ] **T104** Make the source CTA open the canonical public repository.
-- [ ] **T105** Add minimal release metadata supported by the current Expo/Web export architecture, without changing deployment topology.
+- [ ] **T105** Verify the existing Web title/description/social metadata against the release contract and add or change only metadata that is actually missing or contradictory within the current Expo/Web export architecture.
 
 ## Phase 3 — Release documentation and claim convergence
 
