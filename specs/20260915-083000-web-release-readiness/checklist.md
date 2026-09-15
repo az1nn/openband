@@ -50,7 +50,7 @@
 - [x] `plan.md` defines HOW and escalation boundaries.
 - [x] `tasks.md` defines WORK.
 - [x] `verification.md` defines PROOF.
-- [ ] Spec Kit analysis has no unresolved material contradiction.
+- [x] Spec Kit analysis has no unresolved material contradiction or Constitution conflict; 16/16 requirements have task coverage.
 - [x] Graph preflight has no unresolved tier escalation.
-- [ ] Exact Design Baseline SHA is recorded.
-- [ ] Human Design Gate approval is recorded before product implementation.
+- [ ] Exact Design Baseline SHA is recorded in the PR/GitHub gate evidence.
+- [ ] Human Design Gate approval is recorded in GitHub before product implementation.
