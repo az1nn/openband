@@ -18,8 +18,8 @@ Release evidence is valid only when it identifies the exact PR HEAD or exact dep
 | Existing CI launch E2E reviewed | yes | PASS | `web-launch-e2e` already required in PR CI |
 | Marketing/product guardrails reviewed | yes | PASS | launch kit/checklist/product docs are source material |
 | Architecture Graph preflight | yes | PASS | runs `34963915926` + `34964085935`: root MEDIUM/0, root shell MEDIUM/1, login MEDIUM/2, Feed HIGH/91, Onboarding HIGH/93; no semantic T3 trigger |
-| Spec Kit analysis | yes | BLOCKED | run after graph-refined design baseline is complete |
-| Human Design Gate | yes | BLOCKED | cannot occur until analyze evidence converges |
+| Spec Kit analysis | yes | PASS | 16/16 requirements covered; no CRITICAL/HIGH/MEDIUM inconsistency, no Constitution conflict, no material unmapped product task |
+| Human Design Gate | yes | BLOCKED | exact Design Baseline SHA must be recorded and approved before product implementation |
 
 ## Automated candidate verification
 
