@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   patch:
-    if: ${{ github.event.head_commit.message == 'chore run title hydration patch' }}
+    if: github.event.head_commit.message == 'chore run title hydration patch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,18 +24,17 @@ jobs:
 
           path = Path('app/studio/[id].tsx')
           source = path.read_text()
-          old = '''  const hydrateProject = useCallback((saved: ProjectData) => {
-            setTracks(saved.tracks as TrackDef[]);
-          '''
-          new = '''  const hydrateProject = useCallback((saved: ProjectData) => {
-            if (typeof saved.title === "string" && saved.title.trim()) {
-              setProjectTitle(saved.title);
-            }
-            setTracks(saved.tracks as TrackDef[]);
-          '''
-          if source.count(old) != 1:
-              raise SystemExit(f'expected exactly one hydrateProject anchor, found {source.count(old)}')
-          path.write_text(source.replace(old, new, 1))
+          needle = '  const hydrateProject = useCallback((saved: ProjectData) => {\n'
+          insert = (
+              '    if (typeof saved.title === "string" && saved.title.trim()) {\n'
+              '      setProjectTitle(saved.title);\n'
+              '    }\n'
+          )
+          if source.count(needle) != 1:
+              raise SystemExit(f'expected exactly one hydrateProject signature, found {source.count(needle)}')
+          if insert in source:
+              raise SystemExit('hydration patch already present')
+          path.write_text(source.replace(needle, needle + insert, 1))
           PY
       - name: Commit patch
         run: |
@@ -43,5 +42,5 @@ jobs:
           git config user.email "80423834+az1nn@users.noreply.github.com"
           git add 'app/studio/[id].tsx'
           git diff --cached --check
-          git commit -m "fix persistence hydrate saved project title on reload"
+          git commit -m "fix(persistence): hydrate saved project title on reload"
           git push origin HEAD:agent/51-web-release-readiness
