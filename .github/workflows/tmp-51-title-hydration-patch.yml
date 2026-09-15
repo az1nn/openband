@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   patch:
-    if: github.event.head_commit.message == 'chore: run title hydration patch'
+    if: ${{ github.event.head_commit.message == 'chore run title hydration patch' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,5 +43,5 @@ jobs:
           git config user.email "80423834+az1nn@users.noreply.github.com"
           git add 'app/studio/[id].tsx'
           git diff --cached --check
-          git commit -m "fix(persistence): hydrate saved project title on reload"
+          git commit -m "fix persistence hydrate saved project title on reload"
           git push origin HEAD:agent/51-web-release-readiness
