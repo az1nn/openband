@@ -2,24 +2,47 @@
 
 ## Evidence policy
 
-Required states are `PASS`, `FAIL`, `BLOCKED`, `FLAKY`, or `NOT_REQUIRED`. A required `FAIL`, `BLOCKED`, or `FLAKY` result blocks Human Merge Gate.
-
-Release evidence is valid only when it identifies the exact PR HEAD or exact deployed revision it verifies.
+Required states are `PASS`, `FAIL`, `BLOCKED`, `FLAKY`, or `NOT_REQUIRED`. A required `FAIL`, `BLOCKED`, or `FLAKY` blocks Human Merge Gate. Release evidence is valid only when it identifies the exact PR HEAD or deployed revision it verifies.
 
 ## Design-stage evidence
 
-| Evidence | Required | State | Notes |
-| --- | --- | --- | --- |
-| Issue/feature identity | yes | PASS | #51 / `20260915-083000-web-release-readiness` |
-| Base revision | yes | PASS | branch created from `master` after PR #67 merge |
-| Tier classification | yes | PASS | T2 with explicit T3/T4 escalation triggers |
-| Existing Web root reviewed | yes | PASS | current `/` redirects to `/tabs`; root shell redirects unauthenticated non-auth routes to `/login` |
-| Existing deployment config reviewed | yes | PASS | reuse current Vercel Web export topology |
-| Existing CI launch E2E reviewed | yes | PASS | `web-launch-e2e` already required in PR CI |
-| Marketing/product guardrails reviewed | yes | PASS | launch kit/checklist/product docs are source material |
-| Architecture Graph preflight | yes | PASS | runs `34963915926` + `34964085935`: root MEDIUM/0, root shell MEDIUM/1, login MEDIUM/2, Feed HIGH/91, Onboarding HIGH/93; no semantic T3 trigger |
-| Spec Kit analysis | yes | PASS | 16/16 requirements covered; no CRITICAL/HIGH/MEDIUM inconsistency, no Constitution conflict, no material unmapped product task |
-| Human Design Gate | yes | BLOCKED | exact Design Baseline SHA must be recorded and approved before product implementation |
+| Evidence | State | Notes |
+| --- | --- | --- |
+| Issue / feature | PASS | #51 / `20260915-083000-web-release-readiness` |
+| Tier | PASS | T2; explicit T3/T4 escalation boundaries |
+| Graph preflight | PASS | runs `34963915926` + `34964085935`: root MEDIUM/0, root shell MEDIUM/1, login MEDIUM/2, Feed HIGH/91, Onboarding HIGH/93 |
+| Spec Kit analyze | PASS | 16/16 requirements covered; no material inconsistency or Constitution conflict |
+| Human Design Gate | PASS | approved in PR #69 against baseline `e2ea8f8fd2ea192afcc395e30bb1bd53d81b2640` before product implementation |
+
+## Implementation convergence
+
+The approved implementation remains bounded to:
+
+- public Web `/` landing;
+- a Web-root-only auth-shell exception using `pathname === "/"`;
+- primary CTA reuse of `/login` → existing visitor flow → existing first-run;
+- canonical source CTA;
+- focused route/landing/auth-shell tests;
+- launch E2E adaptation to include landing → Start creating;
+- Web alpha release/runbook and README claim convergence.
+
+No AuthContext identity/session semantics, project/persistence ownership, `asset://` contract, export/DSP, backend topology, runtime bridge, or production credential design changed.
+
+The first implementation CI exposed a real TypeScript defect in root detection (`segments.length === 0`). It was fixed by using `usePathname() === "/"`; the failed check was not masked or weakened.
+
+## Post-implementation Architecture Graph
+
+Temporary evidence run `35006469726` on implementation + measurement workflow passed:
+
+- graph: 510 nodes / 1377 edges;
+- `app/index.tsx`: MEDIUM / blast radius 1;
+- `app/_layout.tsx`: MEDIUM / 1;
+- `src/components/WebLaunchLanding.tsx`: MEDIUM / 3;
+- `app/(auth)/login.tsx`: MEDIUM / 2;
+- `app/tabs/index.tsx`: HIGH / 91;
+- `src/components/OnboardingFlow.tsx`: HIGH / 93.
+
+The HIGH reused surfaces retain their pre-existing centrality. No new cross-runtime, auth identity/session, persistence, export/DSP, backend, security, or deployment-topology coupling was introduced; no tier escalation is required. The temporary workflow was removed after evidence collection.
 
 ## Automated candidate verification
 
@@ -35,107 +58,57 @@ The exact final PR HEAD must pass:
 | full Vitest | PASS |
 | legacy tests | PASS |
 | production Web build | PASS |
-| existing `web-launch-e2e` | PASS |
+| `web-launch-e2e` | PASS |
 | focused Web landing/root-auth-shell tests | PASS |
 | focused primary/source CTA tests | PASS |
 
-The root-auth-shell tests must prove that unauthenticated Web `/` is public while existing protected routes keep their current redirect behavior and non-Web root behavior is preserved.
+Evidence from an earlier HEAD is informative only; final Merge Gate requires a clean run on the exact final HEAD after SDD evidence reconciliation.
 
-No required job may be converted to a soft failure, skipped through a release-only condition, or satisfied by stale evidence from another HEAD.
+## Vercel candidate
+
+The branch preview is automatically deployed by the existing Vercel integration. GitHub evidence recorded preview deployment `32nqkhBmhrXTrqvfejzdZeETwuUT` as Ready during implementation. This is preview evidence, not proof that the canonical production URL serves the final PR HEAD.
 
 ## Deployed release smoke
 
-Record:
+Before Merge Gate record canonical URL, exact deployed SHA, deployment identifier, date/time, browser/version/OS, and PASS/FAIL/BLOCKED per step:
 
-- canonical URL;
-- exact deployed Git SHA;
-- deployment identifier when exposed by the platform;
-- date/time;
-- browser + version + OS for human checks;
-- result state per step.
-
-Required smoke:
-
-1. `/` loads the public launch entry without requiring a session.
-2. Alpha status and core promise are visible.
+1. `/` loads the public launch entry without a session.
+2. `Web alpha` and `Make music. Keep the project.` are visible.
 3. **Start creating** enters the existing login/visitor path.
-4. Visitor/no-account entry succeeds.
-5. One deterministic launch path reaches audible material.
+4. **Começar sem conta** succeeds.
+5. One launch path reaches audible material.
 6. A persisted edit survives reload/reopen.
-7. WAV export downloads and is valid/audible under the existing #49/#50 contract.
+7. WAV export is valid and audible.
 8. **View source** resolves to the canonical repository.
-9. A failure in permission/storage/export surfaces visibly rather than fabricating success.
-10. A representative existing protected route still redirects an unauthenticated visitor according to the current auth contract.
+9. Permission/storage/export failures remain explicit.
+10. An existing protected route still redirects unauthenticated visitors under the existing auth contract.
 
 ## Real microphone evidence
 
-At least one desktop browser intended to be labeled `SUPPORTED` must have human evidence for:
+At least one desktop browser intended to be labeled `SUPPORTED` must complete, against the exact deployed candidate:
 
-**landing → Start creating → no-account visitor → Record audio → grant mic → record audible material → stop → playback → reload/reopen → playback → WAV export**
+**landing → Start creating → Começar sem conta → Gravar áudio → grant mic → record audible material → stop → playback → reload/reopen → playback → WAV export**
 
-Record browser/version/OS and exact deployed SHA. Imported-audio Playwright does not replace this evidence.
+Imported-audio CI does not replace this evidence.
 
-## Browser support matrix evidence
+## Browser evidence
 
-The release document must use only:
+Use only:
 
-- `SUPPORTED` — complete release-specific smoke evidence exists;
-- `EXPERIMENTAL` — partial evidence exists or known limitations remain;
+- `SUPPORTED` — complete release-specific smoke including microphone evidence;
+- `EXPERIMENTAL` — partial/automated evidence or a material limitation remains;
 - `UNVERIFIED` — no release claim.
 
-For any `SUPPORTED` browser, verify at minimum:
+## Claim reconciliation
 
-- public landing and navigation;
-- microphone permission and capture;
-- playback;
-- local save/reload/reopen;
-- persistent audio asset availability;
-- WAV export.
-
-Storage quota/private-mode behavior may be documented as a limitation rather than treated as supported if the browser imposes known restrictions.
-
-## Data/copy reconciliation
-
-Before Merge Gate, inspect the exact release candidate for these forbidden overclaims:
-
-- mature desktop DAW parity;
-- "everything stays local" or equivalent blanket privacy claim;
-- universal offline operation;
-- unlimited hosted capacity;
-- public pricing commitments not represented by product policy/code;
-- competitor-paid-status claims without current evidence;
-- native/mobile availability beyond verified public releases.
-
-README, launch entry, product docs and release notes must agree on alpha status and launch scope.
+README, landing, product docs and release runbook must not claim mature desktop-DAW parity, universal offline operation, blanket "everything stays local" privacy, unlimited hosted capacity, unimplemented pricing, unsupported browsers, or unverified native releases.
 
 ## Rollback evidence
 
-Before Merge Gate, record a concrete previous known-good Web revision/deployment and verify that the runbook contains:
-
-1. how to identify/promote the known-good deployment using the existing platform/Git mechanism;
-2. how to verify the public URL now serves the restored release;
-3. a post-rollback smoke covering entry, visitor start, persistence and export;
-4. how the incident/release result is recorded.
-
-A hypothetical rollback statement without a concrete known-good target is insufficient.
-
-## Architecture convergence
-
-Post-implementation Graph evidence must be compared with preflight. High centrality alone does not force T3, but new cross-runtime, backend, auth identity/session, broader route-protection, persistence, export/DSP, or deployment-boundary coupling requires re-analysis and a fresh Design Gate.
+Before Merge Gate record a concrete previous known-good Web revision/deployment. The runbook must restore/promote that existing deployment without incident-time code editing, verify the canonical URL, and rerun entry → visitor → persistence/reopen → export smoke.
 
 ## Human Merge Gate
 
-Present the gate only when:
-
-- exact PR HEAD is known;
-- all required automated evidence is PASS;
-- deployed candidate maps to the intended revision;
-- real-microphone evidence is PASS for at least one supported browser;
-- browser matrix and limitations are evidence-backed;
-- rollback target/procedure are concrete;
-- documentation claims are reconciled;
-- no blocking review thread remains;
-- PR is mergeable/current;
-- no temporary evidence workflow remains in the final diff.
+Present only when the exact final PR HEAD is green, the intended deployed revision is identified and smoked, real-microphone evidence passes for at least one supported browser, browser/limitations and rollback evidence are concrete, documentation is reconciled, no blocking review remains, the PR is current/mergeable, and no temporary evidence workflow remains.
 
 Merge remains human-only.
