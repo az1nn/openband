@@ -8,31 +8,31 @@
 - [x] **T004** Run/record Architecture Graph preflight for `app/index.tsx`, `app/_layout.tsx`, and the reused first-run surfaces; confirm no tier escalation.
 - [x] **T005** Produce `openband.json`, `spec.md`, `plan.md`, `tasks.md`, `checklist.md`, and `verification.md`.
 - [x] **T006** Run Spec Kit analysis over the baseline; all 16 requirements have task coverage and no material contradiction or Constitution conflict remains.
-- [ ] **T007** Freeze the exact Design Baseline SHA and obtain Human Design Gate approval.
+- [x] **T007** Freeze Design Baseline SHA `e2ea8f8fd2ea192afcc395e30bb1bd53d81b2640` and record Human Design Gate approval in PR #69.
 
 ## Phase 2 — Public Web entry
 
-- [ ] **T101** Add a Web-only `/` landing surface and narrowly exempt only Web `/` from the existing unauthenticated root-shell redirect while preserving all other protected-route behavior and current non-Web entry navigation.
-- [ ] **T102** Implement launch copy from repository-owned messaging: product promise, Web alpha status, proof row, primary creation CTA, and source CTA.
-- [ ] **T103** Route the creation CTA into the existing auth/visitor → first-run flow without introducing a parallel auth/project path.
-- [ ] **T104** Make the source CTA open the canonical public repository.
-- [ ] **T105** Verify the existing Web title/description/social metadata against the release contract and add or change only metadata that is actually missing or contradictory within the current Expo/Web export architecture.
+- [x] **T101** Add a Web-only `/` landing surface and narrowly exempt only Web `/` from the existing unauthenticated root-shell redirect while preserving all other protected-route behavior and current non-Web entry navigation.
+- [x] **T102** Implement launch copy from repository-owned messaging: product promise, Web alpha status, proof row, primary creation CTA, and source CTA.
+- [x] **T103** Route the creation CTA into the existing auth/visitor → first-run flow without introducing a parallel auth/project path.
+- [x] **T104** Make the source CTA open the canonical public repository.
+- [x] **T105** Verify existing Web title/description/social metadata against the release contract; no new deployment/metadata architecture is required.
 
 ## Phase 3 — Release documentation and claim convergence
 
-- [ ] **T201** Add `docs/release/web-alpha.md` with canonical URL/revision fields, browser matrix, microphone/storage limitations, known limitations, data-boundary explanation, smoke steps, and rollback steps.
-- [ ] **T202** Reconcile README opening/status/capability claims against launch-grade evidence.
-- [ ] **T203** Reconcile `docs/product.md` only where public release wording or limitations need an exact reference.
-- [ ] **T204** Review launch-facing marketing copy for contradictions; change only contradictions, not strategy.
-- [ ] **T205** Ensure no copy claims universal offline/privacy behavior, mature-DAW parity, unlimited service capacity, or universal paid status of competitors.
+- [x] **T201** Add `docs/release/web-alpha.md` with canonical URL/revision fields, browser matrix, microphone/storage limitations, known limitations, data-boundary explanation, smoke steps, and rollback steps.
+- [x] **T202** Reconcile README opening/status/capability claims against launch-grade evidence and link the release runbook.
+- [x] **T203** Review `docs/product.md`; no change is required because its Web MVP/local-first/hosted-service boundaries already match the release contract.
+- [x] **T204** Review launch-facing marketing copy for contradictions; existing guardrails and launch kit remain aligned, so strategy is unchanged.
+- [x] **T205** Ensure release copy avoids universal offline/privacy behavior, mature-DAW parity, unlimited service capacity, unsupported-browser claims, and unverified competitor/pricing claims.
 
 ## Phase 4 — Focused automated proof
 
-- [ ] **T301** Add focused tests proving Web root is public, renders the launch entry, all other existing protected routes retain their current unauthenticated redirect behavior, and non-Web root navigation remains unchanged.
-- [ ] **T302** Test primary CTA destination/integration and source CTA target.
-- [ ] **T303** Test visible alpha status and core claim copy at the public entry.
-- [ ] **T304** Keep existing `web-launch-e2e` unchanged unless the public-root route change requires an evidence-preserving navigation update.
-- [ ] **T305** Run focused tests, frontend/backend typecheck, Vitest, legacy tests, Web build, SDD checks, Graph checks, and launch Playwright.
+- [x] **T301** Add focused tests proving Web root is public, all other existing protected routes retain current unauthenticated redirect behavior, and non-Web root navigation remains unchanged.
+- [x] **T302** Test primary CTA destination/integration and source CTA target.
+- [x] **T303** Test visible alpha status and core claim copy at the public entry.
+- [x] **T304** Preserve the existing `web-launch-e2e` contract; update it only if the new public root legitimately changes the deterministic launch navigation.
+- [ ] **T305** Run focused tests, frontend/backend typecheck, Vitest, legacy tests, Web build, SDD checks, Graph checks, and launch Playwright on the exact implementation HEAD.
 
 ## Phase 5 — Convergence and release evidence
 
