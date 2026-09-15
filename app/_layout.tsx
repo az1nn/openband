@@ -21,13 +21,14 @@ function RootLayoutProtected() {
   useEffect(() => {
     if (loading) return;
     const inAuthGroup = segments[0] === "(auth)";
+    const isPublicWebRoot = Platform.OS === "web" && segments.length === 0;
 
-    if (!session && !inAuthGroup) {
+    if (!session && !inAuthGroup && !isPublicWebRoot) {
       router.replace("/login");
     } else if (session && inAuthGroup) {
       router.replace("/tabs");
     }
-  }, [session, loading, segments]);
+  }, [session, loading, segments, router]);
 
   if (loading) {
     return (
