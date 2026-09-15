@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This directory is the marketing source of truth for OpenBand. It translates the product's launch contract into a coherent market position, message system, go-to-market plan, community motion, and measurement model.
+This directory is the marketing source of truth for OpenBand. It translates product truth into a traceable system of **research → decisions → positioning → execution → measurement → learning**.
 
 It is intentionally narrower than the full technical feature inventory. Marketing must sell what a new user can trust today, not everything the repository can theoretically do.
 
@@ -43,6 +43,7 @@ The product experience has to prove that claim in minutes.
 6. **No competitor distortion.** Never imply another DAW is universally paid, closed in every workflow, or incapable of features it demonstrably supports.
 7. **No AI slop positioning.** AI is an optional accelerator. The brand is music creation and ownership, not "AI music".
 8. **Privacy claims must match implementation.** Do not claim "nothing leaves your device" if a user invokes cloud collaboration, stem separation, hosted services, or external AI providers.
+9. **No fake market precision.** Platform users, recorded-music revenue and creator-economy statistics are context/proxies until OpenBand measures its own addressable behavior.
 
 ## P0 risks before public brand investment
 
@@ -62,6 +63,32 @@ The repository `LICENSE` currently carries the Expo/650 Industries copyright tex
 
 The README exposes a very broad feature inventory while the launch issues explicitly narrow the public MVP to the core creative loop. Public-facing copy should use launch-gated proof points and move the full inventory to a technical/features reference.
 
+## Knowledge architecture
+
+The marketing system has five layers. Each layer answers a different question and should not silently take ownership of another layer's job.
+
+| Layer | Question | Canonical artifacts |
+| --- | --- | --- |
+| Product truth | What can the product honestly promise now? | `../product.md`, feature status, launch issues/specs |
+| Evidence & intelligence | What do we know, observe, assume, or still need to test about users and market? | [`research-register.md`](./research-register.md), [`source-registry.md`](./source-registry.md), [`market-intelligence.md`](./market-intelligence.md), [`competitive-landscape.md`](./competitive-landscape.md), [`pricing-landscape.md`](./pricing-landscape.md), [`creator-research.md`](./creator-research.md) |
+| Decisions | What durable choices constrain marketing? | [`decision-log.md`](./decision-log.md) |
+| Strategy & execution | Who, why, what message, which channels, what launch motion? | positioning, audiences, messaging, brand, GTM, launch kit/assets |
+| Learning | Did the strategy create creator value and what changes next? | [`measurement.md`](./measurement.md), [`experiments.md`](./experiments.md) |
+
+```mermaid
+flowchart LR
+  PT[Product truth] --> SI[Sources / market intelligence]
+  SI --> R[Research register]
+  CR[Creator research] --> R
+  PT --> D[Decisions]
+  R --> D
+  D --> S[Positioning / audiences / brand]
+  S --> M[Messaging / GTM / launch execution]
+  M --> X[Measurement / experiments]
+  X --> R
+  X --> D
+```
+
 ## Marketing operating model
 
 ```mermaid
@@ -74,21 +101,127 @@ flowchart LR
   F --> G[Public Web beta]
   G --> H[Community + content loop]
   H --> I[Retention + contribution + referral]
-  I --> B
+  I --> A
 ```
 
-## Files
+## Canonical files
 
-- [`positioning.md`](./positioning.md) — category, audiences, JTBD, differentiation, competitive frame.
+### Evidence and market intelligence
+
+- [`source-registry.md`](./source-registry.md) — dated external sources, source quality, freshness, supported claims and caveats.
+- [`research-register.md`](./research-register.md) — hypotheses, observations, evidence state, freshness and next validation.
+- [`market-intelligence.md`](./market-intelligence.md) — category structure, market segmentation, geographic signals and disciplined TAM/SAM/SOM model.
+- [`competitive-landscape.md`](./competitive-landscape.md) — strategic competitor map and dated source notes.
+- [`pricing-landscape.md`](./pricing-landscape.md) — adjacent monetization/pricing models and OpenBand pricing guardrails.
+- [`creator-research.md`](./creator-research.md) — participant model, interview/usability protocol, synthesis taxonomy and research-to-strategy loop.
+
+### Decisions
+
+- [`decision-log.md`](./decision-log.md) — durable strategic decisions, rationale, authority and supersession history.
+
+### Strategy
+
+- [`positioning.md`](./positioning.md) — category, JTBD, differentiation and competitive frame.
 - [`audiences.md`](./audiences.md) — IUP/ICP model, persona fit, anti-segments, messaging matrix and future B2B hypotheses.
+- [`brand.md`](./brand.md) — brand idea, visual territory, naming gate and identity rules.
 - [`messaging.md`](./messaging.md) — message house, copy bank, voice, claims and landing architecture.
-- [`brand.md`](./brand.md) — brand idea, visual territory, naming gate, identity rules.
-- [`go-to-market.md`](./go-to-market.md) — launch phases, channels, content engine, community, SEO and repository growth.
-- [`measurement.md`](./measurement.md) — activation funnel, north-star metrics, event taxonomy and experiment model.
+
+### Go-to-market and execution
+
+- [`go-to-market.md`](./go-to-market.md) — launch phases, channels, content engine, community, SEO and growth progression.
 - [`launch-checklist.md`](./launch-checklist.md) — marketing/release gates mapped to product launch truth.
-- [`launch-kit.md`](./launch-kit.md) — localized, channel-ready copy templates governed by the launch gates.
+- [`launch-kit.md`](./launch-kit.md) — localized, channel-ready copy templates governed by launch gates.
 - [`launch-assets.md`](./launch-assets.md) — current visual evidence audit, production brief and rights record.
-- [`competitive-landscape.md`](./competitive-landscape.md) — strategic competitor map and source notes.
+
+### Measurement and learning
+
+- [`measurement.md`](./measurement.md) — activation funnel, north-star model, event taxonomy and privacy rules.
+- [`experiments.md`](./experiments.md) — experiment backlog, hypotheses, metrics, guardrails, results and knowledge-base feedback loop.
+
+## Knowledge governance
+
+### Evidence labels
+
+Research uses explicit states:
+
+`VERIFIED | OBSERVED | HYPOTHESIS | UNKNOWN | STALE`
+
+Do not convert a hypothesis into a fact by repeating it across documents.
+
+### Decision labels
+
+Durable choices use:
+
+`ACTIVE | PROVISIONAL | SUPERSEDED | RETIRED`
+
+Material strategy changes must update the decision log rather than silently rewriting the old rationale.
+
+### Source discipline
+
+Reusable external evidence should have an `S-*` entry in [`source-registry.md`](./source-registry.md) containing:
+
+- source owner and URL;
+- date checked;
+- authority/quality grade;
+- proposition(s) the source supports;
+- caveats / what it does not prove;
+- linked `R-*` research items.
+
+This is especially important for market size, pricing, user counts and competitor claims.
+
+### Freshness
+
+Re-check time-sensitive evidence before it is used externally. This includes:
+
+- competitor positioning/features;
+- pricing;
+- app-store availability;
+- platform support;
+- search demand;
+- naming/domain/social/trademark availability;
+- legal or policy-sensitive claims.
+
+Product behavior must be checked against the actual promoted release, not remembered implementation state.
+
+### Market-sizing rule
+
+Do not present a numeric OpenBand TAM/SAM by copying a generic music-software report or a platform user count.
+
+A defensible model should distinguish:
+
+```text
+macro music economy
+≠ creator-platform population
+≠ digital music creators
+≠ browser-first addressable creators
+≠ OpenBand activated/retained creators
+```
+
+Until beta evidence exists, use the operational SOM milestone defined in [`market-intelligence.md`](./market-intelligence.md) rather than invented market-share precision.
+
+### Traceability rule
+
+A material campaign claim should be traceable backward:
+
+```text
+campaign claim
+→ messaging / launch artifact
+→ positioning / audience / decision
+→ R-* research item
+→ S-* source or product/creator evidence
+```
+
+If that path breaks, qualify the claim or do not publish it.
+
+### Learning rule
+
+A completed experiment must not die in a dashboard. It should update:
+
+1. the relevant `R-*` research entry;
+2. the relevant `MD-*` decision if the evidence changes strategy;
+3. downstream positioning/messaging/GTM only after the knowledge layer is reconciled.
+
+Creator interviews and usability studies follow the same rule: sanitized synthesis updates the public knowledge layer; raw participant material stays out of the public repository.
 
 ## Decision hierarchy
 
@@ -96,7 +229,9 @@ When marketing artifacts disagree, use this order:
 
 1. verified current product behavior;
 2. approved Spec Kit feature/launch contract and GitHub issue acceptance criteria;
-3. this marketing foundation;
-4. campaign copy and channel-specific assets.
+3. active decisions in [`decision-log.md`](./decision-log.md);
+4. current research/evidence state and registered sources;
+5. positioning, audience, brand and messaging strategy;
+6. campaign copy and channel-specific assets.
 
 A campaign may simplify language, but it must not widen the product promise.
