@@ -32,20 +32,21 @@
 - [x] **T302** Test primary CTA integration and source CTA target.
 - [x] **T303** Test visible alpha status and core launch claims.
 - [x] **T304** Adapt `web-launch-e2e` to include landing → Start creating while preserving persistence/export assertions.
-- [ ] **T305** Obtain a clean full CI on the exact final implementation/evidence HEAD.
+- [ ] **T305** Obtain a clean full CI on the exact final documentation-reconciled implementation/evidence HEAD. Product-code candidate `582889e238fe65afe2b627d3e91365a969344e6e` already passed CI `35026016724`; final docs-only HEAD still requires its own run.
 
 ## Phase 5 — Convergence and release evidence
 
-- [x] **T401** Run convergence review; the TypeScript root-detection defect was fixed rather than masked and no requirement was weakened.
+- [x] **T401** Run convergence review; real TypeScript, Web hit-testing, onboarding layout, and title-hydration defects were fixed rather than masked and no requirement was weakened.
 - [x] **T402** Run post-implementation Architecture Graph evidence (`35006469726`) and compare with preflight; no tier escalation required; temporary workflow removed.
-- [ ] **T403** Record exact final candidate HEAD and CI run with every required job green.
+- [ ] **T403** Record exact final documentation-reconciled candidate HEAD and CI run with every required job green.
 - [ ] **T404** Deploy/promote the exact candidate revision through the existing Web/Vercel path.
 - [ ] **T405** Record canonical deployed URL and verify revision identity as exposed by the deployment mechanism.
-- [ ] **T406** Run deterministic production smoke for landing → visitor → creation/import → persistence/reopen → WAV export.
+- [ ] **T406** Run deterministic deployed smoke for landing → visitor → creation/import → persistence/reopen → WAV export.
 - [ ] **T407** Run human real-microphone smoke on at least one browser intended to be labeled supported.
 - [ ] **T408** Complete browser support matrix from actual release evidence; leave unproven combinations experimental/unverified.
-- [ ] **T409** Name a concrete previous known-good revision/deployment and review rollback + post-rollback smoke.
-- [ ] **T410** Reconcile README/product/release docs against the exact deployed candidate after evidence is known.
+- [x] **T409** Name a concrete previous known-good revision/deployment and review rollback procedure: `2aa887e3bd2ab4643407ae96532966ec1fed9767`, Vercel deployment `BvCLtXBmtRY4iuofRi3pTkYWxRDB`.
+- [ ] **T410** Reconcile README/product/release docs against the exact promoted/deployed candidate after production identity is known.
+- [x] **T411** Add durable deferred-human-validation handoff in `docs/release/human-validation-pending.md` with HVT checks, evidence template, browser-state rules, and explicit Merge Gate blocking semantics.
 
 ## Phase 6 — Merge gate and cleanup
 
@@ -54,3 +55,7 @@
 - [ ] **T503** Present Human Merge Gate against the exact verified PR HEAD and deployed candidate evidence.
 - [ ] **T504** Human merges the PR; agent does not merge T2+.
 - [ ] **T505** After merge, verify public release remains healthy and reconcile #51/#46 tracking state.
+
+### Deferred human work
+
+T404–T408 and T410 may be completed later when a human has access to the deployed browser/microphone path. Their deferral does not convert them to PASS and does not authorize Human Merge Gate. Automated/non-human work may continue while they remain pending.
