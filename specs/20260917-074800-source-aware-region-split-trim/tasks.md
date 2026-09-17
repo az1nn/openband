@@ -59,7 +59,7 @@
 - [x] Architecture Graph baseline + implementation evidence PASS: run `35226545143`; baseline 508 nodes / 1374 edges, implementation evidence 510 / 1381; validation and Graph CI PASS.
 - [x] Architecture specialist review: T3 appropriate; ownership/boundaries unchanged; no T4 trigger.
 - [x] Audio/DSP specialist review: initial effect-order inconsistency fixed; source selection now precedes track effects; no context/blob/realtime lifecycle expansion.
-- [ ] Remove temporary `.github/scripts/apply-53-source-window.py` and `.github/workflows/tmp-53-apply-source-window.yml`.
+- [x] Remove temporary `.github/scripts/apply-53-source-window.py` and `.github/workflows/tmp-53-apply-source-window.yml`.
 - [ ] Final frontend typecheck PASS on exact clean HEAD.
 - [ ] Final backend typecheck PASS on exact clean HEAD.
 - [ ] Final focused tests PASS on exact clean HEAD.
