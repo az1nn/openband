@@ -11,6 +11,6 @@
 - [x] T009 Obtain a fresh Human Design Gate for the revised T4 baseline. No further implementation mutation is authorized before approval.
 - [x] T010 Implement the trusted default-branch privileged evaluator, fork blocking, path/risk-derived minimum tier, and machine-readable required-evidence contract.
 - [x] T011 Add trusted `openband-security` + `t4-evidence` producers and adversarial regression fixtures.
-- [ ] T012 Converge live governance/policy checks and remove any candidate-controlled trust loophole.
+- [x] T012 Converge live governance/policy checks and remove candidate-controlled trust loopholes, including deleted trust roots, evidence-script indirection, and fail-open CI patterns.
 - [ ] T013 Run exact-HEAD SDD/Graph/security/T4/full CI verification and audit recovery evidence.
 - [ ] T014 Record the verified HEAD and complete integration under the policy valid for this bootstrap PR.
