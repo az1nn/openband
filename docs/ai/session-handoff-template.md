@@ -2,173 +2,100 @@
 
 > Derived bootstrap context only. Canonical Git-backed project state wins on conflict.
 
-## Objective
+## Default handoff — Caveman Mode
 
-- Session objective:
-- Why this handoff exists:
+The verified-context-handoff skill performs the full closeout audit, then emits this compact artifact by default. Compression applies to the transferred text, never to verification depth.
 
-## Repository State
+```text
+CAVEMAN HANDOFF v1
 
-- Repository: `az1nn/openband`
-- Base branch:
-- Base SHA:
-- Working branch:
-- Worktree:
-- Current HEAD:
-- Issue:
-- Parent / umbrella issue:
-- PR:
-- PR state:
-- Mergeable:
+REPO: <url>
+BASE: <branch>@<sha>
+HEAD: <branch>@<sha>
+WORK: issue=<id|-> pr=<id/state|-> spec=<id|-> tier=<tier|->
+STATE: <VERIFIED_COMPLETE|IMPLEMENTED_NOT_VERIFIED|INCOMPLETE|PROCESS_DRIFT>
 
-## Spec Kit State
+DONE:
+- <delta-only completed facts>
 
-- Active feature:
-- Lifecycle step:
-- Risk tier:
-- Risk triggers:
-- Design Baseline SHA:
-- Design Gate: `NOT_REQUIRED | PENDING | APPROVED | INVALIDATED`
-- Merge Gate: `NOT_REQUIRED | PENDING | READY_FOR_HUMAN | INVALIDATED`
+PROOF:
+- <check/run>: <PASS|FAIL|BLOCKED|FLAKY|NOT_REQUIRED|STALE>@<sha-or-reason>
 
-## Closeout Audit
+BLOCK:
+- <none | unresolved blocker/human gate>
 
-- Outcome: `VERIFIED_COMPLETE | IMPLEMENTED_NOT_VERIFIED | INCOMPLETE | PROCESS_DRIFT`
-- Scope vs issue/spec/tasks:
-- Changed production files audited:
-- Changed test files audited:
-- Temporary workflows/scaffolding present: `YES | NO`
-- Review threads/reviews blocking: `YES | NO`
-- Base freshness / conflict notes:
-- Human-only evidence still required:
+KEEP:
+- <critical invariant/authority boundary only>
 
-### Scope checklist
+NEXT:
+1. <single exact next action>
 
-| Expected item | State | Evidence / notes |
-|---|---|---|
-|  | `DONE | MISSING | PARTIAL | SUPERSEDED | NOT_REQUIRED` |  |
+VERIFY-FIRST:
+Reconstruct GitHub/Git/Spec Kit/tests/CI/Graph from canonical state before acting. Canonical state wins on conflict; stale PASS must be rerun.
 
-## Final Decisions
+PR: <direct URL when applicable>
+```
 
-- 
+## Required semantics
 
-## Superseded — Do Not Reuse
+The compact handoff must preserve, when applicable:
 
-- 
+- target base and exact base SHA;
+- working branch/worktree and exact HEAD;
+- issue, PR and Spec Kit identity;
+- risk tier / lifecycle state;
+- closeout classification;
+- current-cycle implementation delta;
+- verification evidence bound to the relevant HEAD;
+- blocking review, human gate, or freshness risk;
+- critical invariants / authority boundaries;
+- one exact next action;
+- verify-first contract.
 
-## Completed
+Allowed evidence states:
 
-- 
+```text
+PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED | STALE
+```
 
-## Known Defects Found / Fixed
+A running workflow is not PASS. Evidence from an older relevant HEAD is STALE. A skipped job is acceptable only when explicitly not applicable.
 
-- 
+## Compression rules
 
-## Surfaces That Should Not Have Changed
+- Emit the Caveman handoff automatically at every material task, feature slice, verification cycle, PR freeze, or context boundary.
+- Do not require a separate user request for a continuation prompt.
+- Prefer SHAs, IDs, run IDs, paths and short state labels over prose.
+- Carry only the current delta plus facts required to execute `NEXT` safely.
+- Reference canonical specs/ADRs/docs instead of copying their contents.
+- Omit empty optional fields.
+- Normal target: roughly 250–700 tokens; correctness overrides the budget.
+- Expand only when compression would hide a blocker, ambiguity, human gate, process drift, or authority boundary.
 
-- 
+## Fallback expansion
 
-## Canonical Artifacts
+If Caveman format cannot safely encode the handoff, add only the missing operational fields rather than restoring a project-history dump. Useful optional fields:
 
-- Constitution:
-- `AGENTS.md`:
-- Feature spec:
-- Plan:
-- Tasks:
-- Verification/checklist:
-- Architecture:
-- Contracts:
-- ADRs:
-- Relevant code/tests:
-- Architecture Graph queries/evidence to refresh:
+```text
+GATES: design=<...> merge=<...> human=<...>
+REVIEW: threads=<...> blocking=<...>
+FILES: <only unexpected or next-action-critical paths>
+GRAPH: <run/evidence/freshness>
+CI: <workflow/run + per-job exceptions>
+DRIFT: <canonical mismatch/process drift>
+```
 
-## Verification State
+## New-chat verification contract
 
-| Evidence | State | Bound to SHA / notes |
-|---|---|---|
-| Acceptance / focused tests |  |  |
-| Full unit/integration suite |  |  |
-| Typecheck |  |  |
-| Build |  |  |
-| E2E / browser / native smoke |  |  |
-| Graph / SDD validation |  |  |
-| Post-implementation Graph impact |  |  |
-| Specialist/adversarial review |  |  |
-| Human hardware/device evidence |  |  |
-| Other required evidence |  |  |
+Do **not** assume a task is complete because the previous chat says so.
 
-Allowed states: `PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED | STALE`.
+Before acting, reconstruct canonical state from GitHub/Git/Spec Kit/tests/CI/Architecture Graph. Treat any mismatch with the handoff as stale handoff data.
 
-Verification is `STALE` if its relevant HEAD changed. A running workflow is not PASS. A skipped job is acceptable only when its condition makes it explicitly not applicable.
-
-## Last Known CI
-
-- Workflow / run:
-- Head SHA:
-- Required jobs:
-- Passed:
-- Failed:
-- Running:
-- Skipped as expected:
-
-## Review / PR Hygiene
-
-- Unresolved review threads:
-- Blocking reviews:
-- Unexpected changed files:
-- Temporary workflows/scripts:
-- PR base still expected:
-- PR still mergeable:
-
-## Open / Blocked
-
-- 
-
-## Freshness Risks
-
-- 
-
-## Exact Next Action
-
-1. 
-
-## New Chat Verification Contract
-
-Do **not** assume this task is complete because the previous chat says so.
-
-Before acting, reconstruct canonical state from GitHub/Git/Spec Kit/tests/CI/Architecture Graph. Canonical state wins on conflict.
-
-The new chat must verify at minimum:
-
-1. current `master` / target base and base SHA;
-2. branch/worktree and exact HEAD;
-3. issue/parent issue/PR state and mergeability;
-4. active Spec Kit feature/tasks/lifecycle/tier;
-5. Design and Merge Gate freshness;
-6. changed-file scope;
-7. required tests from the feature artifacts;
-8. CI result on the exact relevant HEAD;
-9. Architecture Graph evidence when applicable;
-10. review threads/reviews and temporary verification scaffolding.
-
-If any previous PASS is tied to a stale SHA, rerun the affected evidence before treating the task as verified.
-
-## New Chat Bootstrap
-
-Start by refreshing Git/PR state and reading:
-
-- `AGENTS.md`
-- `docs/ai/context-handoff.md`
-- `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md`
-
-Reconstruct bounded context progressively:
+Bootstrap progressively:
 
 ```text
 L0  Constitution + AGENTS + feature/tier
-L1  feature spec + impacted architecture/contracts/ADRs + Graph
+L1  active feature + impacted architecture/contracts/ADRs + Graph
 L2  relevant code + tests + specialists
 ```
 
-Then verify this handoff against current canonical state. Treat any mismatch as stale handoff data, not as authority.
-
-Continue from **Exact Next Action** only after confirming canonical state, verification freshness, and applicable human gates.
+If previous PASS evidence is bound to a stale HEAD, rerun it before treating the task as verified. Continue from `NEXT` only after canonical state, evidence freshness and applicable human gates are confirmed.
