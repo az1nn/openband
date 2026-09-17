@@ -74,7 +74,6 @@ describe("task-lived handoff lifecycle policy", () => {
   });
 
   it("keeps Spec Kit as lifecycle authority after session routing", () => {
-    expect(sessionRouter).toContain(canonicalSessionRouterRef.replace("/SKILL.md", ""));
     expect(sessionRouter).toContain("Spec Kit remains the engineering lifecycle authority");
     expect(sessionRouter).toContain(".agents/skills/openband-ask/SKILL.md");
     expect(sessionRouter).toContain("openband-ask");
@@ -123,6 +122,7 @@ describe("task-lived handoff lifecycle policy", () => {
       expect(source).toContain("ONE TASK = ONE CHAT");
     }
 
+    expect(agents).toContain(canonicalSessionRouterRef);
     expect(projectInstructions).toContain(canonicalSessionRouterRef);
 
     for (const source of [agents, contextPolicy, projectInstructions]) {
