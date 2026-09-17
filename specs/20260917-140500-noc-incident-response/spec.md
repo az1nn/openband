@@ -17,12 +17,14 @@ Add a focused operational specialist that can interpret production evidence, cla
 - **FR-006** A durable incident-response policy defines detection → triage → containment recommendation → diagnosis → remediation → verification → closure.
 - **FR-007** An initial API-regression runbook shows how to correlate elevated errors/latency with a deployment and produce actionable evidence.
 - **FR-008** The design remains vendor-neutral; no observability provider is required by this feature.
+- **FR-009** NOC-generated remediation must re-enter the canonical engineering lifecycle and may never bypass required merge evidence or policy checks.
 
 ## Acceptance
 
 1. An agent can distinguish code/security review from runtime operational triage.
 2. A simulated post-deploy HTTP 5xx/latency regression can be processed into a structured incident report and safe recommendation.
-3. The NOC specialist cannot autonomously merge, rollback, redeploy or perform destructive production actions.
+3. The NOC specialist cannot autonomously rollback, redeploy or perform destructive production actions in this slice.
 4. Security indicators trigger escalation rather than being treated as ordinary availability incidents.
-5. Existing T0–T4, Design Gate, verification and human Merge Gate semantics remain authoritative.
-6. No product/runtime behavior changes in this first slice.
+5. Existing T0–T4, human Design Gate and verification semantics remain authoritative; merge behavior follows the canonical project Merge Gate rather than NOC-specific rules.
+6. NOC remediation cannot suppress, skip or reinterpret required merge evidence.
+7. No product/runtime behavior changes in this first slice.
