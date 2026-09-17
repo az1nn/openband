@@ -9,6 +9,7 @@ OpenBand uses GitHub Spec Kit as its SDD lifecycle. This file defines operationa
 - Stop on decisions, not routine plumbing.
 - Direct `/speckit.*` commands may bypass `openband-ask`, never this policy.
 - Evidence beats claims: masked, blocked, stale, or flaky required checks are not PASS.
+- **ONE TASK = ONE CHAT. ONE CHAT = AT MOST ONE TASK.** A chat that closes one task does not roll into a distinct next task.
 
 ## Risk tiers
 
@@ -24,7 +25,11 @@ Minimum T3: persistence model, architecture boundary, or cross-runtime contract 
 
 ## Entry and context
 
-`openband-ask` is the preferred entrypoint. It classifies risk, gathers bounded context, and starts or resumes the appropriate lifecycle. It does not own a parallel state machine.
+A standalone `siga` is the preferred coding-session command. It must run `.qwen/skills/auto-skill-session-router/SKILL.md` before selecting work. `siga` reconstructs canonical repository/GitHub state and routes the session to exactly one of `ACTIVE`, `WAITING`, or `NEXT`; it never means "continue from chat memory".
+
+Session routing follows `docs/ai/session-routing.md` and persists live task ownership through one idempotent marked PR/issue session lease. A new chat must not silently duplicate or take over a task with a live `ACTIVE` lease. `WAITING` surfaces the exact human/external gate and does not select another task. `NEXT` may bind a new/unbound chat to exactly one task; a chat that already completed another task may identify the next task but must not execute it.
+
+`openband-ask` remains the preferred task/lifecycle entrypoint after session ownership is resolved. It classifies risk, gathers bounded context, and starts or resumes the appropriate lifecycle. It does not own a parallel state machine.
 
 Context is progressive:
 
@@ -42,11 +47,13 @@ Continuously monitor whether the current chat remains a trustworthy bounded impl
 
 Task-lifecycle ownership is explicit:
 
+- `.qwen/skills/auto-skill-session-router/SKILL.md` owns session selection/ownership before task execution;
 - `.qwen/skills/auto-skill-continue-work/SKILL.md` owns finishing all safe work in the active task before closeout;
 - `.qwen/skills/auto-skill-caveman-handoff/SKILL.md` owns closeout audit, durable persistence, and compact Caveman emission only after a genuine task closeout boundary;
-- `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md` is a compatibility router between those two skills;
+- `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md` is a compatibility router between continuation and closeout;
+- `docs/ai/session-routing.md` owns the live session lease/routing contract;
 - `docs/ai/session-handoff-template.md` owns the compact handoff shape;
-- `docs/ai/durable-context.md` owns persistence and promotion rules.
+- `docs/ai/durable-context.md` owns closeout persistence and promotion rules.
 
 For ChatGPT Projects, `docs/ai/chatgpt-project-instructions.md` is the repository-owned source for the Project Instructions that mirror this policy into ChatGPT.
 
