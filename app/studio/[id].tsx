@@ -348,7 +348,6 @@ export default function Studio() {
   );
 
   const hydrateProject = useCallback((saved: ProjectData) => {
-    setProjectTitle(saved.title);
     setTracks(saved.tracks as TrackDef[]);
     setGroups(saved.groups);
     setTrackAssignments(saved.trackAssignments);
@@ -421,10 +420,6 @@ export default function Studio() {
     }
     prevRegionUrlsRef.current = current;
   }, [tracks]);
-
-  useEffect(() => {
-    return () => revokeAssetCache();
-  }, []);
 
   const reportedMissingAssetsRef = useRef(new Set<string>());
   useEffect(() => {
@@ -783,1643 +778,2302 @@ export default function Studio() {
     [tracks, setTracks, rerenderAfterMuteSolo, isWeb, engineActive],
   );
 
-  const setVolume = useCallback((trackId: string, volume: number) => {
-    setTracks(tracks.map((t) => (t.id === trackId ? { ...t, volume } : t)));
-    if (isWeb && engineActive && engineRef.current) {
-      engineRef.current.setVolume(trackId, volume / 100);
-    }
-  }, [tracks, setTracks, isWeb, engineActive]);
-
-  const setPan = useCallback((trackId: string, pan: number) => {
-    setTracks(tracks.map((t) => (t.id === trackId ? { ...t, pan } : t)));
-    if (isWeb && engineActive && engineRef.current) {
-      engineRef.current.setPan(trackId, pan / 100);
-    }
-  }, [tracks, setTracks, isWeb, engineActive]);
-
-  const toggleArm = useCallback((trackId: string) => {
-    setTracks(tracks.map((t) => (t.id === trackId ? { ...t, isArmed: !t.isArmed } : t)));
-  }, [tracks, setTracks]);
-
-  const changeTrackColor = useCallback((trackId: string, color: string) => {
-    setTracks(tracks.map((t) => (t.id === trackId ? { ...t, color } : t)));
-  }, [tracks, setTracks]);
-
-  const addPlugin = useCallback(
-    (trackId: string, type: Plugin["type"]) => {
-      const spec = PLUGIN_SPECS[type];
-      if (!spec) return;
-      const plugin: Plugin = {
-        id: `${type}-${Date.now()}`,
-        type,
-        enabled: true,
-        params: Object.fromEntries(
-          Object.entries(spec.params).map(([key, p]) => [key, p.default]),
-        ),
+  const deleteTrack = useCallback(
+    (trackId: string) => {
+      const removed = tracks.find((t) => t.id === trackId);
+      const confirmDelete = () => {
+        if (removed) {
+          for (const region of removed.regions) {
+            if (region.url) revokeTrackedBlob(region.url);
+          }
+        }
+        setTracks(tracks.filter((t) => t.id !== trackId));
+        if (selectedTrackId === trackId) setSelectedTrackId(null);
       };
+      const label = removed?.name ?? t("studio.thisTrack", "this track");
+      if (Platform.OS === "web") {
+        if (typeof window !== "undefined" && !window.confirm(t("studio.deleteTrackConfirm", "Delete \"{{name}}\"? This action cannot be undone.", { name: label }))) {
+          return;
+        }
+        confirmDelete();
+      } else {
+        Alert.alert(
+          t("studio.deleteTrackTitle", "Delete Track"),
+          t("studio.deleteTrackConfirm", "Delete \"{{name}}\"? This action cannot be undone.", { name: label }),
+          [
+            { text: t("studio.cancel", "Cancel"), style: "cancel" },
+            { text: t("studio.deleteTrack", "Delete"), style: "destructive", onPress: confirmDelete },
+          ],
+        );
+      }
+    },
+    [tracks, setTracks, selectedTrackId],
+  );
+
+  const setTrackVolume = useCallback(
+    (trackId: string, vol: number) => {
+      setTracks(
+        tracks.map((t) => (t.id === trackId ? { ...t, volume: vol } : t)),
+      );
+      if (isWeb && engineActive && engineRef.current) {
+        engineRef.current.setTrackVolume(trackId, vol);
+      }
+    },
+    [tracks, setTracks, isWeb, engineActive],
+  );
+
+  const setTrackPan = useCallback(
+    (trackId: string, pan: number) => {
+      setTracks(tracks.map((t) => (t.id === trackId ? { ...t, pan } : t)));
+      if (isWeb && engineActive && engineRef.current) {
+        engineRef.current.setTrackPan(trackId, pan);
+      }
+    },
+    [tracks, setTracks, isWeb, engineActive],
+  );
+
+  // Live MIDI dispatch: route incoming CC/note messages to mixer + transport.
+  useEffect(() => {
+    const resolveTrackId = (target: MidiTarget): string | undefined => {
+      if (target.trackIndex != null) return tracksRef.current[target.trackIndex]?.id;
+      return target.trackId;
+    };
+    const handleMidiTarget = (target: MidiTarget, value01: number) => {
+      switch (target.type) {
+        case "trackVolume": {
+          const tid = resolveTrackId(target);
+          if (tid) setTrackVolume(tid, value01 * 100);
+          break;
+        }
+        case "trackPan": {
+          const tid = resolveTrackId(target);
+          if (tid) setTrackPan(tid, (value01 * 2 - 1) * 100);
+          break;
+        }
+        case "masterVolume": {
+          getEngine().setMasterVolume(value01);
+          break;
+        }
+        case "transport": {
+          switch (target.action) {
+            case "play":
+              if (!isPlayingRef.current) togglePlay();
+              break;
+            case "togglePlay":
+              togglePlay();
+              break;
+            case "stop":
+              stopPlayback();
+              break;
+            case "record":
+              toggleRecording();
+              break;
+            case "loop": {
+              const engine = getEngine();
+              const looping = engine.isLooping();
+              engine.setLoop(looping ? null : 0, looping ? null : durationRef.current);
+              break;
+            }
+            case "scrub": {
+              const pos = value01 * durationRef.current;
+              if (engineActiveRef.current && engineRef.current) {
+                engineRef.current.seek(pos);
+              } else {
+                seekRelative(pos - currentTimeRef.current);
+              }
+              break;
+            }
+          }
+          break;
+        }
+        case "pluginParam": {
+          if (!target.paramId) break;
+          const tid = resolveTrackId(target) ?? selectedTrackIdRef.current;
+          if (!tid) break;
+          const track = tracksRef.current.find((t) => t.id === tid);
+          if (!track) break;
+          // Find the plugin in the track chain whose spec exposes this paramId.
+          const plugin = track.plugins.find((p) => {
+            const spec = PLUGIN_SPECS[p.type];
+            return spec?.params.some((ps) => ps.id === target.paramId);
+          });
+          if (!plugin) break;
+          const spec = PLUGIN_SPECS[plugin.type];
+          const paramSpec = spec.params.find((ps) => ps.id === target.paramId);
+          if (!paramSpec) break;
+          const scaled = clampParam(
+            paramSpec,
+            paramSpec.min + value01 * (paramSpec.max - paramSpec.min),
+          );
+          setTracks(
+            tracksRef.current.map((t) =>
+              t.id === tid
+                ? {
+                    ...t,
+                    plugins: t.plugins.map((p) =>
+                      p.id === plugin.id
+                        ? {
+                            ...p,
+                            params: { ...p.params, [target.paramId!]: scaled },
+                          }
+                        : p,
+                    ),
+                  }
+                : t,
+            ),
+          );
+          break;
+        }
+      }
+    };
+    setMidiTargetHandler(handleMidiTarget);
+    let unsub: (() => void) | null = null;
+    subscribeToInputs(applyMidiMessage).then((u) => {
+      unsub = u;
+    });
+    return () => {
+      unsub?.();
+      setMidiTargetHandler(null);
+    };
+  }, [togglePlay, stopPlayback, toggleRecording, seekRelative, setTrackVolume, setTrackPan]);
+
+  const setTrackColor = useCallback(
+    (trackId: string, color: string) => {
+      setTracks(tracks.map((t) => (t.id === trackId ? { ...t, color } : t)));
+    },
+    [tracks, setTracks],
+  );
+
+  const trackVolume = (trackId: string) =>
+    tracks.find((t) => t.id === trackId)?.volume ?? 70;
+
+  const isAudible = (track: TrackDef) => {
+    if (anySolo) return track.solo;
+    const groupVol = getGroupVolume(groups, track.id);
+    if (groupVol?.muted) return false;
+    return !track.muted;
+  };
+
+  const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const selectedTrack = useMemo(
+    () => tracks.find((t) => t.id === selectedTrackId) || null,
+    [tracks, selectedTrackId],
+  );
+
+  const updateTrackPlugins = useCallback(
+    (trackId: string, plugins: Plugin[]) => {
+      setTracks(tracks.map((t) => (t.id === trackId ? { ...t, plugins } : t)));
+    },
+    [tracks, setTracks],
+  );
+
+  const updateAutomation = useCallback(
+    (trackId: string, param: string, points: AutomationPoint[]) => {
       setTracks(
         tracks.map((t) =>
-          t.id === trackId ? { ...t, plugins: [...t.plugins, plugin] } : t,
+          t.id === trackId
+            ? { ...t, automation: { ...t.automation, [param]: points } }
+            : t,
         ),
       );
     },
     [tracks, setTracks],
   );
 
-  const removePlugin = useCallback((trackId: string, pluginId: string) => {
-    setTracks(tracks.map((t) =>
-      t.id === trackId ? { ...t, plugins: t.plugins.filter((p) => p.id !== pluginId) } : t,
-    ));
-  }, [tracks, setTracks]);
+  const { handleSaveMix, handleLoadMix, handleDeleteMix, handleCompareMix } =
+    useMixSnapshots({
+      tracks,
+      setTracks,
+      mixSnapshots,
+      setMixSnapshots,
+      activeMixId,
+      setActiveMixId,
+    });
 
-  const togglePlugin = useCallback((trackId: string, pluginId: string) => {
-    setTracks(tracks.map((t) =>
-      t.id === trackId ? { ...t, plugins: t.plugins.map((p) => p.id === pluginId ? { ...p, enabled: !p.enabled } : p) } : t,
-    ));
-  }, [tracks, setTracks]);
+  const { handlePluginParamChange, handleTogglePlugin } =
+    usePluginChains({
+      editingPluginSource,
+      selectedTrack,
+      tracks,
+      setTracks,
+      setMasteringChain,
+      setMasterPlugins,
+    });
 
-  const updatePluginParam = useCallback((trackId: string, pluginId: string, key: string, value: number) => {
-    setTracks(tracks.map((t) =>
-      t.id === trackId ? {
-        ...t,
-        plugins: t.plugins.map((p) => p.id === pluginId ? {
-          ...p,
-          params: { ...p.params, [key]: value },
-        } : p),
-      } : t,
-    ));
-  }, [tracks, setTracks]);
+  const handleAddSample = useCallback(
+    (sample: {
+      id: string;
+      name: string;
+      category: string;
+      color: string;
+      duration: number;
+    }) => {
+      const trackId = `sample-${Date.now()}`;
+      const newTrack: TrackDef = {
+        id: trackId,
+        name: sample.name,
+        color: sample.color,
+        muted: false,
+        solo: false,
+        volume: 75,
+        pan: 0,
+        sends: {},
+        sidechainSource: null,
+        regions: [
+          {
+            id: `region-${Date.now()}`,
+            start: 0,
+            duration: Math.max(sample.duration * 10, 40),
+          },
+        ],
+        plugins: [],
+        automation: {},
+      };
+      setTracks([...tracks, newTrack]);
+    },
+    [tracks, setTracks],
+  );
 
-  const updatePluginSidechain = useCallback((trackId: string, pluginId: string, source: string | null) => {
-    setTracks(tracks.map((t) =>
-      t.id === trackId ? {
-        ...t,
-        plugins: t.plugins.map((p) => p.id === pluginId ? { ...p, sidechainSource: source } : p),
-      } : t,
-    ));
-  }, [tracks, setTracks]);
-
-  const addGroup = useCallback((name: string, color: string) => {
-    setGroups((prev) => [
-      ...prev,
-      { id: `group-${Date.now()}`, name, color, collapsed: false, muted: false, solo: false },
-    ]);
-  }, []);
-
-  const removeGroup = useCallback((groupId: string) => {
-    setGroups((prev) => prev.filter((g) => g.id !== groupId));
-  }, []);
-
-  const updateGroup = useCallback((groupId: string, updates: Partial<GroupDef>) => {
-    setGroups((prev) => prev.map((g) => (g.id === groupId ? { ...g, ...updates } : g)));
-  }, []);
-
-  const toggleGroupCollapse = useCallback((groupId: string) => {
-    setGroups((prev) => prev.map((g) => (g.id === groupId ? { ...g, collapsed: !g.collapsed } : g)));
-  }, []);
-
-  const assignTrackGroup = useCallback((trackId: string, groupId: string | null) => {
-    setTracks(tracks.map((t) => (t.id === trackId ? { ...t, groupId: groupId ?? undefined } : t)));
-  }, [tracks, setTracks]);
-
-  const addBus = useCallback((name: string) => {
-    setBuses((prev) => [...prev, { id: `bus-${Date.now()}`, name, volume: 70, plugins: [] }]);
-  }, []);
-
-  const removeBus = useCallback((busId: string) => {
-    setBuses((prev) => prev.filter((b) => b.id !== busId));
-  }, []);
-
-  const addSendBus = useCallback((name: string) => {
-    setSendBuses((prev) => [...prev, { id: `send-${Date.now()}`, name, volume: 70, plugins: [] }]);
-  }, []);
-
-  const removeSendBus = useCallback((busId: string) => {
-    setSendBuses((prev) => prev.filter((b) => b.id !== busId));
-  }, []);
-
-  const updateSendBus = useCallback((busId: string, updates: Partial<SendBus>) => {
-    setSendBuses((prev) => prev.map((b) => (b.id === busId ? { ...b, ...updates } : b)));
-  }, []);
-
-  const toggleBus = useCallback((busId: string) => {
-    setBuses((prev) => prev.map((b) => (b.id === busId ? { ...b, muted: !b.muted } : b)));
-  }, []);
-
-  const updateBusVolume = useCallback((busId: string, volume: number) => {
-    setBuses((prev) => prev.map((b) => (b.id === busId ? { ...b, volume } : b)));
-  }, []);
-
-  const updateBusPlugin = useCallback((busId: string, pluginId: string, updates: Partial<Plugin>) => {
-    setBuses((prev) => prev.map((b) => (b.id === busId ? { ...b, plugins: b.plugins.map((p) => (p.id === pluginId ? { ...p, ...updates } : p)) } : b)));
-  }, []);
-
-  const removeBusPlugin = useCallback((busId: string, pluginId: string) => {
-    setBuses((prev) => prev.map((b) => (b.id === busId ? { ...b, plugins: b.plugins.filter((p) => p.id !== pluginId) } : b)));
-  }, []);
-
-  const addMasterPlugin = useCallback((type: Plugin["type"]) => {
-    const spec = PLUGIN_SPECS[type];
-    if (!spec) return;
-    setMasterPlugins((prev) => [...prev, { id: `master-${type}-${Date.now()}`, type, enabled: true, params: Object.fromEntries(Object.entries(spec.params).map(([key, p]) => [key, p.default])) }]);
-  }, []);
-
-  const removeMasterPlugin = useCallback((pluginId: string) => {
-    setMasterPlugins((prev) => prev.filter((p) => p.id !== pluginId));
-  }, []);
-
-  const toggleMasterPlugin = useCallback((pluginId: string) => {
-    setMasterPlugins((prev) => prev.map((p) => (p.id === pluginId ? { ...p, enabled: !p.enabled } : p)));
-  }, []);
-
-  const updateMasterPlugin = useCallback((pluginId: string, key: string, value: number) => {
-    setMasterPlugins((prev) => prev.map((p) => p.id === pluginId ? { ...p, params: { ...p.params, [key]: value } } : p));
-  }, []);
-
-  const addAutomationPoint = useCallback((trackId: string, lane: "volume" | "pan", time: number, value: number) => {
-    setTracks(tracks.map((t) => t.id === trackId ? { ...t, automation: { ...t.automation, [lane]: [...(t.automation?.[lane] ?? []), { time, value }] } } : t));
-  }, [tracks, setTracks]);
-
-  const removeAutomationPoint = useCallback((trackId: string, lane: "volume" | "pan", pointIndex: number) => {
-    setTracks(tracks.map((t) => t.id === trackId ? { ...t, automation: { ...t.automation, [lane]: (t.automation?.[lane] ?? []).filter((_, i) => i !== pointIndex) } } : t));
-  }, [tracks, setTracks]);
-
-  const updateAutomationPoint = useCallback((trackId: string, lane: "volume" | "pan", pointIndex: number, updates: Partial<AutomationPoint>) => {
-    setTracks(tracks.map((t) => t.id === trackId ? { ...t, automation: { ...t.automation, [lane]: (t.automation?.[lane] ?? []).map((p, i) => i === pointIndex ? { ...p, ...updates } : p) } } : t));
-  }, [tracks, setTracks]);
-
-  const toggleAutomation = useCallback((trackId: string, lane: "volume" | "pan") => {
-    if (lane === "volume") setShowAutomation((prev) => ({ ...prev, [trackId]: !prev[trackId] }));
-    else setShowPanAutomation((prev) => ({ ...prev, [trackId]: !prev[trackId] }));
-  }, []);
-
-  const handleImportFiles = useCallback(async (files: File[]) => {
-    if (files.length === 0) return;
-    try {
-      const { tracks: importedTracks, failedFileNames } = await persistImportedAudioFiles({
-        files,
-        existingTrackCount: tracks.length,
-        save: saveAsset,
-      });
-      if (failedFileNames.length > 0) {
-        Alert.alert(
-          t("studio.importFailedTitle", "Import failed"),
-          t("studio.importFailedMessage", "Could not persist: {{files}}", {
-            files: failedFileNames.join(", "),
-          }),
-        );
-      }
-      if (importedTracks.length === 0) return;
-      setTracks((prev) => [...prev, ...importedTracks]);
-      if (importedTracks[0]) setSelectedTrackId(importedTracks[0].id);
-    } catch (error) {
-      console.warn("Import failed:", error);
-      Alert.alert(t("studio.importFailedTitle", "Import failed"), t("studio.importFailedGeneric", "Could not import audio."));
-    }
-  }, [tracks.length, setTracks, t]);
-
-  const handleExport = useCallback(() => {
-    if (tracks.length === 0) {
-      Alert.alert(t("studio.exportTitle", "Export"), t("studio.exportEmpty", "Add at least one track before exporting."));
-      return;
-    }
-    openModal("bounce");
-  }, [tracks.length, openModal, t]);
-
-  const handleQuickStart = useCallback(() => {
-    if (!isScratch && tracks.length > 0) {
-      Alert.alert(t("studio.quickStartTitle", "Quick Start"), t("studio.quickStartLoaded", "Template already loaded."));
-      return;
-    }
-    const templateTracks = generateTracksForGenre(genreParam || "pop", initialBpm, projectKey, projectMood, initialNumBars, projectTimeSig);
-    setTracks(templateTracks);
-  }, [isScratch, tracks.length, genreParam, initialBpm, projectKey, projectMood, initialNumBars, projectTimeSig, setTracks]);
-
-  const handleClearProject = useCallback(() => {
-    setTracks([]);
-    setGroups([]);
-    setBuses([]);
-    setSendBuses([]);
-    setTrackAmpChains({});
-    setTrackAssignments({});
-    setMasterPlugins([]);
-    setMasteringChain([]);
-    setMixSnapshots([]);
-    setActiveMixId(undefined);
-    setProjectLyrics("");
-    setCoverUrl(undefined);
-    setSelectedTrackId(null);
-    setSelectedRegion(null);
-    renderCacheRef.current = { key: null, url: null };
-  }, [setTracks, setGroups, setBuses, setSendBuses, setTrackAmpChains, setTrackAssignments, setMasterPlugins, setMasteringChain, setMixSnapshots, setActiveMixId]);
-
-  const handleAddMidiTrack = useCallback(() => {
-    const trackId = `midi-${Date.now()}`;
+  const handleAddTrack = useCallback(() => {
+    const trackId = `track-${Date.now()}`;
+    const name = `Track ${tracks.length + 1}`;
+    const busId = assignTrackToBus(name);
     const newTrack: TrackDef = {
       id: trackId,
-      name: `MIDI ${tracks.length + 1}`,
+      name,
       color: TRACK_COLORS[tracks.length % TRACK_COLORS.length],
       muted: false,
       solo: false,
-      volume: 80,
+      volume: 75,
       pan: 0,
       sends: {},
       sidechainSource: null,
-      regions: [],
+      outputId: busId,
+      regions: [{ id: `region-${Date.now()}`, start: 0, duration: 80 }],
       plugins: [],
-      midiNotes: [],
       automation: {},
     };
-    setTracks((prev) => [...prev, newTrack]);
-  }, [tracks.length, setTracks]);
-
-  const handleRemoveTrack = useCallback((trackId: string) => {
-    setTracks((prev) => prev.filter((t) => t.id !== trackId));
-    if (selectedTrackId === trackId) setSelectedTrackId(null);
-  }, [selectedTrackId, setTracks]);
-
-  const handleDuplicateTrack = useCallback((trackId: string) => {
-    setTracks((prev) => {
-      const track = prev.find((t) => t.id === trackId);
-      if (!track) return prev;
-      const duplicated: TrackDef = {
-        ...track,
-        id: `${track.id}-copy-${Date.now()}`,
-        name: `${track.name} Copy`,
-        regions: track.regions.map((region) => ({ ...region, id: `${region.id}-copy-${Date.now()}` })),
-      };
-      return [...prev, duplicated];
-    });
-  }, [setTracks]);
-
-  const handleRegionDelete = useCallback((trackId: string, regionId: string) => {
-    setTracks((prev) => deleteRegion(prev, trackId, regionId));
-    setSelectedRegion((current) =>
-      current?.trackId === trackId && current.regionId === regionId ? null : current,
-    );
-  }, [setTracks]);
-
-  const handleRegionDuplicate = useCallback((trackId: string, regionId: string) => {
-    setTracks((prev) => duplicateRegion(prev, trackId, regionId));
-  }, [setTracks]);
-
-  const handleRegionMove = useCallback((trackId: string, regionId: string, start: number) => {
-    setTracks((prev) => moveRegionBySeconds(prev, trackId, regionId, start));
-  }, [setTracks]);
-
-  const handleRegionRepeat = useCallback((trackId: string, regionId: string, count: number) => {
-    setTracks((prev) => repeatRegion(prev, trackId, regionId, count));
-  }, [setTracks]);
-
-  const handleRegionSelect = useCallback((trackId: string, regionId: string) => {
-    setSelectedRegion({ trackId, regionId });
-  }, []);
-
-  const handleRegionClearSelection = useCallback(() => {
-    setSelectedRegion(null);
-  }, []);
-
-  const handleToggleDrawer = useCallback(() => {
-    setDrawerOpen((open) => !open);
-  }, []);
-
-  const handleSetBottomTab = useCallback((tab: BottomTab) => {
-    setBottomTab(tab);
-  }, []);
-
-  const handleDismissCoachmark = useCallback(() => {
-    setTooltipDismissed(true);
-  }, []);
-
-  const handleOpenShortcuts = useCallback(() => {
-    openModal("shortcuts");
-  }, [openModal]);
-
-  const handleOpenMixer = useCallback(() => {
-    setBottomTab("mixer");
-  }, []);
-
-  const handleOpenFx = useCallback(() => {
-    setBottomTab("fx");
-  }, []);
-
-  const handleOpenMastering = useCallback(() => {
-    setBottomTab("mastering");
-  }, []);
-
-  const handleOpenGroups = useCallback(() => {
-    setBottomTab("groups");
-  }, []);
-
-  const handleOpenBuses = useCallback(() => {
-    setBottomTab("buses");
-  }, []);
-
-  const handleOpenMixes = useCallback(() => {
-    setBottomTab("mixes");
-  }, []);
-
-  const handleOpenChords = useCallback(() => {
-    setBottomTab("chords");
-  }, []);
-
-  const handleToggleAutomation = useCallback((trackId: string) => {
-    toggleAutomation(trackId, "volume");
-  }, [toggleAutomation]);
-
-  const handleTogglePanAutomation = useCallback((trackId: string) => {
-    toggleAutomation(trackId, "pan");
-  }, [toggleAutomation]);
-
-  const handleStartDragTrack = useCallback((trackId: string) => {
+    setTracks([...tracks, newTrack]);
     setSelectedTrackId(trackId);
+  }, [tracks, setTracks]);
+
+  const handleAddMidiTrack = useCallback(() => {
+    const trackId = `midi-${Date.now()}`;
+    const name = `MIDI ${tracks.length + 1}`;
+    const busId = assignTrackToBus("synth");
+    const newTrack: TrackDef = {
+      id: trackId,
+      name,
+      color: TRACK_COLORS[tracks.length % TRACK_COLORS.length],
+      muted: false,
+      solo: false,
+      volume: 75,
+      pan: 0,
+      sends: {},
+      sidechainSource: null,
+      outputId: busId,
+      regions: [],
+      midiNotes: [],
+      plugins: [],
+      automation: {},
+    };
+    setTracks([...tracks, newTrack]);
+    setSelectedTrackId(trackId);
+  }, [tracks, setTracks]);
+
+  const handleImportAudio = useCallback(() => {
+    if (Platform.OS !== "web") {
+      Alert.alert(
+        t("studio.importTitle", "Import"),
+        t("studio.importWebOnly", "Importing is only available in the web version."),
+      );
+      return;
+    }
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".wav,.mp3,.aiff,.flac,.ogg,.m4a,audio/*";
+    input.multiple = true;
+    input.onchange = async (e: Event) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (!files || files.length === 0) return;
+
+      const { tracks: importedTracks, failedNames } = await persistImportedAudioFiles({
+        files: Array.from(files),
+        existingTrackCount: tracks.length,
+        trackColors: TRACK_COLORS,
+        persistAsset: saveAsset,
+      });
+
+      if (importedTracks.length > 0) {
+        setTracks([...tracks, ...importedTracks]);
+      }
+      if (failedNames.length > 0) {
+        Alert.alert(
+          t("studio.importFailedTitle", "Import incomplete"),
+          t(
+            "studio.importFailedMessage",
+            "Some audio files could not be stored locally and were not added to the project.",
+          ),
+        );
+      }
+    };
+    input.click();
+  }, [tracks, setTracks, t]);
+
+  const handleAddClip = useCallback(() => {
+    const defaultDuration = initialNumBars && initialBpm ? (60 / initialBpm) * initialNumBars : 4;
+    const target = tracks.find((t) => t.id === selectedTrackId) ?? null;
+
+    if (target) {
+      const lastEnd = target.regions.reduce(
+        (max, r) => Math.max(max, (r.start || 0) + (r.duration || 0)),
+        0,
+      );
+      const newRegion: TrackRegion = {
+        id: "region-" + Date.now(),
+        start: lastEnd,
+        duration: defaultDuration,
+      };
+      setTracks(
+        tracks.map((t) =>
+          t.id === target.id ? { ...t, regions: [...t.regions, newRegion] } : t,
+        ),
+      );
+      return;
+    }
+
+    const trackId = "track-" + Date.now();
+    const name = "Clip " + (tracks.length + 1);
+    const busId = assignTrackToBus(name);
+    const newTrack: TrackDef = {
+      id: trackId,
+      name,
+      color: TRACK_COLORS[tracks.length % TRACK_COLORS.length],
+      muted: false,
+      solo: false,
+      volume: 75,
+      pan: 0,
+      sends: {},
+      sidechainSource: null,
+      outputId: busId,
+      regions: [{ id: "region-" + Date.now(), start: 0, duration: defaultDuration }],
+      plugins: [],
+      automation: {},
+    };
+    setTracks([...tracks, newTrack]);
+    setSelectedTrackId(trackId);
+  }, [tracks, setTracks, selectedTrackId, initialBpm, initialNumBars]);
+
+  const refreshEditedTracks = useCallback(
+    (updatedTracks: TrackDef[]) => {
+      if (!isWeb) return;
+      rerenderAfterMuteSolo(updatedTracks).catch((error) =>
+        console.warn("region edit audio refresh failed:", error),
+      );
+    },
+    [isWeb, rerenderAfterMuteSolo],
+  );
+
+  const handleUndo = useCallback(() => {
+    undoHistory();
+    if (isWeb) {
+      setTimeout(() => refreshEditedTracks(tracksRef.current), 0);
+    }
+  }, [undoHistory, isWeb, refreshEditedTracks]);
+
+  const handleRedo = useCallback(() => {
+    redoHistory();
+    if (isWeb) {
+      setTimeout(() => refreshEditedTracks(tracksRef.current), 0);
+    }
+  }, [redoHistory, isWeb, refreshEditedTracks]);
+
+  const applyRegionAction = useCallback(
+    (action: "move-left" | "move-right" | "duplicate" | "repeat" | "delete") => {
+      if (!selectedRegion) return;
+      const { trackId, regionId } = selectedRegion;
+      const beatSeconds = 60 / Math.max(1, metronome.bpm);
+      const stamp = Date.now();
+      const current = tracksRef.current;
+      let updatedTracks = current;
+
+      switch (action) {
+        case "move-left":
+          updatedTracks = moveRegionBySeconds(current, trackId, regionId, -beatSeconds);
+          break;
+        case "move-right":
+          updatedTracks = moveRegionBySeconds(current, trackId, regionId, beatSeconds);
+          break;
+        case "duplicate":
+          updatedTracks = duplicateRegion(current, trackId, regionId, `region-${stamp}-copy`);
+          break;
+        case "repeat":
+          updatedTracks = repeatRegion(current, trackId, regionId, [
+            `region-${stamp}-repeat-1`,
+            `region-${stamp}-repeat-2`,
+            `region-${stamp}-repeat-3`,
+          ]);
+          break;
+        case "delete":
+          updatedTracks = deleteRegion(current, trackId, regionId);
+          break;
+      }
+
+      setTracks(updatedTracks);
+      refreshEditedTracks(updatedTracks);
+      if (action === "delete") setSelectedRegion(null);
+    },
+    [selectedRegion, metronome.bpm, setTracks, refreshEditedTracks],
+  );
+
+  const handleCodeRender = useCallback(
+    (
+      patterns: { name: string; tokens: string[]; unit: string; bpm: number }[],
+    ) => {
+      const stepSeconds = (unit: string, bpm: number) =>
+        unit === "1/4" ? 60 / bpm : unit === "1/8" ? 30 / bpm : 15 / bpm;
+
+      const newTracks: TrackDef[] = patterns.map((pattern, pi) => {
+        const step = stepSeconds(pattern.unit, pattern.bpm);
+        const tokens = pattern.tokens as string[];
+        const regions: TrackRegion[] = [];
+        let currentStart = 0;
+        for (let i = 0; i < tokens.length; i++) {
+          if (tokens[i] === "REST") {
+            currentStart += step;
+            continue;
+          }
+          const dur = tokens[i] === "BASS" ? step * 2 : step * 0.9;
+          regions.push({
+            id: `code-${Date.now()}-${pi}-${i}`,
+            start: currentStart,
+            duration: dur,
+          });
+          currentStart += step;
+        }
+        return {
+          id: `code-${Date.now()}-${pi}`,
+          name: pattern.name + (patterns.length > 1 ? ` ${pi + 1}` : ""),
+          color: TRACK_COLORS[(tracks.length + pi) % TRACK_COLORS.length],
+          muted: false,
+          solo: false,
+          volume: 75,
+          pan: 0,
+          sends: {},
+          sidechainSource: null,
+          regions,
+          plugins: [] as Plugin[],
+          automation: {} as Record<string, AutomationPoint[]>,
+        } as TrackDef;
+      });
+      setTracks([...tracks, ...newTracks]);
+    },
+    [tracks, setTracks],
+  );
+
+  const handlePromptMidiRender = useCallback(
+    async (data: { prompt: string; bpm: number; key: string }) => {
+      try {
+        const apiBase = API_BASE_URL || (process.env.EXPO_PUBLIC_API_URL as string) || "";
+        const response = await fetch(
+          `${apiBase}/api/generate-midi`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          },
+        );
+
+        if (!response.ok) throw new Error(`Failed to generate MIDI (${response.status}): ${await response.text()}`);
+
+        const result = await response.json();
+
+        const trackId = `gen-${Date.now()}`;
+        const newTrack: TrackDef = {
+          id: trackId,
+          name: `Gen: ${data.prompt}`,
+          color: TRACK_COLORS[tracks.length % TRACK_COLORS.length],
+          muted: false,
+          solo: false,
+          volume: 80,
+          pan: 0,
+          sends: {},
+          sidechainSource: null,
+          regions: result.midiData.map((n: { start: number; duration: number; note: number }) => ({
+            id: `reg-${Date.now()}-${n.start}`,
+            start: n.start * (60 / result.bpm),
+            duration: n.duration * (60 / result.bpm),
+          })),
+          midiNotes: result.midiData.map((n: { start: number; duration: number; note: number }) => ({
+            pitch: n.note,
+            start: n.start,
+            duration: n.duration,
+            velocity: 100,
+          })),
+          plugins: [],
+          automation: {},
+        };
+
+        setTracks([...tracks, newTrack]);
+        setSelectedTrackId(trackId);
+      } catch (err) {
+        console.warn("MIDI generation failed:", err);
+        Alert.alert(t("studio.errorTitle", "Error"), t("studio.generateMidiError", "Failed to generate MIDI."));
+      }
+    },
+    [tracks, setTracks],
+  );
+
+  const handleMidiImport = useCallback(() => {
+    if (Platform.OS !== "web") {
+      Alert.alert(t("studio.midiTitle", "MIDI"), t("studio.midiWebOnly", "MIDI import is only available in the web version."));
+      return;
+    }
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".mid,.midi,audio/midi";
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const result = ev.target?.result;
+        if (!result || typeof result === "string") return;
+        const midi = parseMidi(result as ArrayBuffer);
+        if (!midi) {
+          Alert.alert(t("studio.errorTitle", "Error"), t("studio.readMidiError", "Could not read the MIDI file."));
+          return;
+        }
+        const newTracks: TrackDef[] = midi.tracks.map((trk, ti) => ({
+          id: `midi-${Date.now()}-${ti}`,
+          name: `${trk.name} (${trk.instrument})`,
+          color: TRACK_COLORS[(tracks.length + ti) % TRACK_COLORS.length],
+          muted: false,
+          solo: false,
+          volume: 75,
+          pan: 0,
+          sends: {},
+          sidechainSource: null,
+          regions: midiToTrackRegions(
+            trk,
+            midi.bpm,
+            midi.ticksPerQuarter,
+            midi.smpteFps,
+            midi.ticksPerFrame,
+          ),
+          midiNotes: trk.notes.map((n) => ({
+            pitch: n.note,
+            start: n.start / midi.ticksPerQuarter,
+            duration: n.duration / midi.ticksPerQuarter,
+            velocity: n.velocity,
+          })),
+          plugins: [] as Plugin[],
+          automation: {} as Record<string, AutomationPoint[]>,
+        }));
+        setTracks([...tracks, ...newTracks]);
+        Alert.alert(
+          t("studio.midiImported", "MIDI Imported"),
+          t("studio.midiImportedSummary", "{{count}} tracks created from \"{{file}}\" ({{bpm}} BPM)", { count: newTracks.length, file: file.name, bpm: midi.bpm }),
+        );
+      };
+      reader.onerror = () => {
+        Alert.alert(t("studio.errorTitle", "Error"), t("studio.loadMidiError", "Failed to read the MIDI file."));
+      };
+      reader.readAsArrayBuffer(file);
+    };
+    input.click();
+  }, [tracks, setTracks]);
+
+  const selectedMidiTrack = useMemo(() => {
+    if (!editingMidiTrackId) return null;
+    return tracks.find((t) => t.id === editingMidiTrackId) || null;
+  }, [tracks, editingMidiTrackId]);
+
+  const currentMidiNotes: MIDINote[] = useMemo(() => {
+    return selectedMidiTrack?.midiNotes || [];
+  }, [selectedMidiTrack]);
+
+  function midiNotesToRegions(notes: MIDINote[], bpm: number): TrackRegion[] {
+    if (notes.length === 0) return [];
+    const safeBpm = Math.max(1, bpm);
+    const minBeat = Math.min(...notes.map((n) => n.start));
+    return notes.map((n, i) => ({
+      id: `midi-${n.pitch}-${i}-${Date.now()}`,
+      start: (n.start - minBeat) * (60 / safeBpm),
+      duration: Math.max(n.duration * (60 / safeBpm), 0.5),
+    }));
+  }
+
+  const handleOpenPianoRoll = useCallback((trackId: string) => {
+    setEditingMidiTrackId(trackId);
+    openModal("pianoRoll");
   }, []);
 
-  const handleEndDragTrack = useCallback(() => {}, []);
-
-  const handleTimelineScroll = useCallback(() => {}, []);
-
-  const handleTrackResize = useCallback(() => {}, []);
-
-  const handlePointerMove = useCallback((event: { nativeEvent?: { locationX?: number; offsetX?: number } }) => {
-    handleTimelinePointerMove(event);
-  }, [handleTimelinePointerMove]);
-
-  const handleTrackDrop = useCallback(() => {}, []);
-
-  const handleFileDrop = useCallback(async (event: any) => {
-    const files = Array.from(event?.dataTransfer?.files ?? []) as File[];
-    await handleImportFiles(files);
-  }, [handleImportFiles]);
-
-  const handleTimelineKeyDown = useCallback(() => {}, []);
-
-  const handleProjectTitleBlur = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSubmit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleChange = useCallback((text: string) => {
-    setProjectTitle(text);
-  }, []);
-
-  const handleProjectTitleFocus = useCallback(() => {}, []);
-
-  const handleProjectTitleKeyPress = useCallback(() => {}, []);
-
-  const handleProjectTitleLayout = useCallback(() => {}, []);
-
-  const handleProjectTitleContentSizeChange = useCallback(() => {}, []);
-
-  const handleProjectTitleEndEditing = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSelectionChange = useCallback(() => {}, []);
-
-  const handleProjectTitleTouchStart = useCallback(() => {}, []);
-
-  const handleProjectTitleTouchEnd = useCallback(() => {}, []);
-
-  const handleProjectTitlePressIn = useCallback(() => {}, []);
-
-  const handleProjectTitlePressOut = useCallback(() => {}, []);
-
-  const handleProjectTitleLongPress = useCallback(() => {}, []);
-
-  const handleProjectTitleScroll = useCallback(() => {}, []);
-
-  const handleProjectTitleKeyUp = useCallback(() => {}, []);
-
-  const handleProjectTitleKeyDown = useCallback(() => {}, []);
-
-  const handleProjectTitleMouseDown = useCallback(() => {}, []);
-
-  const handleProjectTitleMouseUp = useCallback(() => {}, []);
-
-  const handleProjectTitleMouseEnter = useCallback(() => {}, []);
-
-  const handleProjectTitleMouseLeave = useCallback(() => {}, []);
-
-  const handleProjectTitleContextMenu = useCallback(() => {}, []);
-
-  const handleProjectTitleWheel = useCallback(() => {}, []);
-
-  const handleProjectTitleDragStart = useCallback(() => {}, []);
-
-  const handleProjectTitleDragEnd = useCallback(() => {}, []);
-
-  const handleProjectTitleDragEnter = useCallback(() => {}, []);
-
-  const handleProjectTitleDragLeave = useCallback(() => {}, []);
-
-  const handleProjectTitleDragOver = useCallback(() => {}, []);
-
-  const handleProjectTitleDrop = useCallback(() => {}, []);
-
-  const handleProjectTitleCompositionStart = useCallback(() => {}, []);
-
-  const handleProjectTitleCompositionEnd = useCallback(() => {}, []);
-
-  const handleProjectTitleCompositionUpdate = useCallback(() => {}, []);
-
-  const handleProjectTitlePaste = useCallback(() => {}, []);
-
-  const handleProjectTitleCopy = useCallback(() => {}, []);
-
-  const handleProjectTitleCut = useCallback(() => {}, []);
-
-  const handleProjectTitleSelect = useCallback(() => {}, []);
-
-  const handleProjectTitleInput = useCallback(() => {}, []);
-
-  const handleProjectTitleInvalid = useCallback(() => {}, []);
-
-  const handleProjectTitleReset = useCallback(() => {}, []);
-
-  const handleProjectTitleLoad = useCallback(() => {}, []);
-
-  const handleProjectTitleError = useCallback(() => {}, []);
-
-  const handleProjectTitleAbort = useCallback(() => {}, []);
-
-  const handleProjectTitleCanPlay = useCallback(() => {}, []);
-
-  const handleProjectTitleCanPlayThrough = useCallback(() => {}, []);
-
-  const handleProjectTitleChangeCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleClick = useCallback(() => {}, []);
-
-  const handleProjectTitleDoubleClick = useCallback(() => {}, []);
-
-  const handleProjectTitleAuxClick = useCallback(() => {}, []);
-
-  const handleProjectTitlePointerDown = useCallback(() => {}, []);
-
-  const handleProjectTitlePointerUp = useCallback(() => {}, []);
-
-  const handleProjectTitlePointerMove = useCallback(() => {}, []);
-
-  const handleProjectTitlePointerEnter = useCallback(() => {}, []);
-
-  const handleProjectTitlePointerLeave = useCallback(() => {}, []);
-
-  const handleProjectTitlePointerOver = useCallback(() => {}, []);
-
-  const handleProjectTitlePointerOut = useCallback(() => {}, []);
-
-  const handleProjectTitleGotPointerCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleLostPointerCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleScrollCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleWheelCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleAnimationStart = useCallback(() => {}, []);
-
-  const handleProjectTitleAnimationEnd = useCallback(() => {}, []);
-
-  const handleProjectTitleAnimationIteration = useCallback(() => {}, []);
-
-  const handleProjectTitleTransitionEnd = useCallback(() => {}, []);
-
-  const handleProjectTitleTransitionStart = useCallback(() => {}, []);
-
-  const handleProjectTitleTransitionRun = useCallback(() => {}, []);
-
-  const handleProjectTitleTransitionCancel = useCallback(() => {}, []);
-
-  const handleProjectTitleBeforeInput = useCallback(() => {}, []);
-
-  const handleProjectTitleBeforeMatch = useCallback(() => {}, []);
-
-  const handleProjectTitleBeforeToggle = useCallback(() => {}, []);
-
-  const handleProjectTitleToggle = useCallback(() => {}, []);
-
-  const handleProjectTitleFormData = useCallback(() => {}, []);
-
-  const handleProjectTitleSubmitCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleResetCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleInvalidCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleLoadCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleErrorCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleAbortCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleCanPlayCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleCanPlayThroughCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleCopyCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleCutCapture = useCallback(() => {}, []);
-
-  const handleProjectTitlePasteCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleCompositionStartCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleCompositionEndCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleCompositionUpdateCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleSelectCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleInputCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleKeyUpCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleKeyDownCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleMouseDownCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleMouseUpCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleMouseEnterCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleMouseLeaveCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleContextMenuCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleClickCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleDoubleClickCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleAuxClickCapture = useCallback(() => {}, []);
-
-  const handleProjectTitlePointerDownCapture = useCallback(() => {}, []);
-
-  const handleProjectTitlePointerUpCapture = useCallback(() => {}, []);
-
-  const handleProjectTitlePointerMoveCapture = useCallback(() => {}, []);
-
-  const handleProjectTitlePointerEnterCapture = useCallback(() => {}, []);
-
-  const handleProjectTitlePointerLeaveCapture = useCallback(() => {}, []);
-
-  const handleProjectTitlePointerOverCapture = useCallback(() => {}, []);
-
-  const handleProjectTitlePointerOutCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleGotPointerCaptureCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleLostPointerCaptureCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleTransitionEndCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleTransitionStartCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleTransitionRunCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleTransitionCancelCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleAnimationStartCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleAnimationEndCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleAnimationIterationCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleBeforeInputCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleBeforeMatchCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleBeforeToggleCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleToggleCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleFormDataCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleTouchStartCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleTouchEndCapture = useCallback(() => {}, []);
-
-  const handleProjectTitlePressInCapture = useCallback(() => {}, []);
-
-  const handleProjectTitlePressOutCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleLongPressCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleScrollCapture2 = useCallback(() => {}, []);
-
-  const handleProjectTitleWheelCapture2 = useCallback(() => {}, []);
-
-  const handleProjectTitleDragStartCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleDragEndCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleDragEnterCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleDragLeaveCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleDragOverCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleDropCapture = useCallback(() => {}, []);
-
-  const handleProjectTitleSubmitEvent = useCallback(() => {}, []);
-
-  const handleProjectTitleFocusEvent = useCallback(() => {}, []);
-
-  const handleProjectTitleBlurEvent = useCallback(() => {}, []);
-
-  const handleProjectTitleChangeText = useCallback((text: string) => {
-    setProjectTitle(text);
-  }, []);
-
-  const handleProjectTitlePress = useCallback(() => {
-    setEditingTitle(true);
-  }, []);
-
-  const handleProjectTitleKeySubmit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleDone = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleCancel = useCallback(() => {
-    setEditingTitle(false);
-  }, []);
-
-  const handleProjectTitleEdit = useCallback(() => {
-    setEditingTitle(true);
-  }, []);
-
-  const handleProjectTitleSave = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSaveAndClose = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleEscape = useCallback(() => {
-    setEditingTitle(false);
-  }, []);
-
-  const handleProjectTitleEnter = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleTab = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleNativeSubmit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleCommit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleApply = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleConfirm = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleAccept = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleUpdate = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinish = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleComplete = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleConfirmEdit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalize = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSubmitEditing = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleEndEditingEvent = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleBlurSubmit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleTextInput = useCallback((text: string) => {
-    setProjectTitle(text);
-  }, []);
-
-  const handleProjectTitleKeyboardSubmit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleKeyboardEscape = useCallback(() => {
-    setEditingTitle(false);
-  }, []);
-
-  const handleProjectTitleKeyboardTab = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleKeyboardEnter = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleConfirmPress = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleDismissPress = useCallback(() => {
-    setEditingTitle(false);
-  }, []);
-
-  const handleProjectTitleSavePress = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleApplyPress = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleCancelPress = useCallback(() => {
-    setEditingTitle(false);
-  }, []);
-
-  const handleProjectTitleClosePress = useCallback(() => {
-    setEditingTitle(false);
-  }, []);
-
-  const handleProjectTitleEditPress = useCallback(() => {
-    setEditingTitle(true);
-  }, []);
-
-  const handleProjectTitleOpen = useCallback(() => {
-    setEditingTitle(true);
-  }, []);
-
-  const handleProjectTitleClose = useCallback(() => {
-    setEditingTitle(false);
-  }, []);
-
-  const handleProjectTitleToggle = useCallback(() => {
-    setEditingTitle((value) => !value);
-  }, []);
-
-  const handleProjectTitleDoublePress = useCallback(() => {
-    setEditingTitle(true);
-  }, []);
-
-  const handleProjectTitleLongPressEdit = useCallback(() => {
-    setEditingTitle(true);
-  }, []);
-
-  const handleProjectTitleResetValue = useCallback(() => {
-    setProjectTitle(initialTitle);
-  }, [initialTitle]);
-
-  const handleProjectTitleRestore = useCallback(() => {
-    setProjectTitle(initialTitle);
-  }, [initialTitle]);
-
-  const handleProjectTitleReload = useCallback(() => {
-    setProjectTitle(initialTitle);
-  }, [initialTitle]);
-
-  const handleProjectTitleRevert = useCallback(() => {
-    setProjectTitle(initialTitle);
-  }, [initialTitle]);
-
-  const handleProjectTitleClear = useCallback(() => {
-    setProjectTitle("");
-  }, []);
-
-  const handleProjectTitleDefault = useCallback(() => {
-    setProjectTitle("Projeto");
-  }, []);
-
-  const handleProjectTitleRestoreDefault = useCallback(() => {
-    setProjectTitle("Projeto");
-  }, []);
-
-  const handleProjectTitleEnsure = useCallback(() => {
-    setProjectTitle((value) => value.trim() || "Projeto");
-  }, []);
-
-  const handleProjectTitleNormalize = useCallback(() => {
-    setProjectTitle((value) => value.trim() || "Projeto");
-  }, []);
-
-  const handleProjectTitleTrim = useCallback(() => {
-    setProjectTitle((value) => value.trim());
-  }, []);
-
-  const handleProjectTitleCommitTrimmed = useCallback(() => {
-    const trimmed = projectTitle.trim() || "Projeto";
-    setProjectTitle(trimmed);
-    saveProjectNow(trimmed);
-    setEditingTitle(false);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitleCommitCurrent = useCallback(() => {
-    saveProjectNow(projectTitle);
-    setEditingTitle(false);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitleSaveCurrent = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitleManualSave = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitleAutosave = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitleFlush = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitlePersist = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitleSync = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitleStorage = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitleSnapshot = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitleFlushSave = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitlePersistNow = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitlePersistImmediate = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitlePersistSync = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitlePersisted = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitleStore = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitleWrite = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitleWriteNow = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitleWriteSync = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitleUpdateStorage = useCallback(() => {
-    saveProjectNow(projectTitle);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitleSetAndSave = useCallback((text: string) => {
-    const trimmed = text.trim() || "Projeto";
-    setProjectTitle(trimmed);
-    saveProjectNow(trimmed);
-    setEditingTitle(false);
-  }, [saveProjectNow]);
-
-  const handleProjectTitleSubmitValue = useCallback((text: string) => {
-    handleProjectTitleSetAndSave(text);
-  }, [handleProjectTitleSetAndSave]);
-
-  const handleProjectTitleFinishEditing = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleCommitOnBlur = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleCommitOnSubmit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSubmitCurrent = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSubmitTrimmed = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleAcceptCurrent = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleDoneEditing = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeEditing = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleCommitEditing = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSaveEditing = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleEndEditingCommit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleConfirmEditing = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleApplyEditing = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleCompleteEditing = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSubmitEdit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleCommitEdit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSaveEdit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleApplyEdit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleConfirmEdit2 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleDoneEdit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinishEdit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleCloseEdit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleExitEdit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleExit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSaveExit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleCommitExit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeExit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSubmitExit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleAcceptExit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleDoneExit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinishExit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleCompleteExit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleApplyExit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleConfirmExit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitlePersistExit = useCallback(() => {
-    saveProjectNow(projectTitle);
-    setEditingTitle(false);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitlePersistAndClose = useCallback(() => {
-    saveProjectNow(projectTitle);
-    setEditingTitle(false);
-  }, [projectTitle, saveProjectNow]);
-
-  const handleProjectTitleCommitAndClose = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleDoneAndClose = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinishAndClose = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSaveAndDismiss = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleApplyAndDismiss = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleConfirmAndDismiss = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSubmitAndDismiss = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleAcceptAndDismiss = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleCloseAndSave = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleExitAndSave = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleBlurAndSave = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleEnterAndSave = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleTabAndSave = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSubmitAndSave = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleCommitAndSave = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinishAndSave = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleCompleteAndSave = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleApplyAndSave = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleConfirmAndSave = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleAcceptAndSave = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSaveAndApply = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSaveAndConfirm = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSaveAndAccept = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSaveAndFinish = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSaveAndComplete = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleSaveAndFinalize = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndClose = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndDismiss = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndExit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndCommit = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndPersist = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndStore = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndWrite = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndUpdate = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSync = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndFlush = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave2 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave3 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave4 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave5 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave6 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave7 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave8 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave9 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave10 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave11 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave12 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave13 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave14 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave15 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave16 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave17 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave18 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave19 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave20 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave21 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave22 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave23 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave24 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave25 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave26 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave27 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave28 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave29 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave30 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave31 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave32 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave33 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave34 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave35 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave36 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave37 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave38 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave39 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave40 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave41 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave42 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave43 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave44 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave45 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave46 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave47 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave48 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave49 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave50 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave51 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave52 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave53 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave54 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave55 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave56 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave57 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave58 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave59 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave60 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave61 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave62 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave63 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave64 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave65 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave66 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave67 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave68 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave69 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave70 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave71 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave72 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave73 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave74 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave75 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave76 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave77 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave78 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave79 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave80 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave81 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave82 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave83 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave84 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave85 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave86 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave87 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave88 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave89 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave90 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave91 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave92 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave93 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave94 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave95 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave96 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave97 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave98 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave99 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
-
-  const handleProjectTitleFinalizeAndSave100 = useCallback(() => {
-    commitTitle();
-  }, [commitTitle]);
+  const handlePianoRollChange = useCallback(
+    (notes: MIDINote[]) => {
+      if (!editingMidiTrackId) return;
+      setTracks(
+        tracks.map((t) => {
+          if (t.id !== editingMidiTrackId) return t;
+          return {
+            ...t,
+            midiNotes: notes,
+            regions: midiNotesToRegions(notes, metronome.bpm),
+          };
+        }),
+      );
+    },
+    [editingMidiTrackId, tracks, setTracks, metronome.bpm],
+  );
+
+  const shortcuts = useMemo(
+    () => ({
+      play: togglePlay,
+      record: toggleRecording,
+      undo: handleUndo,
+      redo: handleRedo,
+      save: handleManualSave,
+      bounce: () => openModal("bounce"),
+      escape: () => {
+        setEditingPlugin(null);
+        closeModal("recordOptions");
+        closeModal("bounce");
+        closeModal("sampleBrowser");
+        closeModal("codeSampler");
+        closeModal("tuner");
+        closeModal("looper");
+        closeModal("sampler");
+        closeModal("synth");
+        closeModal("pianoRoll");
+        closeModal("commandPalette");
+        closeModal("branchManager");
+        closeModal("commitModal");
+        setEditingMidiTrackId(null);
+      },
+      toggleMute: selectedTrack
+        ? () => toggleMute(selectedTrack.id)
+        : undefined,
+      toggleSolo: selectedTrack
+        ? () => toggleSolo(selectedTrack.id)
+        : undefined,
+      delete: selectedTrack ? () => deleteTrack(selectedTrack.id) : undefined,
+    }),
+    [
+      togglePlay,
+      toggleRecording,
+      handleUndo,
+      handleRedo,
+      handleManualSave,
+      selectedTrack,
+      toggleMute,
+      toggleSolo,
+      deleteTrack,
+    ],
+  );
+
+  useKeyboardShortcuts(shortcuts);
+
+  useEffect(() => {
+    registerCommand("transport.play", t("studio.command.play", "Play"), "Start/stop playback", "Transport", togglePlay, "Space");
+    registerCommand("transport.record", t("studio.command.record", "Record"), "Toggle recording", "Transport", toggleRecording, "R");
+    registerCommand("edit.undo", t("studio.command.undo", "Undo"), "Undo last action", "Edit", handleUndo, "Ctrl+Z");
+    registerCommand("edit.redo", t("studio.command.redo", "Redo"), "Redo last action", "Edit", handleRedo, "Ctrl+Shift+Z");
+    registerCommand("edit.delete", t("studio.command.delete", "Delete"), "Delete selected track", "Edit", () => selectedTrack && deleteTrack(selectedTrack.id), "Delete", "Backspace");
+    registerCommand("track.add", t("studio.command.addTrack", "Add Track"), "Add a new track to the project", "Track", handleAddTrack, "Ctrl+T");
+    registerCommand("clip.add", t("studio.command.addClip", "Add Clip"), "Add a clip region to the selected track", "Clip", handleAddClip, "Ctrl+Shift+C");
+    registerCommand("track.mute", t("studio.command.muteTrack", "Mute Track"), "Toggle mute on selected track", "Track", () => selectedTrack && toggleMute(selectedTrack.id));
+    registerCommand("track.solo", t("studio.command.soloTrack", "Solo Track"), "Toggle solo on selected track", "Track", () => selectedTrack && toggleSolo(selectedTrack.id));
+    registerCommand("mixer.open", t("studio.command.openMixer", "Open Mixer"), "Switch to mixer view", "View", () => setBottomTab("mixer"), "Ctrl+M");
+    registerCommand("file.save", t("studio.command.save", "Save"), "Save current project", "File", handleManualSave, "Ctrl+S");
+    registerCommand("file.export", t("studio.command.export", "Export"), "Open export/bounce dialog", "File", () => openModal("bounce"), "Ctrl+Shift+E");
+    registerCommand("file.branch", t("studio.command.branchManager", "Branch Manager"), "Open project branching", "File", () => openModal("branchManager"), "Ctrl+B");
+    registerCommand("file.commit", t("studio.command.commitChanges", "Commit Changes"), "Open commit modal", "File", () => openModal("commitModal"), "Ctrl+Shift+C");
+    registerCommand("view.browser", t("studio.command.sampleBrowser", "Sample Browser"), "Toggle sample browser", "View", () => toggleModal("sampleBrowser"), "Ctrl+I");
+    registerCommand("palette.toggle", t("studio.command.commandPalette", "Command Palette"), "Open command palette", "System", () => openModal("commandPalette"), "Ctrl+K");
+    initKeyBindings();
+    return () => {
+      disposeKeyBindings();
+    };
+  }, [togglePlay, toggleRecording, handleUndo, handleRedo, handleManualSave, selectedTrack, toggleMute, toggleSolo, deleteTrack, handleAddTrack, handleAddClip, setBottomTab, openModal, toggleModal, closeModal, t]);
+
+  const getEffectiveVolume = useCallback((trackId: string): number => {
+    const gv = getGroupVolume(groups, trackId);
+    const tv = tracks.find((t) => t.id === trackId)?.volume ?? 70;
+    const baseVol = isPlaying ? automatedVolume(trackId) : tv;
+    return gv ? Math.round(baseVol * (gv.volume / 100)) : baseVol;
+  }, [groups, isPlaying, automatedVolume, tracks]);
+
+  const bottomTabs: { key: BottomTab; label: string; icon: string }[] = [
+    { key: "mixer", label: t("studio.tabMixer", "Mixer"), icon: "◉" },
+    { key: "fx", label: t("studio.tabFx", "FX"), icon: "✦" },
+    { key: "mastering", label: t("studio.tabMastering", "Master"), icon: "♛" },
+    { key: "groups", label: t("studio.tabGroups", "Groups"), icon: "◈" },
+    { key: "buses", label: t("studio.tabBuses", "Buses"), icon: "⏚" },
+    { key: "mixes", label: t("studio.tabMixes", "Mixes"), icon: "☰" },
+    { key: "chords", label: t("studio.tabChords", "Chords"), icon: "♪" },
+  ];
 
   return (
-    <View>...TRUNCATED FOR BREVITY...</View>
+    <View className="flex-1 bg-dark-bg select-none flex-row">
+      {resp.isDesktop && (
+        <Sidebar
+          currentRoute="studio"
+          onNavigate={handleNavigate}
+          isOpen
+          onClose={() => {}}
+          isPersistent
+        />
+      )}
+      {isFromOnboarding && !rawTool && !tooltipDismissed && (
+        <StudioOnboardingCoachmark
+          onDismiss={() => {
+            setTooltipDismissed(true);
+            completeOnboarding();
+          }}
+        />
+      )}
+      {isFromOnboarding &&
+        rawTool === "import" &&
+        !launchActionConsumed &&
+        tracks.length === 0 && (
+          <View
+            testID="first-run-import-prompt"
+            className="absolute inset-0 z-[60] bg-black/70 items-center justify-center px-6"
+          >
+            <View className="w-full max-w-sm rounded-2xl border border-brand-primary/40 bg-dark-elevated p-5">
+              <Text className="text-white text-lg font-bold mb-2">Importe seu primeiro áudio</Text>
+              <Text className="text-gray-300 text-sm leading-5 mb-4">
+                Selecione um arquivo local. O áudio será guardado no projeto antes de entrar na timeline.
+              </Text>
+              <Pressable
+                testID="first-run-import-audio"
+                accessibilityRole="button"
+                accessibilityLabel="Importar áudio agora"
+                onPress={() => {
+                  consumeLaunchAction();
+                  completeOnboarding();
+                  handleImportAudio();
+                }}
+                className="rounded-xl bg-brand-primary py-3 items-center active:opacity-80"
+              >
+                <Text className="text-white font-bold text-sm">Importar áudio agora</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+      {drawerOpen && (
+        <StudioDrawer
+          onClose={() => setDrawerOpen(false)}
+          onNavigate={handleNavigate}
+        />
+      )}
+      <View className="flex-1">
+      <View
+        className={`${resp.isMobile ? "h-12 px-2" : "h-14 px-4"} bg-dark-surface/95 border-b border-dark-border/50 flex-row items-center justify-between`}
+      >
+        <View className="flex-row items-center gap-2">
+          {editingTitle ? (
+            <TextInput
+              ref={titleInputRef}
+              value={projectTitle}
+              onChangeText={setProjectTitle}
+              onBlur={commitTitle}
+              onSubmitEditing={commitTitle}
+              accessibilityLabel={t("studio.a11yProjectTitle", "Project title")}
+              returnKeyType="done"
+              autoFocus
+              className="h-9 px-2 rounded-lg bg-dark-elevated text-white text-sm border border-brand-primary/60 min-w-[140px] max-w-[200px]"
+            />
+          ) : (
+            <Pressable
+              onPress={() => setEditingTitle(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t("studio.a11yEditProjectTitle", "Edit project title")}
+              className="h-9 px-2 rounded-lg items-center justify-center bg-dark-muted/30 active:opacity-70 focus-ring max-w-[200px]"
+            >
+              <Text className="text-white font-bold text-sm" numberOfLines={1} ellipsizeMode="tail">
+                {projectTitle}
+              </Text>
+            </Pressable>
+          )}
+          {!resp.isDesktop && (
+            <Pressable
+              onPress={() => setDrawerOpen(true)}
+              className="w-8 h-8 rounded-lg bg-dark-muted/30 items-center justify-center active:opacity-70 mr-1"
+            >
+              <Text className="text-gray-300 text-base">☰</Text>
+            </Pressable>
+          )}
+          <Pressable
+            onPress={() => seekRelative(-5)}
+            accessibilityRole="button"
+            accessibilityLabel={t("studio.a11ySeekBack", "Back 5 seconds")}
+            className="w-8 h-8 rounded-lg bg-dark-muted items-center justify-center active:opacity-70 focus-ring"
+          >
+            <Text className="text-gray-300 text-xs">⏮</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => openModal("generateCover")}
+            accessibilityRole="button"
+            accessibilityLabel={t("studio.a11yGenerateCover", "Generate AI cover")}
+            className="h-8 rounded-lg items-center justify-center px-2 bg-brand-accent/20 border border-brand-accent/30 active:opacity-70"
+          >
+            <Text className="text-brand-accent text-xs font-bold">{t("studio.generateCoverButton", "✨ Generate AI Cover")}</Text>
+          </Pressable>
+          <Pressable
+            onPress={togglePlay}
+            accessibilityRole="button"
+            accessibilityLabel={isPlaying ? t("studio.a11yPause", "Pause") : t("studio.a11yPlay", "Play")}
+            className={`w-11 h-11 rounded-full items-center justify-center focus-ring ${isPlaying ? "bg-green-600" : "bg-dark-border"}`}
+          >
+            <Text className="text-white text-lg">{isPlaying ? "⏸" : "▶"}</Text>
+          </Pressable>
+          <Pressable
+            onPress={toggleRecording}
+            accessibilityRole="button"
+            accessibilityLabel={isRecording ? t("studio.a11yStopRecording", "Stop recording") : t("studio.a11yRecord", "Record")}
+            className={`w-11 h-11 rounded-full items-center justify-center focus-ring ${isRecording ? "bg-red-600" : recordSettings.armed ? "bg-red-500/30" : "bg-dark-border"}`}
+          >
+            <View
+              className={`w-4 h-4 rounded-sm ${isRecording ? "bg-white" : "bg-red-500"}`}
+            />
+          </Pressable>
+          <Pressable
+            onPress={() => seekRelative(5)}
+            accessibilityRole="button"
+            accessibilityLabel={t("studio.a11ySeekForward", "Forward 5 seconds")}
+            className="w-8 h-8 rounded-lg bg-dark-muted items-center justify-center active:opacity-70 focus-ring"
+          >
+            <Text className="text-gray-300 text-xs">⏭</Text>
+          </Pressable>
+          <Pressable
+            onPress={stopPlayback}
+            accessibilityRole="button"
+            accessibilityLabel={t("studio.a11yStop", "Stop")}
+            className="w-8 h-8 rounded-lg bg-dark-muted items-center justify-center active:opacity-70 focus-ring"
+          >
+            <Text className="text-gray-300 text-xs">⏹</Text>
+          </Pressable>
+        </View>
+
+        <View className="flex-row items-center gap-1.5">
+          <Pressable
+            onPress={handleUndo}
+            accessibilityRole="button"
+            accessibilityLabel={t("studio.a11yUndo", "Undo")}
+            accessibilityState={{ disabled: !canUndo }}
+            className={`w-8 h-8 rounded-lg items-center justify-center focus-ring ${canUndo ? "bg-dark-muted active:opacity-70" : "opacity-30"}`}
+          >
+            <Text className="text-gray-300 text-xs">↩</Text>
+          </Pressable>
+          <Pressable
+            onPress={handleRedo}
+            accessibilityRole="button"
+            accessibilityLabel={t("studio.a11yRedo", "Redo")}
+            accessibilityState={{ disabled: !canRedo }}
+            className={`w-8 h-8 rounded-lg items-center justify-center focus-ring ${canRedo ? "bg-dark-muted active:opacity-70" : "opacity-30"}`}
+          >
+            <Text className="text-gray-300 text-xs">↪</Text>
+          </Pressable>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={!resp.isDesktop}
+          className="mx-2 flex-1 min-w-[200px]"
+          contentContainerStyle={{ alignItems: "center", gap: 12, paddingHorizontal: 4, paddingRight: 40 }}
+        >
+          <Metronome
+            settings={metronome}
+            onChange={setMetronome}
+            isPlaying={isPlaying}
+          />
+          <MixManager
+            snapshots={mixSnapshots}
+            activeMixId={activeMixId}
+            onSave={handleSaveMix}
+            onLoad={handleLoadMix}
+            onDelete={handleDeleteMix}
+            onCompare={handleCompareMix}
+          />
+          <Pressable
+            onPress={() => openModal("tuner")}
+            className="h-8 rounded-lg items-center justify-center px-2 bg-dark-muted"
+          >
+            <Text className="text-gray-300 text-xs">🎵</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => openModal("commandPalette")}
+            accessibilityRole="button"
+            accessibilityLabel={t("studio.a11yOpenCommands", "Open command palette")}
+            className="h-8 rounded-lg items-center justify-center px-2 bg-dark-muted active:opacity-70 focus-ring"
+          >
+            <Text className="text-gray-300 text-xs font-bold">⌘K</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => openModal("branchManager")}
+            className="h-8 rounded-lg items-center justify-center px-2 bg-dark-muted active:opacity-70"
+          >
+            <Text className="text-gray-300 text-xs">⎇</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => openModal("commitModal")}
+            className="h-8 rounded-lg items-center justify-center px-2 bg-dark-muted active:opacity-70"
+          >
+            <Text className="text-gray-300 text-xs">✓</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => openModal("sampler")}
+            className="h-8 rounded-lg items-center justify-center px-2 bg-dark-muted active:opacity-70"
+          >
+            <Text className="text-gray-300 text-xs">🎛️</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => openModal("synth")}
+            className="h-8 rounded-lg items-center justify-center px-2 bg-dark-muted active:opacity-70"
+          >
+            <Text className="text-gray-300 text-xs">🎹</Text>
+          </Pressable>
+            <Pressable
+              onPress={() => openModal("outputSelector")}
+              className="h-8 rounded-lg items-center justify-center px-2 bg-dark-muted active:opacity-70"
+            >
+              <Text className="text-gray-300 text-xs">🔊</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => openModal("patchbay")}
+              className="h-8 rounded-lg items-center justify-center px-2 bg-dark-muted active:opacity-70"
+            >
+              <Text className="text-gray-300 text-xs">🔌</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => openModal("midi")}
+              className="h-8 rounded-lg items-center justify-center px-2 bg-dark-muted active:opacity-70"
+            >
+              <Text className="text-gray-300 text-xs">🎹</Text>
+            </Pressable>
+          <Pressable
+            onPress={() => openModal("looper")}
+            className="h-8 rounded-lg items-center justify-center px-2 bg-dark-muted active:opacity-70"
+          >
+            <Text className="text-gray-300 text-xs">🔁</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => openModal("codeSampler")}
+            className="w-8 h-8 rounded-lg bg-dark-muted items-center justify-center active:opacity-70"
+          >
+            <Text className="text-gray-400 text-xs">⌨</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => openModal("promptSampler")}
+            className="w-8 h-8 rounded-lg bg-brand-accent/20 items-center justify-center active:opacity-70"
+          >
+            <Text className="text-brand-accent text-xs">✨</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => toggleModal("sampleBrowser")}
+            className={`w-8 h-8 rounded-lg items-center justify-center ${modals.sampleBrowser ? "bg-brand-accent/30 border border-brand-accent" : "bg-dark-muted active:opacity-70"}`}
+          >
+            <Text
+              className={`text-xs ${modals.sampleBrowser ? "text-brand-accent" : "text-gray-400"}`}
+            >
+              📂
+            </Text>
+          </Pressable>
+        </ScrollView>
+
+        {!resp.isDesktop && (
+          <Pressable
+            onPress={() => openModal("toolbarOverflow")}
+            accessibilityRole="button"
+            accessibilityLabel={t("studio.a11yMoreTools", "More tools")}
+            className="h-8 rounded-lg flex-row items-center justify-center px-2 bg-dark-muted active:opacity-70 focus-ring"
+          >
+            <Text className="text-gray-300 text-xs">{t("studio.moreTools", "⋯ more")}</Text>
+          </Pressable>
+        )}
+
+        <Modal
+          visible={modals.toolbarOverflow}
+          transparent
+          animationType="fade"
+          onRequestClose={() => closeModal("toolbarOverflow")}
+        >
+          <Pressable
+            className="flex-1 bg-black/50"
+            onPress={() => closeModal("toolbarOverflow")}
+          >
+            <View className="mt-14 mr-2 ml-auto w-56 bg-dark-muted rounded-lg p-2 gap-1">
+              {[
+                { label: t("studio.toolTuner", "🎵  Tuner"), action: () => openModal("tuner") },
+                { label: t("studio.toolCommands", "⌘K  Commands"), action: () => openModal("commandPalette") },
+                { label: t("studio.toolBranches", "⎇  Branches"), action: () => openModal("branchManager") },
+                { label: t("studio.toolCommit", "✓  Commit"), action: () => openModal("commitModal") },
+                { label: t("studio.toolSampler", "🎛️  Sampler"), action: () => openModal("sampler") },
+                { label: t("studio.toolSynth", "🎹  Synth"), action: () => openModal("synth") },
+                { label: t("studio.toolOutput", "🔊  Audio output"), action: () => openModal("outputSelector") },
+                { label: t("studio.toolPatchbay", "🔌  Patchbay"), action: () => openModal("patchbay") },
+                { label: t("studio.toolMidi", "🎹  MIDI"), action: () => openModal("midi") },
+                { label: t("studio.toolLooper", "🔁  Looper"), action: () => openModal("looper") },
+                { label: t("studio.toolCodeSampler", "⌨  Code Sampler"), action: () => openModal("codeSampler") },
+                { label: t("studio.toolPromptSampler", "✨  Prompt Sampler"), action: () => openModal("promptSampler") },
+                { label: t("studio.toolSamples", "📂  Samples"), action: () => toggleModal("sampleBrowser") },
+              ].map((item) => (
+                <Pressable
+                  key={item.label}
+                  onPress={() => {
+                    closeModal("toolbarOverflow");
+                    item.action();
+                  }}
+                  className="h-9 rounded-md px-3 justify-center active:opacity-70"
+                >
+                  <Text className="text-gray-200 text-sm">{item.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </Pressable>
+        </Modal>
+
+        <View className="flex-row items-center gap-2">
+          <TimeDisplay seconds={currentTime} />
+          <Text className="text-gray-600">/</Text>
+          <TimeDisplay seconds={duration} />
+          {isPlaying && (
+            <Text className="text-gray-500 text-[9px] font-mono ml-1">
+            <PlayheadBeatDisplay />
+            </Text>
+          )}
+        </View>
+
+        <View className="flex-row items-center gap-0.5 bg-dark-bg/40 rounded-lg px-1.5 py-1 border border-dark-border/30">
+          <Text className="text-gray-600 text-[9px] font-bold mr-0.5">⟳</Text>
+          {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
+            <Pressable
+              key={rate}
+              onPress={() => setPlaybackRate(rate)}
+              className={`px-1.5 py-0.5 rounded ${Math.abs(playbackRate - rate) < 0.01 ? "bg-brand-accent/20 border border-brand-accent/40" : "bg-dark-muted/30"}`}
+            >
+              <Text
+                className={`text-[10px] font-mono ${Math.abs(playbackRate - rate) < 0.01 ? "text-brand-accent font-semibold" : "text-gray-500"}`}
+              >
+                {rate}x
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <View className="flex-row items-center gap-0.5 bg-dark-bg/40 rounded-lg px-1.5 py-1 border border-dark-border/30">
+          <Pressable
+            onPress={() => setPitchCorrected(!pitchCorrected)}
+            className={`px-1.5 py-0.5 rounded ${pitchCorrected ? "bg-brand-accent/20 border border-brand-accent/40" : "bg-dark-muted/30"}`}
+          >
+            <Text
+              className={`text-[9px] font-bold ${pitchCorrected ? "text-brand-accent" : "text-gray-500"}`}
+            >
+              ♪
+            </Text>
+          </Pressable>
+          {[-12, -7, -5, -1, 0, 1, 5, 7, 12].map((semi) => (
+            <Pressable
+              key={semi}
+              onPress={() => setPitchShiftSemitones(semi)}
+              className={`px-1 py-0.5 rounded ${Math.abs(pitchShiftSemitones - semi) < 0.01 ? "bg-brand-accent/20 border border-brand-accent/40" : "bg-dark-muted/30"}`}
+            >
+              <Text
+                className={`text-[9px] font-mono ${Math.abs(pitchShiftSemitones - semi) < 0.01 ? "text-brand-accent font-semibold" : "text-gray-500"}`}
+              >
+                {semi === 0 ? "0" : semi > 0 ? `+${semi}` : semi}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {projectKey && genreParam && (
+          <View className="bg-dark-muted px-2.5 py-1 rounded-lg border border-dark-border items-center">
+            <Text className="text-gray-500 text-[8px] font-bold tracking-wider">
+              {genreParam.toUpperCase()}
+            </Text>
+            <Text className="text-gray-300 font-mono text-[11px]">
+              {projectKey}
+            </Text>
+          </View>
+        )}
+
+        <View className="flex-row items-center gap-2">
+          <Pressable
+            onPress={() => openModal("bounce")}
+            className="w-8 h-8 rounded-lg bg-dark-muted items-center justify-center active:opacity-70"
+          >
+            <Text className="text-gray-400 text-xs">📦</Text>
+          </Pressable>
+          {lastSavedLabel && (
+            <Text className="text-gray-500 text-[10px] font-medium">
+              {lastSavedLabel}
+              {syncState.pending ? t("studio.syncing", " · syncing...") : ""}
+              {syncState.error ? ` · ${syncState.error}` : ""}
+            </Text>
+          )}
+          <Pressable
+            onPress={async () => {
+              try {
+                const url = await renderTracksCached(tracks, metronome.bpm, projectMood, buses, masterPlugins, renderCacheRef.current);
+                if (url) {
+                  setMasteringInput({
+                    url,
+                    filename: projectTitle || "studio_mix",
+                    bpm: metronome.bpm,
+                    key: projectKey || "C",
+                    timeSignature: projectTimeSig,
+                  });
+                  router.push("/mastering");
+                } else {
+                  Alert.alert(t("studio.error", "Erro"), t("studio.mixdownError", "Falha ao renderizar mixdown para mastering."));
+                }
+              } catch (err) {
+                console.warn("Mastering mixdown render error:", err);
+                Alert.alert(t("studio.error", "Erro"), t("studio.mixdownError", "Falha ao renderizar mixdown para mastering."));
+              }
+            }}
+            className="bg-dark-muted px-4 py-2 rounded-xl border border-dark-border active:opacity-80 flex-row items-center gap-1.5"
+          >
+            <Text className="text-white font-bold text-sm">🎚 {t("studio.masterize", "Masterizar")}</Text>
+          </Pressable>
+          <Pressable
+            onPress={handleManualSave}
+            className="bg-brand-primary px-5 py-2 rounded-xl active:opacity-80 shadow-sm shadow-brand-primary/20"
+          >
+            <Text className="text-white font-bold text-sm">{t("studio.saveButton", "Save")}</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <View className="h-10 bg-dark-surface/40 border-b border-dark-border/50 flex-row items-center px-4">
+        <View style={{ width: resp.tracksSidebarWidth }} className="pr-2">
+          <Text className="text-gray-500 text-[10px] font-bold tracking-wider">
+            {t("studio.tracksHeader", "TRACKS")}
+          </Text>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="flex-1"
+        >
+          <View
+            className="flex-row items-center"
+            style={{ width: 25 * secondsPerMarker * pxPerSec }}
+          >
+            {Array.from({ length: 25 }, (_, i) => (
+              <View
+                key={i}
+                className="flex-row"
+                style={{ width: secondsPerMarker * pxPerSec }}
+              >
+                <Text className="text-gray-600 font-mono text-[10px]">
+                  {String(Math.floor((i * secondsPerMarker) / 60)).padStart(2, "0")}:
+                  {String((i * secondsPerMarker) % 60).padStart(2, "0")}
+                </Text>
+                {i % 4 === 0 && (
+                  <View className="w-px h-3 bg-gray-700 absolute right-0" />
+                )}
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+        <View className="flex-row items-center gap-1 pl-2">
+          <Pressable
+            accessibilityLabel={t("studio.a11yZoomOut", "Zoom out")}
+            onPress={() => setZoom((z) => Math.max(0.5, +(z / 1.5).toFixed(2)))}
+            className="w-8 h-8 rounded items-center justify-center bg-dark-muted/40 border border-dark-border text-gray-300 active:opacity-70"
+          >
+            <Text className="text-gray-300 text-base font-bold">−</Text>
+          </Pressable>
+          <Pressable
+            accessibilityLabel={t("studio.a11yZoomIn", "Zoom in")}
+            onPress={() => setZoom((z) => Math.min(3, +(z * 1.5).toFixed(2)))}
+            className="w-8 h-8 rounded items-center justify-center bg-dark-muted/40 border border-dark-border text-gray-300 active:opacity-70"
+          >
+            <Text className="text-gray-300 text-base font-bold">+</Text>
+          </Pressable>
+          <Pressable
+            accessibilityLabel={t("studio.a11yResetZoom", "Reset zoom")}
+            onPress={() => setZoom(1)}
+            className="w-8 h-8 rounded items-center justify-center bg-dark-muted/40 border border-dark-border text-gray-400 active:opacity-70"
+          >
+            <Text className="text-[10px] text-gray-400 font-bold">
+              {Math.round(zoom * 100)}%
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {selectedRegion && (
+        <View className="h-10 bg-dark-surface/80 border-b border-dark-border/50 flex-row items-center px-3 gap-2">
+          <Text className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mr-1">
+            {t("studio.regionActions", "Region")}
+          </Text>
+          <Pressable
+            onPress={() => applyRegionAction("move-left")}
+            accessibilityRole="button"
+            accessibilityLabel={t("studio.moveRegionLeft", "Move region left one beat")}
+            className="h-7 px-2 rounded-lg bg-dark-muted items-center justify-center active:opacity-70"
+          >
+            <Text className="text-gray-300 text-xs">← 1 beat</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => applyRegionAction("move-right")}
+            accessibilityRole="button"
+            accessibilityLabel={t("studio.moveRegionRight", "Move region right one beat")}
+            className="h-7 px-2 rounded-lg bg-dark-muted items-center justify-center active:opacity-70"
+          >
+            <Text className="text-gray-300 text-xs">1 beat →</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => applyRegionAction("duplicate")}
+            accessibilityRole="button"
+            className="h-7 px-2 rounded-lg bg-dark-muted items-center justify-center active:opacity-70"
+          >
+            <Text className="text-gray-300 text-xs">{t("studio.duplicateRegion", "Duplicate")}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => applyRegionAction("repeat")}
+            accessibilityRole="button"
+            className="h-7 px-2 rounded-lg bg-dark-muted items-center justify-center active:opacity-70"
+          >
+            <Text className="text-gray-300 text-xs">{t("studio.repeatRegion", "Repeat ×4")}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => applyRegionAction("delete")}
+            accessibilityRole="button"
+            className="h-7 px-2 rounded-lg bg-red-500/15 border border-red-500/30 items-center justify-center active:opacity-70"
+          >
+            <Text className="text-red-400 text-xs">{t("studio.deleteRegion", "Delete")}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setSelectedRegion(null)}
+            accessibilityRole="button"
+            className="ml-auto w-7 h-7 rounded-lg items-center justify-center active:opacity-70"
+          >
+            <Text className="text-gray-500 text-xs">✕</Text>
+          </Pressable>
+        </View>
+      )}
+
+      <View className="flex-1 flex-row">
+        <View
+          style={{ width: resp.tracksSidebarWidth }}
+          className="bg-dark-bg/60 border-r border-dark-border/50"
+        >
+          {tracks.map((track) => {
+            const gv = getGroupVolume(groups, track.id);
+            const trackH = resp.isMobile ? 84 : resp.isDesktop ? 108 : 84;
+            return (
+              <View key={track.id} className="relative">
+                <Pressable
+                  onPress={() =>
+                    setSelectedTrackId(
+                      track.id === selectedTrackId ? null : track.id,
+                    )
+                  }
+                  className={`p-2 border-b border-dark-border/40 justify-between bg-dark-surface/20 ${
+                    selectedTrackId === track.id
+                      ? "border-l-[3px] border-brand-primary bg-dark-elevated/40"
+                      : ""
+                  }`}
+                  style={{ height: trackH }}
+                >
+                  <View className="flex-row items-center gap-1.5">
+                    <Text className="text-gray-200 text-xs font-semibold truncate flex-1">
+                      {track.name}
+                    </Text>
+                    <View className="h-8">
+                      <VuMeter
+                        level={track.volume / 100}
+                        peakLevel={isAudible(track) ? Math.min(1, track.volume / 100) : 0}
+                      />
+                    </View>
+                  </View>
+                  <View className="flex-row items-center gap-1 mt-0.5">
+                    {track.plugins
+                      .filter((p) => p.enabled)
+                      .slice(0, 3)
+                      .map((p) => (
+                        <View
+                          key={p.id}
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ backgroundColor: p.color }}
+                        />
+                      ))}
+                    {gv && (
+                      <View className="w-3 h-1.5 rounded-full bg-gray-600" />
+                    )}
+                  </View>
+                  <View className="flex-row gap-1.5 mt-1">
+                    <Pressable
+                      onPress={() =>
+                        setColorPickerTrackId(
+                          colorPickerTrackId === track.id ? null : track.id,
+                        )
+                      }
+                      className={`w-7 h-7 rounded items-center justify-center border ${track.color} border-dark-border`}
+                    />
+                    <Pressable
+                      onPress={() => toggleMute(track.id)}
+                      className={`btn-mute ${track.muted ? "btn-mute-active" : ""}`}
+                    >
+                      <Text
+                        className={`text-xs font-bold ${track.muted ? "text-amber-400" : "text-gray-400"}`}
+                      >
+                        M
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => toggleSolo(track.id)}
+                      className={`btn-solo ${track.solo ? "btn-solo-active" : ""}`}
+                    >
+                      <Text
+                        className={`text-xs font-bold ${track.solo ? "text-green-400" : "text-gray-400"}`}
+                      >
+                        S
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() =>
+                        setTracks((prev) =>
+                          prev.map((t) =>
+                            t.id === track.id
+                              ? { ...t, isArmed: !t.isArmed }
+                              : { ...t, isArmed: false },
+                          ),
+                        )
+                      }
+                      className={`w-7 h-7 rounded items-center justify-center border ${track.isArmed ? "bg-red-500/20 border-red-500/50" : "bg-dark-muted/30 border-dark-border/40"}`}
+                    >
+                      <Text
+                        className={`text-xs font-bold ${track.isArmed ? "text-red-500" : "text-gray-400"}`}
+                      >
+                        R
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() =>
+                        setShowAutomation((prev) => ({
+                          ...prev,
+                          [track.id]: !prev[track.id],
+                        }))
+                      }
+                      className={`w-7 h-7 rounded-lg items-center justify-center border ${showAutomation[track.id] ? "bg-brand-accent/20 border-brand-accent/50" : "bg-dark-muted/30 border-dark-border/40"}`}
+                    >
+                      <Text
+                        className={`text-xs font-bold ${showAutomation[track.id] ? "text-brand-accent" : "text-gray-400"}`}
+                      >
+                      V
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() =>
+                      setShowPanAutomation((prev) => ({
+                        ...prev,
+                        [track.id]: !prev[track.id],
+                      }))
+                    }
+                    className={`w-7 h-7 rounded-lg items-center justify-center border ${showPanAutomation[track.id] ? "bg-brand-accent/20 border-brand-accent/50" : "bg-dark-muted/30 border-dark-border/40"}`}
+                  >
+                    <Text
+                      className={`text-xs font-bold ${showPanAutomation[track.id] ? "text-brand-accent" : "text-gray-400"}`}
+                    >
+                      P
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => handleOpenPianoRoll(track.id)}
+                    className="w-7 h-7 rounded items-center justify-center border bg-dark-muted/40 border-dark-border"
+                  >
+                    <Text className="text-xs text-brand-accent font-bold">
+                      🎹
+                    </Text>
+                  </Pressable>
+                </View>
+              </Pressable>
+              <TrackColorPicker
+                visible={colorPickerTrackId === track.id}
+                currentColor={track.color}
+                onSelect={(color) => setTrackColor(track.id, color)}
+                onClose={() => setColorPickerTrackId(null)}
+              />
+            </View>
+            );
+          })}
+          <View className="p-1.5 gap-1.5 border-t border-dark-border/40 bg-dark-surface/20">
+            <Pressable
+              onPress={handleAddTrack}
+              className="h-8 rounded-lg bg-dark-muted/30 items-center justify-center flex-row gap-1.5 active:opacity-70 border border-dark-border/30"
+            >
+              <Text className="text-gray-300 text-xs font-bold">+</Text>
+              <Text className="text-gray-300 text-[10px] font-semibold">{t("studio.addTrackLabel", "Track")}</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleImportAudio}
+              className="h-8 rounded-lg bg-dark-muted/30 items-center justify-center flex-row gap-1.5 active:opacity-70 border border-dark-border/30"
+            >
+              <Text className="text-gray-300 text-xs">📁</Text>
+              <Text className="text-gray-300 text-[10px] font-semibold">{t("studio.addAudioLabel", "Audio")}</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleAddMidiTrack}
+              className="h-8 rounded-lg bg-dark-muted/30 items-center justify-center flex-row gap-1.5 active:opacity-70 border border-dark-border/30"
+            >
+              <Text className="text-gray-300 text-xs">🎹</Text>
+              <Text className="text-gray-300 text-[10px] font-semibold">MIDI</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleMidiImport}
+              className="h-8 rounded-lg bg-dark-muted/30 items-center justify-center flex-row gap-1.5 active:opacity-70 border border-dark-border/30"
+            >
+              <Text className="text-gray-300 text-xs">📂</Text>
+              <Text className="text-gray-300 text-[10px] font-semibold">{t("studio.midiImportLabel", "Import")}</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleAddClip}
+              className="h-8 rounded-lg bg-dark-muted/30 items-center justify-center flex-row gap-1.5 active:opacity-70 border border-dark-border/30"
+            >
+              <Text className="text-gray-300 text-xs">▦</Text>
+              <Text className="text-gray-300 text-[10px] font-semibold">{t("studio.addClipLabel", "Clip")}</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <ScrollView horizontal className="flex-1 bg-dark-bg">
+          {tracks.length === 0 ? (
+            <View className="flex-1 items-center justify-center px-6" style={{ width: timelineWidth }}>
+              <Text className="text-gray-300 text-lg font-bold">{t("studio.quickStartTitle", "Make your first sound")}</Text>
+              <Text className="text-gray-500 text-xs mt-1 text-center max-w-md">
+                {t("studio.quickStartHint", "Start with your microphone, an instrument, or a sample. No setup detour required.")}
+              </Text>
+              <View className="flex-row flex-wrap justify-center gap-2 mt-4">
+                <Pressable
+                  onPress={() => {
+                    setRecordSettings((current) => ({ ...current, armed: true }));
+                    void toggleRecording(true);
+                  }}
+                  accessibilityRole="button"
+                  className="h-10 px-4 rounded-xl bg-red-500/20 border border-red-500/40 flex-row items-center gap-2 justify-center active:opacity-70"
+                >
+                  <Text className="text-red-400 text-sm">●</Text>
+                  <Text className="text-white text-sm font-bold">{t("studio.quickRecord", "Record")}</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => openModal("synth")}
+                  accessibilityRole="button"
+                  className="h-10 px-4 rounded-xl bg-dark-muted border border-dark-border flex-row items-center gap-2 justify-center active:opacity-70"
+                >
+                  <Text className="text-sm">🎹</Text>
+                  <Text className="text-white text-sm font-bold">{t("studio.quickInstrument", "Instrument")}</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => toggleModal("sampleBrowser")}
+                  accessibilityRole="button"
+                  className="h-10 px-4 rounded-xl bg-dark-muted border border-dark-border flex-row items-center gap-2 justify-center active:opacity-70"
+                >
+                  <Text className="text-sm">📂</Text>
+                  <Text className="text-white text-sm font-bold">{t("studio.quickSamples", "Samples")}</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+          <View style={{ width: timelineWidth }}>
+            <View
+              className="relative"
+              onPointerMove={handleTimelinePointerMove}
+              style={{ height: tracks.length * (resp.isMobile ? 84 : resp.isDesktop ? 108 : 84) }}
+            >
+              {tracks.map((track, trackIndex) => {
+                const showAuto = showAutomation[track.id];
+                const showPanAuto = showPanAutomation[track.id];
+                const trackH = resp.isMobile ? 84 : resp.isDesktop ? 108 : 84;
+                const laneCount = (showAuto ? 1 : 0) + (showPanAuto ? 1 : 0);
+                return (
+                  <View
+                    key={track.id}
+                    className="absolute w-full"
+                    style={{
+                      height: showAuto || showPanAuto ? trackH + laneCount * 26 : trackH,
+                      top: trackIndex * (showAuto || showPanAuto ? trackH + laneCount * 26 : trackH),
+                    }}
+                  >
+                    <View
+                      className="border-b border-dark-border/30 relative justify-center bg-dark-bg/10"
+                      style={{ height: trackH }}
+                    >
+                      {track.regions.map((region) => {
+                        const regionSelected =
+                          selectedRegion?.trackId === track.id && selectedRegion?.regionId === region.id;
+                        return (
+                          <Pressable
+                            key={region.id}
+                            onPress={() => {
+                              setSelectedTrackId(track.id);
+                              setSelectedRegion({ trackId: track.id, regionId: region.id });
+                            }}
+                            accessibilityRole="button"
+                            accessibilityLabel={t("studio.selectRegion", "Select region")}
+                            style={{
+                              left: region.start * pxPerSec,
+                              width: region.duration * pxPerSec,
+                              position: "absolute",
+                            }}
+                            className={`h-14 rounded-xl border overflow-hidden shadow-md ${
+                              regionSelected ? "border-2 border-brand-accent" : "border-white/10"
+                            } ${track.color} ${isAudible(track) ? "opacity-95" : "opacity-25"}`}
+                          >
+                            <WaveformCanvas
+                              regionId={region.id}
+                              duration={region.duration}
+                              color={track.color}
+                              audible={isAudible(track)}
+                              selected={regionSelected}
+                              muted={track.muted}
+                              height={56}
+                            />
+                          </Pressable>
+                        );
+                      })}
+                      {isRecording && track.isArmed && (
+                        <View
+                          style={{
+                            left: getPlayheadBeat() * pxPerSec,
+                            width: ((Date.now() - (webRecordingStart || Date.now())) / 1000) * (initialBpm / 60) * pxPerSec,
+                            minWidth: 100, // so we can see it growing
+                            position: "absolute",
+                          }}
+                          className={`h-14 rounded-xl border border-red-500/50 overflow-hidden shadow-md bg-red-500/20`}
+                        >
+                          <LiveWaveformCanvas dataRef={liveRecordingDataRef} height={56} />
+                        </View>
+                      )}
+                    </View>
+                    {showAuto && (
+                      <View className="h-[26px] bg-dark-bg/20 border-b border-dark-border/20">
+                        <AutomationLane
+                          points={track.automation.volume || []}
+                          onChange={(pts) =>
+                            updateAutomation(track.id, "volume", pts)
+                          }
+                          duration={duration}
+                          color="#5ac8fa"
+                          visible
+                          label="Volume"
+                          minValue={0}
+                          maxValue={100}
+                          showCurveToggle
+                        />
+                      </View>
+                    )}
+                    {showPanAuto && (
+                      <View className="h-[26px] bg-dark-bg/20 border-b border-dark-border/20">
+                        <AutomationLane
+                          points={track.automation.pan || []}
+                          onChange={(pts) =>
+                            updateAutomation(track.id, "pan", pts)
+                          }
+                          duration={duration}
+                          color="#bf5af2"
+                          visible
+                          label="Pan"
+                          minValue={-100}
+                          maxValue={100}
+                          showCurveToggle
+                        />
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+
+              {isPlaying && (
+                <View
+                  className="absolute top-0 bottom-0 w-0.5 bg-brand-primary z-10 shadow-sm shadow-brand-primary/50"
+                  style={{ left: currentTime * pxPerSec }}
+                />
+              )}
+              <CollaboratorCursors cursors={cursors} timelineWidth={timelineWidth} />
+            </View>
+          </View>
+          )}
+        </ScrollView>
+      </View>
+
+      {modals.sampleBrowser && (
+        <View className="h-64 border-t border-dark-border bg-dark-bg">
+          <View className="flex-row items-center justify-between px-4 py-1.5 border-b border-dark-border/50">
+            <Text className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">
+              {t("studio.sampleBrowserHeader", "Sample Browser")}
+            </Text>
+            <Pressable
+              onPress={() => closeModal("sampleBrowser")}
+              className="w-6 h-6 items-center justify-center active:opacity-60"
+            >
+              <Text className="text-gray-500 text-xs">✕</Text>
+            </Pressable>
+          </View>
+          <SampleBrowser visible onAddSample={handleAddSample} />
+        </View>
+      )}
+      <View className="bg-dark-surface border-t border-dark-border/60">
+        <View className="flex-row border-b border-dark-border/40">
+          {bottomTabs.map((tab) => (
+            <Pressable
+              key={tab.key}
+              onPress={() => setBottomTab(tab.key)}
+              className={`flex-1 py-2.5 flex-row items-center justify-center gap-1.5 ${
+                bottomTab === tab.key
+                  ? "bg-dark-surface border-b-2 border-brand-primary"
+                  : "opacity-50"
+              }`}
+            >
+              <Text
+                className={`text-xs ${bottomTab === tab.key ? "text-brand-primary" : "text-gray-400"}`}
+              >
+                {tab.icon}
+              </Text>
+              <Text
+                className={`text-xs font-bold ${bottomTab === tab.key ? "text-brand-primary" : "text-gray-400"}`}
+              >
+                {tab.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {bottomTab === "mixer" && (
+          <View>
+            <View
+              className={`flex-row items-center gap-3 ${resp.isMobile ? "px-2 py-1.5" : "px-4 py-2"} border-b border-dark-border/50 bg-dark-surface/20`}
+            >
+              <Text className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">
+                Mixer
+              </Text>
+              <View className="flex-1 h-1.5 bg-dark-border rounded-full overflow-hidden">
+                <View
+                  className="h-full bg-brand-primary rounded-full"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </View>
+              {isPlaying && (
+                <View className="flex-row gap-0.5">
+                  {Array.from({ length: 4 }, (_, i) => (
+                    <View
+                      key={i}
+                      className="w-1 bg-green-500/60 rounded-full"
+                      style={{
+                        height: 8 + Math.sin(currentTime * 4 + i * 1.5) * 6,
+                        opacity: 0.4 + Math.sin(currentTime * 3 + i) * 0.3,
+                      }}
+                    />
+                  ))}
+                </View>
+              )}
+              <Pressable
+                onPress={() => {
+                  if (sendBuses.length < 20)
+                    setSendBuses((prev) => [
+                      ...prev,
+                      {
+                        id: `bus-${Date.now()}`,
+                        name: `Send ${prev.length + 1}`,
+                        color: "#5ac8fa",
+                        volume: 80,
+                        muted: false,
+                      },
+                    ]);
+                }}
+                className="ml-auto px-2 py-1 rounded-md bg-dark-muted/40 border border-dark-border active:opacity-70"
+              >
+                <Text className="text-[10px] text-gray-400">+Send</Text>
+              </Pressable>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              className={`flex-1 ${resp.isMobile ? "px-2" : "px-4"}`}
+            >
+              <View className="flex-row gap-3 py-2">
+                {tracks.map((track) => {
+                  const effVol = getEffectiveVolume(track.id);
+                  return (
+                    <View
+                      key={track.id}
+                      style={{ width: resp.channelWidth }}
+                      className="mixer-channel p-2.5 items-center gap-1.5"
+                    >
+                      <Text className="text-[10px] text-gray-400 font-medium truncate w-full text-center">
+                        {track.name}
+                      </Text>
+                      <View className="flex-row gap-1">
+                        <Pressable
+                          onPress={() => toggleMute(track.id)}
+                          className={`btn-mute ${track.muted ? "btn-mute-active" : ""}`}
+                        >
+                          <Text
+                            className={`text-[9px] font-bold ${track.muted ? "text-amber-400" : "text-gray-500"}`}
+                          >
+                            M
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => toggleSolo(track.id)}
+                          className={`btn-solo ${track.solo ? "btn-solo-active" : ""}`}
+                        >
+                          <Text
+                            className={`text-[9px] font-bold ${track.solo ? "text-green-400" : "text-gray-500"}`}
+                          >
+                            S
+                          </Text>
+                        </Pressable>
+                      </View>
+                      <View className="flex-row items-stretch flex-1 w-full gap-1">
+                        <VuMeter
+                          level={effVol / 100}
+                          peakLevel={isAudible(track) ? Math.min(1, effVol / 100) : 0}
+                        />
+                        <Pressable
+                          onLayout={(e: any) =>
+                            (faderHeightRef.current[track.id] =
+                              e.nativeEvent.layout.height)
+                          }
+                          onPress={(e: any) => {
+                            const h = faderHeightRef.current[track.id];
+                            const y = e.nativeEvent.locationY;
+                            if (!h) return;
+                            const vol = Math.round((1 - y / h) * 100);
+                            setTrackVolume(
+                              track.id,
+                              Math.min(100, Math.max(0, vol)),
+                            );
+                          }}
+                          className="w-3 flex-1 bg-dark-bg rounded-full relative justify-end overflow-hidden active:opacity-80"
+                        >
+                          <View
+                            style={{ height: `${effVol}%` }}
+                            className={`w-full rounded-full ${isAudible(track) ? "bg-brand-primary" : "bg-gray-600"}`}
+                          />
+                        </Pressable>
+                      </View>
+                      <View className="flex-row items-center gap-1">
+                        <Pressable
+                          onPress={() =>
+                            setTrackVolume(
+                              track.id,
+                              Math.max(0, trackVolume(track.id) - 5),
+                            )
+                          }
+                          className="w-5 h-5 rounded bg-dark-muted/30 items-center justify-center active:opacity-70"
+                        >
+                          <Text className="text-gray-400 text-[11px]">−</Text>
+                        </Pressable>
+                        <Text className="text-[9px] font-mono text-gray-500 w-8 text-center">
+                          {track.muted ? "MUT" : `${effVol}%`}
+                        </Text>
+                        <Pressable
+                          onPress={() =>
+                            setTrackVolume(
+                              track.id,
+                              Math.min(100, trackVolume(track.id) + 5),
+                            )
+                          }
+                          className="w-5 h-5 rounded bg-dark-muted/30 items-center justify-center active:opacity-70"
+                        >
+                          <Text className="text-gray-400 text-[11px]">+</Text>
+                        </Pressable>
+                      </View>
+                      <View className="w-full h-6 flex-row items-center gap-1">
+                        <Text className="text-[9px] text-gray-600 w-4 text-center">
+                          L
+                        </Text>
+                        <Pressable
+                          onLayout={(e: any) =>
+                            (panWidthRef.current[track.id] =
+                              e.nativeEvent.layout.width)
+                          }
+                          onPress={(e: any) => {
+                            const w = panWidthRef.current[track.id];
+                            const x = e.nativeEvent.locationX;
+                            if (!w) return;
+                            const pan = Math.round((x / w) * 200 - 100);
+                            setTrackPan(
+                              track.id,
+                              Math.min(100, Math.max(-100, pan)),
+                            );
+                          }}
+                          className="flex-1 h-1 bg-dark-bg rounded-full overflow-hidden"
+                        >
+                          <View
+                            className="h-full bg-cyan-500 rounded-full"
+                            style={{ width: `${(track.pan + 100) / 2}%` }}
+                          />
+                        </Pressable>
+                        <Text className="text-[9px] text-gray-600 w-4 text-center">
+                          R
+                        </Text>
+                      </View>
+                      <View className="flex-row items-center gap-1 w-full justify-center">
+                        <Pressable
+                          onPress={() =>
+                            setTrackPan(
+                              track.id,
+                              Math.max(-100, track.pan - 10),
+                            )
+                          }
+                          className="w-6 h-5 rounded bg-dark-muted/30 items-center justify-center active:opacity-70"
+                        >
+                          <Text className="text-gray-500 text-[9px]">◀</Text>
+                        </Pressable>
+                        <Text className="text-[9px] font-mono text-gray-500 w-8 text-center">
+                          {track.pan > 0
+                            ? `${track.pan}R`
+                            : track.pan < 0
+                              ? `${-track.pan}L`
+                              : "C"}
+                        </Text>
+                        <Pressable
+                          onPress={() =>
+                            setTrackPan(track.id, Math.min(100, track.pan + 10))
+                          }
+                          className="w-6 h-5 rounded bg-dark-muted/30 items-center justify-center active:opacity-70"
+                        >
+                          <Text className="text-gray-500 text-[9px]">▶</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+        )}
+        {bottomTab === "buses" && (
+          <View className="flex-1 p-3">
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-gray-300 label">{t("studio.subMixBuses", "Sub-Mix Buses")}</Text>
+              <Pressable
+                onPress={() => {
+                  const id = `bus-${Date.now()}`;
+                  const name = `Bus ${buses.length + 1}`;
+                  const colors = ["#ff6482", "#5ac8fa", "#ffcc00", "#34c759", "#bf5af2"];
+                  setBuses((prev) => [
+                    ...prev,
+                    {
+                      id,
+                      name,
+                      color: colors[prev.length % colors.length],
+                      volume: 1,
+                      muted: false,
+                      plugins: [],
+                    },
+                  ]);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-brand-accent/20 border border-brand-accent/40 active:opacity-70"
+              >
+                <Text className="text-brand-accent text-xs font-bold">{t("studio.addBus", "+ Bus")}</Text>
+              </Pressable>
+            </View>
+            {buses.length === 0 && (
+              <View className="flex-1 items-center justify-center">
+                <Text className="text-gray-600 text-xs">
+                  {t("studio.noBuses", "No audio buses. Create one to group tracks.")}
+                </Text>
+              </View>
+            )}
+            <ScrollView className="flex-1">
+              {buses.map((bus) => {
+                const assignedTracks = tracks.filter((t) => t.outputId === bus.id);
+                return (
+                  <View
+                    key={bus.id}
+                    className="bg-dark-surface rounded-xl border border-dark-border p-3 mb-2"
+                  >
+                    <View className="flex-row items-center justify-between mb-2">
+                      <View className="flex-row items-center gap-2">
+                        <View
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: bus.color }}
+                        />
+                        <Text className="text-white font-medium text-sm">
+                          {bus.name}
+                        </Text>
+                      </View>
+                      <View className="flex-row items-center gap-2">
+                        <Pressable
+                          onPress={() =>
+                            setBuses((prev) =>
+                              prev.map((b) =>
+                                b.id === bus.id ? { ...b, muted: !b.muted } : b,
+                              ),
+                            )
+                          }
+                          className={`px-2 py-1 rounded ${bus.muted ? "bg-red-500/30 border border-red-400" : "bg-dark-muted/40"}`}
+                        >
+                          <Text
+                            className={`text-[9px] font-bold ${bus.muted ? "text-red-400" : "text-gray-500"}`}
+                          >
+                            M
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() =>
+                            setBuses((prev) =>
+                              prev.filter((b) => b.id !== bus.id),
+                            )
+                          }
+                          className="w-6 h-6 rounded bg-red-500/20 items-center justify-center active:opacity-70"
+                        >
+                          <Text className="text-red-400 text-xs">×</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                    <View className="flex-row items-center gap-2 mb-2">
+                      <Text className="text-gray-500 text-xs w-12">{t("studio.volumeLabel", "Vol:")}</Text>
+                      <View className="flex-1 h-1.5 bg-dark-bg rounded-full overflow-hidden">
+                        <View
+                          className="h-full bg-brand-accent rounded-full"
+                          style={{ width: `${bus.volume * 100}%` }}
+                        />
+                      </View>
+                      <Text className="text-gray-400 font-mono text-xs w-8 text-right">
+                        {Math.round(bus.volume * 100)}%
+                      </Text>
+                    </View>
+                    <View className="flex-row items-center gap-2">
+                      <Text className="text-gray-500 text-xs w-12">{t("studio.volumeLabel", "Vol:")}</Text>
+                      <Pressable
+                        onPress={() =>
+                          setBuses((prev) =>
+                            prev.map((b) =>
+                              b.id === bus.id
+                                ? { ...b, volume: Math.max(0, b.volume - 0.1) }
+                                : b,
+                            ),
+                          )
+                        }
+                        className="w-6 h-6 rounded bg-dark-muted/30 items-center justify-center active:opacity-70"
+                      >
+                        <Text className="text-gray-400 text-xs">−</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() =>
+                          setBuses((prev) =>
+                            prev.map((b) =>
+                              b.id === bus.id
+                                ? { ...b, volume: Math.min(2, b.volume + 0.1) }
+                                : b,
+                            ),
+                          )
+                        }
+                        className="w-6 h-6 rounded bg-dark-muted/30 items-center justify-center active:opacity-70"
+                      >
+                        <Text className="text-gray-400 text-xs">+</Text>
+                      </Pressable>
+                    </View>
+                    {assignedTracks.length > 0 && (
+                      <View className="flex-row flex-wrap gap-1 mt-2">
+                        {assignedTracks.map((t) => (
+                          <View
+                            key={t.id}
+                            className="px-1.5 py-0.5 rounded bg-dark-muted/40"
+                          >
+                            <Text className="text-[8px] text-gray-500">
+                              {t.name}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
+        {bottomTab === "fx" && (
+          <ScrollView
+            className={`flex-1 ${resp.isMobile ? "px-2 py-2" : "px-4 py-3"}`}
+            style={{
+              maxHeight: resp.isMobile ? 220 : resp.isDesktop ? 320 : 260,
+            }}
+          >
+            {selectedTrack ? (
+              <View>
+                <View className="flex-row items-center gap-2 mb-2 px-1">
+                  <View className="w-1.5 h-1.5 rounded-full bg-brand-accent" />
+                  <Text className="label text-brand-accent/70">
+                    {selectedTrack.name}
+                  </Text>
+                </View>
+                <PluginRack
+                  plugins={selectedTrack.plugins}
+                  onChange={(pl) => updateTrackPlugins(selectedTrack.id, pl)}
+                  onEdit={(p) => {
+                    setEditingPlugin(p);
+                    setEditingPluginSource("track");
+                  }}
+                  trackName={selectedTrack.name}
+                />
+                <View className="mt-3">
+                  <PedalRack
+                    chain={
+                      trackAmpChains[selectedTrack.id] ?? {
+                        pedals: [],
+                        amp: null,
+                        cab: null,
+                      }
+                    }
+                    onChange={(chain) =>
+                      setTrackAmpChains((prev) => ({
+                        ...prev,
+                        [selectedTrack.id]: chain,
+                      }))
+                    }
+                    trackName={selectedTrack.name}
+                  />
+                </View>
+                <View className="mt-3">
+                  <Text className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-2 px-1">
+                    {t("studio.quickFx", "Quick FX")}
+                  </Text>
+                  <View className="flex-row flex-wrap gap-3 px-1">
+                    {ONE_KNOB_TYPES.map((knobType) => (
+                      <OneKnobProcessor
+                        key={knobType}
+                        type={knobType}
+                        value={
+                          oneKnobValues[selectedTrack.id]?.[knobType] ?? 0
+                        }
+                        onChange={(_type, v) => {
+                          setOneKnobValues((prev) => ({
+                            ...prev,
+                            [selectedTrack.id]: {
+                              ...(prev[selectedTrack.id] ?? {}),
+                              [_type]: v,
+                            },
+                          }));
+                        }}
+                      />
+                    ))}
+                  </View>
+                </View>
+                <MasterRack
+                  plugins={masterPlugins}
+                  onChange={setMasterPlugins}
+                  onEdit={(p) => {
+                    setEditingPlugin(p);
+                    setEditingPluginSource("masterRack");
+                  }}
+                />
+              </View>
+            ) : (
+              <View className="py-4 items-center gap-2">
+                <Text className="text-gray-500 text-xs">
+                  {t("studio.fxNoTrack", "Select a track to see its plugins")}
+                </Text>
+                <MasterRack
+                  plugins={masterPlugins}
+                  onChange={setMasterPlugins}
+                  onEdit={(p) => {
+                    setEditingPlugin(p);
+                    setEditingPluginSource("masterRack");
+                  }}
+                />
+              </View>
+            )}
+          </ScrollView>
+        )}
+
+{bottomTab === "mastering" && (
+  <MasteringSuite
+    onBack={() => setBottomTab("mixer")}
+    testID="mastering-suite"
+  />
+)}
+
+        {bottomTab === "groups" && (
+          <ScrollView className="flex-1" style={{ maxHeight: 260 }}>
+            <TrackGroupManager
+              groups={groups}
+              tracks={tracks}
+              onCreateGroup={(name, trackIds) => {
+                const g: GroupDef = {
+                  id: `group-${Date.now()}`,
+                  name,
+                  color: GROUP_COLORS[groups.length % GROUP_COLORS.length],
+                  volume: 80,
+                  muted: false,
+                  trackIds,
+                };
+                setGroups((prev) => [...prev, g]);
+                setTrackAssignments((prev) => {
+                  const next = { ...prev };
+                  trackIds.forEach((tId) => {
+                    next[tId] = g.id;
+                  });
+                  return next;
+                });
+              }}
+              onRemoveGroup={(groupId) => {
+                setGroups((prev) => prev.filter((g) => g.id !== groupId));
+                setTrackAssignments((prev) => {
+                  const next = { ...prev };
+                  Object.keys(next).forEach((k) => {
+                    if (next[k] === groupId) next[k] = null;
+                  });
+                  return next;
+                });
+              }}
+              onGroupVolume={(groupId, vol) =>
+                setGroups((prev) =>
+                  prev.map((g) =>
+                    g.id === groupId ? { ...g, volume: vol } : g,
+                  ),
+                )
+              }
+              onGroupMute={(groupId) =>
+                setGroups((prev) =>
+                  prev.map((g) =>
+                    g.id === groupId ? { ...g, muted: !g.muted } : g,
+                  ),
+                )
+              }
+              onAssignTrack={(trackId, groupId) =>
+                setTrackAssignments((prev) => ({ ...prev, [trackId]: groupId }))
+              }
+              trackAssignments={trackAssignments}
+            />
+          </ScrollView>
+        )}
+
+        {bottomTab === "mixes" && (
+          <View className="px-4 py-3" style={{ maxHeight: 280 }}>
+            <View className="flex-row items-center gap-2 mb-2">
+              <Text className="text-gray-300 text-xs font-semibold">
+                {t("studio.autoMix", "AutoMix")}
+              </Text>
+              {AUTOMIX_GENRES.map((genre) => (
+                <Pressable
+                  key={genre}
+                  onPress={() => setTracks(autoMix(tracks, genre))}
+                  className="px-2.5 py-1 rounded-lg bg-dark-muted border border-dark-border active:opacity-70"
+                >
+                  <Text className="text-gray-300 text-[10px] font-medium capitalize">
+                    {genre}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <MixManager
+              snapshots={mixSnapshots}
+              activeMixId={activeMixId}
+              onSave={handleSaveMix}
+              onLoad={handleLoadMix}
+              onDelete={handleDeleteMix}
+              onCompare={handleCompareMix}
+            />
+          </View>
+        )}
+        {bottomTab === "chords" && (
+          <View className="px-3 py-2" style={{ maxHeight: 200 }}>
+            <ChordTrack
+              chords={chords}
+              onChange={setChords}
+              keySignature={projectKey || "C"}
+              bpm={metronome.bpm}
+              numBars={8}
+              visible
+              onClose={() => setBottomTab("mixer")}
+            />
+            <Pressable
+              onPress={() => {
+                if (chords.length === 0) return;
+                const midiNotes = chordsToMIDINotes(chords, projectKey || "C", metronome.bpm, 4, 80);
+                if (midiNotes.length === 0) return;
+                const trackId = `chord-midi-${Date.now()}`;
+                setTracks((prev) => [...prev, {
+                  id: trackId,
+                  name: "Chord Progression",
+                  color: TRACK_COLORS[tracks.length % TRACK_COLORS.length],
+                  muted: false,
+                  solo: false,
+                  volume: 70,
+                  pan: 0,
+                  sends: {},
+                  sidechainSource: null,
+                  regions: [{ id: `cr-${Date.now()}`, start: 0, duration: chords.reduce((s, c) => s + c.beats, 0) * (60 / metronome.bpm) }],
+                  plugins: [],
+                  automation: {},
+                  midiNotes,
+                }]);
+                setSelectedTrackId(trackId);
+              }}
+              className="mt-2 h-8 rounded-lg bg-brand-accent/20 items-center justify-center active:opacity-70 border border-brand-accent/30"
+            >
+              <Text className="text-brand-accent text-[10px] font-bold">
+                {t("studio.generateChordsMidi", "Generate Chord MIDI →")}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
+
+      <StudioModals
+        recordSettings={recordSettings}
+        setRecordSettings={setRecordSettings}
+        showRecordOptions={modals.recordOptions}
+        editingPlugin={editingPlugin}
+        handlePluginParamChange={handlePluginParamChange}
+        handleTogglePlugin={handleTogglePlugin}
+        setEditingPlugin={setEditingPlugin}
+        setEditingPluginSource={setEditingPluginSource}
+        isPlaying={isPlaying}
+        currentTime={currentTime}
+        showBounce={modals.bounce}
+        projectTitle={projectTitle}
+        duration={duration}
+        tracks={tracks}
+        buses={buses}
+        masterPlugins={masterPlugins}
+        projectMood={projectMood}
+        showCodeSampler={modals.codeSampler}
+        handleCodeRender={handleCodeRender}
+        showPromptSampler={modals.promptSampler}
+        handlePromptMidiRender={handlePromptMidiRender}
+        bpm={metronome.bpm}
+        showTuner={modals.tuner}
+        showSampler={modals.sampler}
+        setTracks={setTracks}
+        setSelectedTrackId={setSelectedTrackId}
+        showSynth={modals.synth}
+        showLooper={modals.looper}
+        currentMidiNotes={currentMidiNotes}
+        handlePianoRollChange={handlePianoRollChange}
+        projectKey={projectKey}
+        showPianoRoll={modals.pianoRoll}
+        setEditingMidiTrackId={setEditingMidiTrackId}
+        selectedMidiTrack={selectedMidiTrack}
+        showCommandPalette={modals.commandPalette}
+        showBranchManager={modals.branchManager}
+        showCommitModal={modals.commitModal}
+        showOutputSelector={modals.outputSelector}
+        showPatchbay={modals.patchbay}
+        trackIds={trackIds}
+        showMidi={modals.midi}
+        showGenerateCover={modals.generateCover}
+        projectGenre={genreParam}
+        projectLyrics={projectLyrics}
+        onProjectLyricsChange={handleProjectLyricsChange}
+        onUseAsCover={handleUseAsCover}
+        autoplayBlocked={autoplayBlocked}
+        setAutoplayBlocked={setAutoplayBlocked}
+        closeModal={closeModal}
+      />
+      </View>
+    </View>
   );
 }
