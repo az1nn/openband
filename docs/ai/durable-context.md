@@ -23,7 +23,15 @@ Constitution
 > code/tests/Git state
 ```
 
-Architecture Graph, handoffs, comments, generated plans, execution records, and chat memory are derived context.
+Architecture Graph, handoffs, comments, generated plans, execution records and chat memory are derived context.
+
+## Task-lifecycle prerequisite
+
+Operational handoff persistence happens only after the active task reaches a genuine closeout boundary under `docs/ai/context-handoff.md`.
+
+If safe autonomous work remains, `.qwen/skills/auto-skill-continue-work/SKILL.md` owns continuation and no Caveman artifact should be persisted yet.
+
+`.qwen/skills/auto-skill-caveman-handoff/SKILL.md` owns final closeout persistence/emission.
 
 ## Two persistence classes
 
@@ -35,16 +43,16 @@ Examples:
 
 - architecture/boundary decision -> ADR / architecture docs;
 - cross-feature behavioral contract -> `docs/contracts/`;
-- workflow/agent rule -> `AGENTS.md`, skill, or AI policy docs;
+- workflow/agent rule -> `AGENTS.md`, skill or AI policy docs;
 - feature requirement / acceptance criterion -> active Spec Kit feature;
 - implementation behavior -> code + tests;
 - project invariant -> Constitution only when constitution-level.
 
-Do not hide durable decisions only inside a Caveman handoff, PR comment, issue comment, or chat memory.
+Do not hide durable decisions only inside a Caveman handoff, PR comment, issue comment or chat memory.
 
 ### 2. Operational continuation state
 
-Short-lived facts required to resume work belong in a Caveman handoff, for example:
+Short-lived facts required to resume after task closeout belong in a Caveman handoff, for example:
 
 - branch/base + exact SHAs;
 - issue/PR/Spec identity;
@@ -58,14 +66,14 @@ This state is derived and must be revalidated by the next session.
 
 ## Persistence sink order
 
-At material closeout, the verified-context-handoff skill must persist the final Caveman artifact using the first safe available sink:
+At eligible task closeout, `caveman-handoff` must persist the final artifact using the first safe available sink:
 
-1. **Active PR:** maintain one idempotent top-level PR comment containing the marker `<!-- openband-caveman-handoff -->` and the latest Caveman artifact.
+1. **Active PR:** maintain one idempotent top-level PR comment containing `<!-- openband-caveman-handoff -->` and the latest Caveman artifact.
 2. **Issue without PR:** maintain one idempotent issue comment using the same marker.
-3. **No PR/issue but writable branch:** persist to `.qwen/handoffs/<work-key>.md` **before** the final verification/freeze, then verify the resulting HEAD.
-4. **No durable sink available:** emit the Caveman artifact in the response and state that durable persistence is unavailable. Do not pretend chat memory is durable.
+3. **No PR/issue but writable branch:** persist to `.qwen/handoffs/<work-key>.md` **before** final verification, then verify the resulting HEAD.
+4. **No durable sink available:** emit the artifact in the response and state `PERSIST: unavailable`. Do not pretend chat memory is durable.
 
-Prefer updating the existing marked comment/file instead of appending new handoff copies.
+Prefer updating the existing marked comment/file instead of appending copies.
 
 ## Freeze safety
 
@@ -82,18 +90,18 @@ Rules:
 
 A failed closeout check does not automatically mean the active branch caused the defect.
 
-When a required check fails outside the changed scope or in behavior shared by multiple independent PRs:
+When a required check fails outside changed scope or in behavior shared by multiple independent PRs:
 
 1. keep the active work `IMPLEMENTED_NOT_VERIFIED`; never relabel the failure as PASS or ignore it;
 2. compare the failure with current `master` / target-base lineage and another independent run when available;
 3. classify the defect as branch regression only when evidence ties it to the active diff;
-4. if evidence proves a baseline defect, create an isolated issue + branch + PR for that defect instead of contaminating the original feature PR;
+4. if evidence proves a baseline defect, create an isolated issue + branch + PR instead of contaminating the original feature PR;
 5. fix the product/process defect without weakening the failing test;
 6. verify and land the baseline fix under its own evidence;
-7. mark all prior evidence for the original PR as `STALE` when the target base changes;
-8. rerun the original PR against the corrected base before merge.
+7. mark prior evidence for the original PR `STALE` when target base changes;
+8. rerun the original PR against corrected base before merge.
 
-A baseline defect is a blocker, not an excuse to bypass assurance. The purpose of triage is to assign the fix to the correct workstream while preserving the original verification contract.
+A baseline defect is a blocker, not an excuse to bypass assurance. If those remediation steps are safe and available now, `continue-work` should perform them before Caveman closeout. Caveman may record the blocker only when no safe autonomous progress remains.
 
 ## Handoff comment contract
 
@@ -116,19 +124,19 @@ The marker exists so agents update one durable record instead of creating commen
 
 ## Promotion rule
 
-Before persisting the operational handoff, ask:
+Before persisting operational state, ask:
 
 > If the next chat disappeared too, would this fact still need to govern the project after this workstream ends?
 
-If yes, promote the fact to its canonical artifact first. The handoff may then reference that artifact by path/ID instead of duplicating its contents.
+If yes, promote the fact to its canonical artifact first. The handoff may then reference that artifact by path/ID instead of duplicating contents.
 
 ## Memory rule
 
-Product/account memory may help bootstrap a session but is optional, non-canonical, and not required for continuity.
+Product/account memory may help bootstrap a session but is optional, non-canonical and not required for continuity.
 
-The verified-context-handoff skill must therefore be fully functional without model memory. Repository/GitHub persistence is the durable fallback and the preferred project-memory substrate.
+The `continue-work` and `caveman-handoff` skills must therefore remain fully functional without model memory. Repository/GitHub persistence is the durable fallback and preferred project-memory substrate.
 
-Never persist secrets, credentials, private tokens, unnecessary personal data, full logs, or large conversation transcripts in durable context.
+Never persist secrets, credentials, private tokens, unnecessary personal data, full logs or large conversation transcripts in durable context.
 
 ## New-session bootstrap
 
@@ -139,4 +147,4 @@ A fresh session should:
 3. read the latest marked Caveman record when useful;
 4. revalidate every decision-relevant fact against canonical state;
 5. treat mismatches as stale handoff data;
-6. continue from `NEXT` only after freshness is proven.
+6. continue from `NEXT` only after freshness and applicable human gates are proven.
