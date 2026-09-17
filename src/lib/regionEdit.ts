@@ -1,26 +1,45 @@
 import type { TrackRegion } from "./types";
 
-export interface EditableRegion extends TrackRegion {
-  offset?: number;
-  length?: number;
+/** Compatibility alias: source-window fields now belong to TrackRegion itself. */
+export type EditableRegion = TrackRegion;
+
+export interface RegionSourceWindow {
+  offset: number;
+  length: number;
 }
 
-function clampMin(v: number, min: number): number {
-  return v < min ? min : v;
+function finiteNonNegative(value: number | undefined, fallback = 0): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  return Math.max(0, value);
 }
 
-function clamp(v: number, min: number, max: number): number {
-  if (v < min) return min;
-  if (v > max) return max;
-  return v;
+function clamp(value: number, min: number, max: number): number {
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
 }
 
-function resolvedOffset(region: EditableRegion): number {
-  return clampMin(region.offset ?? 0, 0);
-}
+/**
+ * Resolve the source segment selected by a TrackRegion. Legacy regions remain
+ * valid: missing offset reads from source 0 and missing length reads duration.
+ * When decoded source duration is known, the selection is clamped to it.
+ */
+export function resolveRegionSourceWindow(
+  region: Pick<TrackRegion, "duration" | "offset" | "length">,
+  sourceDuration?: number,
+): RegionSourceWindow {
+  const fallbackLength = finiteNonNegative(region.duration);
+  const rawOffset = finiteNonNegative(region.offset);
+  const rawLength = finiteNonNegative(region.length, fallbackLength);
 
-function resolvedLength(region: EditableRegion): number {
-  return clampMin(region.length ?? region.duration, 0);
+  if (typeof sourceDuration !== "number" || !Number.isFinite(sourceDuration)) {
+    return { offset: rawOffset, length: rawLength };
+  }
+
+  const maxSource = Math.max(0, sourceDuration);
+  const offset = Math.min(rawOffset, maxSource);
+  const length = Math.min(rawLength, Math.max(0, maxSource - offset));
+  return { offset, length };
 }
 
 export function trimRegion(
@@ -29,17 +48,18 @@ export function trimRegion(
   deltaSec: number,
   sourceDuration: number,
 ): EditableRegion {
-  const offset = resolvedOffset(region);
-  const length = resolvedLength(region);
-  const maxSource = clampMin(sourceDuration, 0);
+  const { offset, length } = resolveRegionSourceWindow(region, sourceDuration);
+  const maxSource = finiteNonNegative(sourceDuration);
+  const safeStart = finiteNonNegative(region.start);
+  const safeDuration = finiteNonNegative(region.duration);
 
   if (edge === "start") {
-    const maxDelta = length;
-    const minDelta = -Math.min(offset, region.start);
-    const d = clamp(deltaSec, minDelta, maxDelta);
-    const newStart = clampMin(region.start + d, 0);
+    const maxDelta = Math.min(length, safeDuration);
+    const minDelta = -Math.min(offset, safeStart);
+    const d = clamp(Number.isFinite(deltaSec) ? deltaSec : 0, minDelta, maxDelta);
+    const newStart = Math.max(0, safeStart + d);
     const newOffset = clamp(offset + d, 0, maxSource);
-    const newLength = clampMin(length - d, 0);
+    const newLength = Math.max(0, length - d);
     return {
       ...region,
       start: newStart,
@@ -49,10 +69,10 @@ export function trimRegion(
     };
   }
 
-  const maxDelta = clampMin(maxSource - offset, 0) - length;
-  const minDelta = -length;
-  const d = clamp(deltaSec, minDelta, maxDelta);
-  const newLength = clampMin(length + d, 0);
+  const maxDelta = Math.max(0, maxSource - offset) - length;
+  const minDelta = -Math.min(length, safeDuration);
+  const d = clamp(Number.isFinite(deltaSec) ? deltaSec : 0, minDelta, maxDelta);
+  const newLength = Math.max(0, length + d);
   return {
     ...region,
     duration: newLength,
@@ -65,27 +85,29 @@ export function splitRegion(
   region: EditableRegion,
   atSec: number,
 ): [EditableRegion, EditableRegion] {
-  const offset = resolvedOffset(region);
-  const length = resolvedLength(region);
-  const end = region.start + region.duration;
-  const at = clamp(atSec, region.start, end);
-  const leftDur = at - region.start;
+  const { offset, length } = resolveRegionSourceWindow(region);
+  const start = finiteNonNegative(region.start);
+  const duration = finiteNonNegative(region.duration);
+  const end = start + duration;
+  const at = clamp(Number.isFinite(atSec) ? atSec : start, start, end);
+  const leftDur = at - start;
   const rightDur = end - at;
 
   const left: EditableRegion = {
     ...region,
-    start: region.start,
+    start,
     duration: leftDur,
     offset,
-    length: leftDur,
+    length: Math.min(length, leftDur),
   };
+  const rightSourceLength = Math.max(0, length - leftDur);
   const right: EditableRegion = {
     ...region,
     id: `${region.id}-b`,
     start: at,
     duration: rightDur,
-    offset: offset + leftDur,
-    length: length - leftDur,
+    offset: offset + Math.min(leftDur, length),
+    length: Math.min(rightSourceLength, rightDur),
   };
   return [left, right];
 }
@@ -96,7 +118,7 @@ export function moveRegion(
 ): EditableRegion {
   return {
     ...region,
-    start: clampMin(region.start + deltaSec, 0),
+    start: Math.max(0, finiteNonNegative(region.start) + (Number.isFinite(deltaSec) ? deltaSec : 0)),
   };
 }
 

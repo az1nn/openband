@@ -6,7 +6,7 @@ import { audioBufferToWavBlob } from "./audio";
 import { getSharedAudioContext, createTrackedBlob } from "./universalAudio";
 import { applyPluginChain } from "./pluginChain";
 import { applyAutomationToParam, buildAutomationSchedule } from "./automationEngine";
-import { crossfadeGain } from "./regionEdit";
+import { crossfadeGain, resolveRegionSourceWindow } from "./regionEdit";
 import { timeStretch } from "./timeStretch";
 import type Soundfont from "soundfont-player";
 import { resolveAssetUrl } from "./assetStore";
@@ -780,6 +780,14 @@ export interface RenderTracksOptions {
   normalizeMixerUnits?: boolean;
 }
 
+type DecodedRegion = {
+  buffer: AudioBuffer;
+  start: number;
+  duration: number;
+  offset: number;
+  length: number;
+};
+
 export async function renderTracksToWavBlob(
   tracks: TrackDef[],
   bpm: number,
@@ -840,11 +848,11 @@ export async function renderTracksToWavBlob(
         }
       }
 
-      const decodedRegions = new Map<string, { buffer: AudioBuffer; start: number; duration: number }[]>();
+      const decodedRegions = new Map<string, DecodedRegion[]>();
       for (const track of tracks) {
         if (track.muted || (anySolo && !track.solo)) continue;
         const trackRegionsRaw = track.regions || [];
-        const decoded: { buffer: AudioBuffer; start: number; duration: number }[] = [];
+        const decoded: DecodedRegion[] = [];
         for (const region of trackRegionsRaw) {
           if (!region.url) continue;
           try {
@@ -852,7 +860,8 @@ export async function renderTracksToWavBlob(
             const ab = await r.arrayBuffer();
             const decodeCtx = getSharedAudioContext() || ctx;
             const buffer = await decodeCtx.decodeAudioData(ab);
-            decoded.push({ buffer, start: region.start, duration: region.duration });
+            const { offset, length } = resolveRegionSourceWindow(region, buffer.duration);
+            decoded.push({ buffer, start: region.start, duration: region.duration, offset, length });
           } catch (e) {
             if (options.strict) {
               throw new FullProjectRenderError(
@@ -983,7 +992,13 @@ export async function renderTracksToWavBlob(
             const source = ctx.createBufferSource();
             source.buffer = r.buffer;
             source.connect(panNode);
-            source.start(r.start, 0, Math.min(r.duration, Math.max(0, duration - r.start)));
+            const playDur = Math.min(
+              r.duration,
+              r.length,
+              Math.max(0, r.buffer.duration - r.offset),
+              Math.max(0, duration - r.start),
+            );
+            if (playDur > 0) source.start(r.start, r.offset, playDur);
           }
         }
         }
@@ -1181,7 +1196,7 @@ export async function renderTrackStem(
     panNode.connect(trackGain);
     trackGain.connect(ctx.destination);
 
-    const decodedRegions: { buffer: AudioBuffer; start: number; duration: number }[] = [];
+    const decodedRegions: DecodedRegion[] = [];
     for (const region of track.regions || []) {
       if (!region.url) continue;
       try {
@@ -1189,7 +1204,8 @@ export async function renderTrackStem(
         const ab = await r.arrayBuffer();
         const decodeCtx = getSharedAudioContext() || ctx;
         const buffer = await decodeCtx.decodeAudioData(ab);
-        decodedRegions.push({ buffer, start: region.start, duration: region.duration });
+        const { offset, length } = resolveRegionSourceWindow(region, buffer.duration);
+        decodedRegions.push({ buffer, start: region.start, duration: region.duration, offset, length });
       } catch (e) {
         console.warn("Failed to decode region for stem", track.name, e);
       }
@@ -1297,10 +1313,20 @@ export async function renderTrackStem(
               gainNode.gain.linearRampToValueAtTime(0.0001, regionEnd);
             }
           }
-          source.buffer = await maybeTimeStretchRegion(region.buffer, playDur);
+          const sourceWindowDur = Math.min(
+            playDur,
+            region.length,
+            Math.max(0, region.buffer.duration - region.offset),
+          );
+          if (sourceWindowDur <= 0) continue;
+          const coversWholeSource =
+            region.offset === 0 && Math.abs(region.length - region.buffer.duration) < 0.001;
+          source.buffer = coversWholeSource
+            ? await maybeTimeStretchRegion(region.buffer, sourceWindowDur)
+            : region.buffer;
           source.connect(gainNode);
           gainNode.connect(panNode);
-          source.start(region.start, 0, playDur);
+          source.start(region.start, coversWholeSource ? 0 : region.offset, sourceWindowDur);
         } catch (e) {
           console.warn("Failed to schedule region for stem", track.name, e);
         }
@@ -1325,7 +1351,7 @@ async function renderTrackBuffer(
   duration: number,
   sampleRate: number,
   numSamples: number,
-  decodedRegions: { buffer: AudioBuffer; start: number; duration: number }[],
+  decodedRegions: DecodedRegion[],
   strict: boolean = false,
 ): Promise<AudioBuffer> {
   const ctx2 = new OfflineAudioContext(2, Math.max(1, numSamples), sampleRate);
@@ -1383,7 +1409,13 @@ async function renderTrackBuffer(
       const source = ctx2.createBufferSource();
       source.buffer = region.buffer;
       source.connect(ctx2.destination);
-      source.start(region.start, 0, Math.min(region.duration, Math.max(0, duration - region.start)));
+      const playDur = Math.min(
+        region.duration,
+        region.length,
+        Math.max(0, region.buffer.duration - region.offset),
+        Math.max(0, duration - region.start),
+      );
+      if (playDur > 0) source.start(region.start, region.offset, playDur);
     } catch (e) {
       if (strict) throw e;
       console.warn("Failed to schedule region for track buffer", track.name, e);
