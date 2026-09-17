@@ -20,6 +20,26 @@ RED    continuing materially increases stale/conflicting-context risk
 
 The state is normally internal. Only YELLOW or RED needs to be surfaced when useful.
 
+## Verified task closeout
+
+Context health and task completion are separate concerns. A chat may still be GREEN while a material task is ending.
+
+At the end of every material task, feature slice, verification cycle, PR freeze, or before moving to a distinct workstream, run `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md`.
+
+The skill must:
+
+1. refresh canonical repository/branch/PR/issue state;
+2. compare implementation against issue + Spec Kit scope;
+3. audit changed production/test files for partial or temporary work;
+4. verify required tests, CI and Graph evidence on the exact relevant HEAD;
+5. check review/thread state, base freshness and temporary workflows/scaffolding;
+6. classify the closeout as `VERIFIED_COMPLETE`, `IMPLEMENTED_NOT_VERIFIED`, `INCOMPLETE`, or `PROCESS_DRIFT`;
+7. produce a paste-ready continuation prompt when work will continue in another task/chat.
+
+The closeout prompt must instruct the next chat to reconstruct canonical state and prove the previous task rather than trusting the handoff summary.
+
+This protocol is mandatory even when context is GREEN. YELLOW/RED additionally determine whether the current chat should be replaced.
+
 ## GREEN
 
 Continue in the current chat when:
@@ -48,8 +68,9 @@ At YELLOW:
 
 1. do not interrupt a safe atomic action;
 2. finish or explicitly stop the current lifecycle step;
-3. refresh canonical state before deciding whether RED is warranted;
-4. prefer a semantic milestone over an arbitrary token/message threshold.
+3. refresh canonical state;
+4. run the verified task closeout skill;
+5. prefer a semantic milestone over an arbitrary token/message threshold.
 
 ## RED
 
@@ -69,7 +90,7 @@ When RED, explicitly say:
 
 > ⚠️ **Context boundary recommended — good moment to start a new chat.**
 
-Complete any safe atomic action already in progress first. Then generate a `SESSION_HANDOFF.md` using `docs/ai/session-handoff-template.md`.
+Complete any safe atomic action already in progress first. Then run the verified task closeout skill and generate a `SESSION_HANDOFF.md` using `docs/ai/session-handoff-template.md`.
 
 ## Handoff contract
 
@@ -82,9 +103,11 @@ It must contain only context needed to resume safely:
 - active Spec Kit feature and lifecycle step;
 - risk tier and relevant triggers;
 - Design Gate / Merge Gate status and approved baseline SHA when applicable;
+- closeout audit outcome;
 - final decisions;
 - explicitly superseded decisions that must not be reused;
 - completed work;
+- changed files / surfaces worth re-auditing;
 - canonical artifacts and Architecture Graph evidence worth reloading;
 - verification evidence and its HEAD/freshness boundary;
 - blockers / open questions;
@@ -105,9 +128,10 @@ A new chat must verify, at minimum:
 4. active Spec Kit feature and tasks;
 5. relevant ADRs/contracts/architecture;
 6. Architecture Graph evidence when available;
-7. whether the approved Design Baseline SHA or verification HEAD still matches the state being acted on.
+7. required tests/CI on the exact relevant HEAD;
+8. whether the approved Design Baseline SHA or verification HEAD still matches the state being acted on.
 
-If the handoff conflicts with Git, Spec Kit, ADRs, contracts, tests, or current PR state, canonical repository state wins and the mismatch must be called out.
+If the handoff conflicts with Git, Spec Kit, ADRs, contracts, tests, CI, or current PR state, canonical repository state wins and the mismatch must be called out.
 
 ## Relationship to OpenBand context levels
 
@@ -128,6 +152,7 @@ A new chat does not reset or bypass lifecycle gates.
 - A handoff cannot grant a Design Gate.
 - A handoff cannot mark verification PASS.
 - A handoff cannot authorize a T2+ merge.
+- A merged PR must not be treated as retroactive human gate approval.
 - If a Design Baseline SHA changed, the existing Design Gate is invalid until re-analysis and human approval.
 - If verified HEAD changed, affected checks must be rerun before Merge Gate.
 
