@@ -12,5 +12,5 @@
 - [x] T010 Implement the trusted default-branch privileged evaluator, fork blocking, path/risk-derived minimum tier, and machine-readable required-evidence contract.
 - [x] T011 Add trusted `openband-security` + `t4-evidence` producers and adversarial regression fixtures.
 - [x] T012 Converge live governance/policy checks and remove candidate-controlled trust loopholes, including deleted trust roots, evidence-script indirection, fail-open CI patterns, post-gate design drift, and unapproved risk-trigger expansion.
-- [x] T013 Run exact-HEAD SDD/Graph/security/T4/full CI verification and audit recovery evidence.
+- [ ] T013 Run exact-HEAD SDD/Graph/security/T4/full CI verification and audit recovery evidence.
 - [ ] T014 Record the verified HEAD and complete integration under the policy valid for this bootstrap PR.
