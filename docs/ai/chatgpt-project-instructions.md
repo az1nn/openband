@@ -6,12 +6,41 @@ Repository: `https://github.com/az1nn/openband`
 
 For OpenBand development work, Git-backed code, GitHub Spec Kit artifacts, Constitution, `AGENTS.md`, architecture, contracts, ADRs, tests and Git history are canonical.
 
+## Session law and `siga`
+
+OpenBand follows:
+
+```text
+ONE TASK = ONE CHAT
+ONE CHAT = AT MOST ONE TASK
+```
+
+A standalone `siga` is the canonical coding-session command. Before selecting or continuing work, read and follow:
+
+- `.qwen/skills/auto-skill-session-router/SKILL.md`;
+- `docs/ai/session-routing.md`.
+
+`Siga` means reconstruct current canonical repository/GitHub state and route the session to exactly one of:
+
+```text
+ACTIVE
+WAITING
+NEXT
+```
+
+- `ACTIVE`: the current task still owns work. Continue it if this chat owns the matching session; if another live session owns it, show that session/task and do not duplicate it.
+- `WAITING`: no safe autonomous work remains before a human/external boundary. Show the exact gate/blocker and required action; do not select another task.
+- `NEXT`: no conflicting active/waiting task owns the session slot. A new/unbound chat may bind to exactly one next task. A chat that already completed another task may identify the next task but must not execute it.
+
+Persist live task ownership through the idempotent marked PR/issue session lease defined by `docs/ai/session-routing.md`. A routine `siga` never silently takes over another `ACTIVE` lease.
+
 At the beginning of a material development session:
 
-1. Refresh repository, branch, worktree, issue and PR state.
-2. Read `AGENTS.md`.
-3. Follow `docs/ai/context-handoff.md` and `docs/ai/durable-context.md`.
-4. Reconstruct context progressively:
+1. Run the session-router semantics above.
+2. Refresh repository, branch, worktree, issue and PR state.
+3. Read `AGENTS.md`.
+4. Follow `docs/ai/context-handoff.md` and `docs/ai/durable-context.md`.
+5. Reconstruct context progressively:
 
 ```text
 L0  Constitution + AGENTS + feature/tier
@@ -23,7 +52,7 @@ Do not load the entire repository or previous conversation history by default. T
 
 ## Task-lifecycle-aware handoff
 
-Use two canonical skills:
+Use two canonical execution/closeout skills after session ownership is resolved:
 
 - `.qwen/skills/auto-skill-continue-work/SKILL.md` — continue the active task until all safe autonomous work is complete;
 - `.qwen/skills/auto-skill-caveman-handoff/SKILL.md` — perform closeout audit, durable persistence and compact handoff only at a genuine task closeout boundary.
@@ -122,18 +151,20 @@ If RED, tell the user when useful:
 
 > ⚠️ **Context boundary detected — canonical state will be reconstructed before continuing.**
 
-Then reconstruct L0 → L1 → L2 and continue safe task work. Emit Caveman only after current-task closeout or a genuine no-safe-work blocker.
+Then reconstruct L0 → L1 → L2 and continue safe task work. Emit Caveman only after current-task closeout or a genuine no-safe-work blocker/human gate.
 
 ## Gate safety
 
-Neither continuation nor handoff can:
+Neither session routing, continuation nor handoff can:
 
 - approve a Design Gate;
 - mark verification PASS without current evidence;
 - authorize or perform a T2+ merge;
 - lower risk tier;
 - override Spec Kit/Git/tests/Graph state;
-- retroactively approve a missing gate because a PR was merged.
+- retroactively approve a missing gate because a PR was merged;
+- silently take over another active session lease;
+- start a second distinct task in a chat already bound to one task.
 
 If the Design Baseline SHA changed materially, treat Design Gate as invalid until re-analysis and human approval.
 
