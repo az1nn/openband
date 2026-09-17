@@ -8,8 +8,9 @@ OpenBand uses GitHub Spec Kit as its SDD lifecycle. This file defines operationa
 - Work through branches and PRs. Never push directly to `master`.
 - Stop on decisions, not routine plumbing.
 - Direct `/speckit.*` commands may bypass `openband-ask`, never this policy.
-- Evidence beats claims: masked, missing, blocked, or flaky required checks are not PASS.
+- Evidence beats claims: masked, missing, blocked, stale, or flaky required checks are not PASS.
 - Risk increases required assurance, not manual merge ceremony.
+- **ONE TASK = ONE CHAT. ONE CHAT = AT MOST ONE TASK.** A chat that closes one task does not roll into a distinct next task.
 
 ## Risk tiers
 
@@ -25,7 +26,15 @@ Minimum T3: persistence model, architecture boundary, or cross-runtime contract 
 
 ## Entry and context
 
-`openband-ask` is the preferred entrypoint. It classifies risk, gathers bounded context, and starts or resumes the appropriate lifecycle. It does not own a parallel state machine.
+A standalone `siga` is the preferred coding-session command. Its canonical project skill is `.agents/skills/openband-session-router/SKILL.md`; `.qwen/skills/auto-skill-session-router/SKILL.md` is only the compatibility entrypoint and must delegate to it before selecting work.
+
+`Siga` is valid only for canonical repository identity `az1nn/openband`. The router must verify that exact Git/GitHub identity before task discovery or mutation; model/account memory and ChatGPT Project context are never repository proof. Every `siga` must render the visible `OPENBAND AGENT TREE` before long work.
+
+Session routing reconstructs canonical repository/GitHub state and routes the session to `ACTIVE/OWNED`, `ACTIVE/OBSERVER`, `WAITING`, `NEXT`, or `REPO_MISMATCH`; it never means "continue from chat memory". `ACTIVE/OBSERVER` may fan out bounded read-only evidence/research when another session owns the task, but it may not mutate that task or acquire its lease.
+
+Session routing follows `docs/ai/session-routing.md` and persists live task ownership through one idempotent marked PR/issue session lease. A new chat must not silently duplicate or take over a task with a live `ACTIVE` lease. `WAITING` surfaces the exact human/external gate and does not select another task. `NEXT` may bind a new/unbound chat to exactly one task; a chat that already completed another task may identify the next task but must not execute it.
+
+`openband-ask` remains the preferred task/lifecycle entrypoint after session ownership is resolved. It classifies risk, gathers bounded context, and starts or resumes the appropriate lifecycle. It does not own a parallel state machine.
 
 Context is progressive:
 
@@ -39,13 +48,34 @@ Retrieve before assuming. Do not load the whole repository by default.
 
 ### Conversation context handoff
 
-Continuously monitor whether the current chat remains a trustworthy bounded implementation context. Use `docs/ai/context-handoff.md` as the policy and `docs/ai/session-handoff-template.md` when a clean-chat handoff is warranted.
+Continuously monitor whether the current chat remains a trustworthy bounded implementation context. Use `docs/ai/context-handoff.md` as policy.
+
+Task-lifecycle ownership is explicit:
+
+- `.agents/skills/openband-session-router/SKILL.md` owns canonical OpenBand repository locking, visible agent-tree construction, and session routing;
+- `.qwen/skills/auto-skill-session-router/SKILL.md` is the compatibility entrypoint and must delegate to the canonical OpenBand skill;
+- `.qwen/skills/auto-skill-continue-work/SKILL.md` owns finishing all safe work in the active task before closeout;
+- `.qwen/skills/auto-skill-caveman-handoff/SKILL.md` owns closeout audit, durable persistence, and compact Caveman emission only after a genuine task closeout boundary;
+- `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md` is a compatibility router between continuation and closeout;
+- `docs/ai/session-routing.md` owns the live session lease/routing contract;
+- `docs/ai/session-handoff-template.md` owns the compact handoff shape;
+- `docs/ai/durable-context.md` owns closeout persistence and promotion rules.
 
 For ChatGPT Projects, `docs/ai/chatgpt-project-instructions.md` is the repository-owned source for the Project Instructions that mirror this policy into ChatGPT.
 
 - GREEN: continue normally; conversation length alone is irrelevant.
-- YELLOW: a semantic boundary is approaching; finish the current safe atomic step and refresh canonical state.
-- RED: continuing materially increases stale/conflicting-context risk; explicitly recommend a new chat and generate a `SESSION_HANDOFF.md`.
+- YELLOW: a semantic boundary is approaching; finish the current safe work and drive the active task toward closeout.
+- RED: refresh canonical state aggressively; continue only trustworthy work derived from canonical evidence. RED alone does not authorize an early handoff.
+
+A Caveman handoff is eligible only when the active task is complete or no safe autonomous work remains because of a genuine human gate/external blocker. If safe work remains, run `continue-work` instead.
+
+When the user asks `gere handoff`, `generate handoff`, `handoff`, a continuity prompt, or a new-chat prompt while the active task is still live, do **not** stop merely to emit a handoff. Run `continue-work`, complete and verify all safe current-task work, give the user a concise lifecycle notice of what was completed or what genuine blocker remains, then run `caveman-handoff`.
+
+At the genuine end of every material task, run `caveman-handoff` even when context is GREEN. A feature slice, verification cycle, or PR freeze counts only when it is the current task's actual closeout boundary; a routine intermediate checkpoint does not.
+
+Caveman Mode compresses transferred context only. It must preserve exact base/HEAD identity, work identifiers, closeout state, current-cycle delta, evidence freshness, blockers/human gates, critical invariants, one exact next action, and the verify-first contract. It must not reduce reasoning, tool checks, verification depth, or required evidence.
+
+Prefer a marked PR/issue handoff comment for operational state because it survives chat loss without mutating a verified HEAD. Do not create a post-freeze Git commit merely to store a handoff when a non-HEAD-mutating durable sink is available. Model/account memory is optional bootstrap context and is never canonical project state.
 
 A handoff is derived bootstrap context only. It must never override Git, Spec Kit, architecture/contracts/ADRs, tests, Graph evidence, risk tier, Design Gate, verification state, or Merge Gate. A new chat reconstructs bounded L0 → L1 → L2 context and verifies branch/worktree/HEAD, feature state and gate freshness before acting.
 
@@ -54,7 +84,7 @@ A handoff is derived bootstrap context only. It must never override Git, Spec Ki
 ```text
 preflight
 → specify
-→ clarify?
+→ clarify? 
 → plan
 → checklist?
 → tasks
@@ -114,16 +144,16 @@ Verification is risk- and impact-derived. Required evidence can include acceptan
 Allowed evidence states:
 
 ```text
-PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED
+PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED | STALE
 ```
 
-Only `PASS` and justified `NOT_REQUIRED` satisfy required evidence. `FAIL`, `BLOCKED`, `FLAKY`, missing, cancelled, timed-out, or stale required evidence blocks the gate.
+Only `PASS` and justified `NOT_REQUIRED` satisfy required evidence. `FAIL`, `BLOCKED`, `FLAKY`, `STALE`, missing, cancelled, or timed-out required evidence blocks the gate.
 
 The Merge Gate is evaluated against the exact merge-candidate HEAD and its target-base relationship. If HEAD changes, or the base moves in a way that can affect the candidate, rerun the affected evidence. Generic CI completion is not enough when the risk-derived contract requires stronger proof.
 
-When the complete contract is satisfied, automation may merge T0–T4 without a separate human merge approval. Higher tiers require stronger evidence; they do not require a different merge ceremony. Unresolved policy violations, contradictory spec/implementation evidence, or active request-for-changes state block automatic merge.
+When the complete contract is satisfied, repository automation may merge T0–T4 without a separate human merge approval. Higher tiers require stronger evidence; they do not require a different merge ceremony. Unresolved policy violations, contradictory spec/implementation evidence, or active request-for-changes state block automatic merge.
 
-If the repository cannot yet produce a required class of evidence, the state is `BLOCKED`. The remedy is to add the missing evidence producer, not to bypass the gate.
+If the repository cannot yet produce a required class of evidence, the state is `BLOCKED`. Add or repair the evidence producer rather than bypassing the gate.
 
 Merge authorization is distinct from production mutation authorization. Rollback/redeploy, credential rotation, access-control changes, destructive data repair, and similar runtime actions retain their independent approval rules.
 

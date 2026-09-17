@@ -23,8 +23,16 @@ const LIVE_GOVERNANCE_FILES = [
   "AGENTS.md",
   "CONTRIBUTING.md",
   ".agents/skills/openband-ask/SKILL.md",
+  ".agents/skills/openband-session-router/SKILL.md",
+  ".qwen/skills/auto-skill-session-router/SKILL.md",
+  ".qwen/skills/auto-skill-continue-work/SKILL.md",
+  ".qwen/skills/auto-skill-caveman-handoff/SKILL.md",
+  ".qwen/skills/auto-skill-verified-context-handoff/SKILL.md",
+  "sdd/README.md",
   "docs/ai/chatgpt-project-instructions.md",
   "docs/ai/context-handoff.md",
+  "docs/ai/durable-context.md",
+  "docs/ai/session-routing.md",
   "docs/ai/session-handoff-template.md",
 ];
 
