@@ -60,6 +60,11 @@ describe("privileged evidence merge trust boundary", () => {
     assert.equal(/(?:contents|pull-requests|checks|actions):\s*write/.test(ci), false);
     assert.equal(/continue-on-error:\s*true/.test(ci), false);
     assert.equal(/\|\|\s*(?:true|echo)\b/.test(ci), false);
+    const ciRunCommands = ci
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => /^(?:-\s*)?run:\s*/.test(line))
+      .map((line) => line.replace(/^(?:-\s*)?run:\s*/, ""));
     for (const command of [
       "npm run sdd:check",
       "npm run security:policy",
@@ -71,7 +76,7 @@ describe("privileged evidence merge trust boundary", () => {
       "npm run merge:gate",
     ]) {
       assert.equal(
-        ci.split(/\r?\n/).map((line) => line.trim()).includes("- run: " + command),
+        ciRunCommands.includes(command),
         true,
         `missing exact CI producer ${command}`,
       );

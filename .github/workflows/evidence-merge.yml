@@ -376,6 +376,9 @@ jobs:
               }
             }
             const ciLines = ci.split(/\r?\n/).map((line) => line.trim());
+            const ciRunCommands = ciLines
+              .filter((line) => /^(?:-\s*)?run:\s*/.test(line))
+              .map((line) => line.replace(/^(?:-\s*)?run:\s*/, ''));
             for (const command of [
               'npm run sdd:check',
               'npm run security:policy',
@@ -386,7 +389,7 @@ jobs:
               'npx playwright test e2e/launch-first-run.spec.ts',
               'npm run merge:gate',
             ]) {
-              if (!ciLines.includes('- run: ' + command)) {
+              if (!ciRunCommands.includes(command)) {
                 throw new Error('CI evidence producer missing exact run command: ' + command);
               }
             }
