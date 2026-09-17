@@ -15,6 +15,8 @@ This skill exists to prevent an early handoff from becoming a substitute for fin
 
 If safe work remains, continue the current task first. Only after the task reaches an eligible closeout boundary may `.qwen/skills/auto-skill-caveman-handoff/SKILL.md` run.
 
+It never emits a handoff itself.
+
 ## Non-negotiable contract
 
 ```text
