@@ -1,6 +1,6 @@
 ---
 name: verified-context-handoff
-description: Audit canonical project state, verification evidence, and completion before producing one safe token-efficient continuation handoff.
+description: Audit canonical project state, verification evidence, completion, and durable continuity before producing one safe token-efficient continuation handoff.
 source: project-skill
 created_at: '2026-09-17'
 ---
@@ -11,17 +11,18 @@ created_at: '2026-09-17'
 
 End a material OpenBand task/session without transferring stale assumptions into the next step or chat.
 
-The skill always performs two internal stages in order:
+The skill always performs three internal stages in order:
 
 1. **Closeout audit** — prove the actual state from canonical sources.
-2. **Caveman handoff** — emit one compact continuation artifact containing only the state needed to resume safely.
+2. **Durable-context promotion/persistence** — move long-lived facts to canonical docs and persist short-lived continuation state outside the chat.
+3. **Caveman handoff** — emit one compact continuation artifact containing only the state needed to resume safely.
 
 This skill is orchestration only. It never overrides Git, Spec Kit, Constitution, `AGENTS.md`, architecture/contracts/ADRs, tests, Architecture Graph, CI, reviews, or human gates.
 
 ## Non-negotiable contract
 
 ```text
-implement -> verify -> classify -> caveman handoff
+implement -> verify -> classify -> persist -> caveman handoff
 ```
 
 Caveman Mode is mandatory by default. Do not ask the user whether to enable it and do not require a separate “generate continuation prompt” request.
@@ -53,7 +54,7 @@ Run this skill when any of the following is true:
 
 Do not trigger merely because of message count, token count, or number of tool calls.
 
-The only output exception is an explicit user instruction in the current turn not to emit a handoff/prompt.
+The only output exception is an explicit user instruction in the current turn not to emit a handoff/prompt. Durable project knowledge must still be promoted when the task requires it.
 
 ## Phase A — Reconstruct canonical state
 
@@ -183,11 +184,52 @@ Repository/process state moved unexpectedly or contradicts the intended lifecycl
 
 Continue fixing safe technical/process gaps autonomously. Stop only for a genuine human gate or external blocker.
 
-## Phase D — Emit one Caveman artifact
+## Phase D — Promote durable knowledge
+
+Chats are short-lived. Before the final handoff, decide which newly learned facts must outlive the current workstream.
+
+Use `docs/ai/durable-context.md`.
+
+Promote long-lived facts to their owning canonical artifact before final verification/freeze:
+
+- architecture/boundary decision -> ADR / architecture docs;
+- cross-feature behavioral contract -> `docs/contracts/`;
+- workflow/agent rule -> `AGENTS.md`, skill, or AI policy docs;
+- feature requirement / acceptance criterion -> active Spec Kit feature;
+- implementation behavior -> code + tests;
+- constitution-level invariant -> Constitution only when truly constitution-level.
+
+Do not leave a durable project decision only in chat memory, a Caveman block, or a PR comment.
+
+Project/account model memory is optional bootstrap context, not a dependency and not canonical. This skill must remain fully functional when model memory is absent.
+
+## Phase E — Persist operational continuation state
+
+Persist the final Caveman artifact outside the chat using the first safe available sink:
+
+1. **Active PR:** maintain one idempotent top-level PR comment containing `<!-- openband-caveman-handoff -->` plus the latest artifact.
+2. **Issue without PR:** maintain one idempotent issue comment using the same marker.
+3. **No PR/issue, writable branch:** persist `.qwen/handoffs/<work-key>.md` before final verification/freeze, then verify the resulting HEAD.
+4. **No durable sink:** emit the handoff and state durable persistence is unavailable; never pretend chat memory is durable.
+
+Prefer updating the existing marked comment/file rather than appending copies.
+
+### Freeze safety
+
+Persistence must never silently invalidate verification.
+
+- Prefer PR/issue comment persistence after verification because comments do not change Git HEAD.
+- A repository handoff-file write changes HEAD; any affected prior verification becomes `STALE`.
+- Never create a post-freeze Git commit only to save operational handoff state when a PR/issue comment is available.
+- If persistence changes HEAD, rerun required verification before classifying `VERIFIED_COMPLETE`.
+
+Never persist secrets, credentials, private tokens, unnecessary personal data, full logs, or conversation transcripts.
+
+## Phase F — Emit one Caveman artifact
 
 Emit **one** complete handoff artifact. Do not emit a separate closeout summary containing the same facts.
 
-A short preamble is allowed only when needed to explain a blocker, material process drift, or why a clean chat is recommended.
+A short preamble is allowed only when needed to explain a blocker, material process drift, persistence failure, or why a clean chat is recommended.
 
 Use:
 
@@ -262,7 +304,7 @@ If `NEXT` depends on a fact that is neither in the handoff nor recoverable from 
 
 ## Caveman lint
 
-Before emitting, validate the artifact itself:
+Before persisting/emitting, validate the artifact itself:
 
 - [ ] exact base and HEAD are present when Git work exists;
 - [ ] closeout classification matches current evidence;
@@ -276,7 +318,10 @@ Before emitting, validate the artifact itself:
 - [ ] no fact is needlessly repeated across sections;
 - [ ] no full canonical artifact is copied into the handoff;
 - [ ] no gate approval is inferred;
-- [ ] handoff remains sufficient if chat history disappears.
+- [ ] long-lived decisions were promoted to canonical docs rather than trapped in the handoff;
+- [ ] operational handoff was persisted to the safe durable sink when one exists;
+- [ ] persistence did not invalidate the claimed verification HEAD;
+- [ ] handoff remains sufficient if chat history and model memory disappear.
 
 ## Gate safety
 
@@ -293,21 +338,24 @@ At the end of every material task, even when context is GREEN:
 
 1. run full closeout audit;
 2. classify state;
-3. emit one Caveman handoff automatically;
-4. if the next workstream is distinct, require a new branch + new Spec Kit feature when applicable + new PR rather than reusing the previous PR.
+3. promote durable knowledge;
+4. persist operational Caveman state;
+5. emit the same Caveman handoff automatically;
+6. if the next workstream is distinct, require a new branch + new Spec Kit feature when applicable + new PR rather than reusing the previous PR.
 
 At YELLOW:
 
 - finish the current safe atomic action;
 - refresh canonical state;
 - close out;
-- emit Caveman before materially different work.
+- persist + emit Caveman before materially different work.
 
 At RED:
 
 - do not begin another material implementation step;
 - finish/stop the current atomic action safely;
 - close out;
+- persist Caveman;
 - recommend a clean chat;
 - emit Caveman.
 
@@ -317,6 +365,7 @@ Read and follow:
 
 - `AGENTS.md`
 - `docs/ai/context-handoff.md`
+- `docs/ai/durable-context.md`
 - `docs/ai/session-handoff-template.md`
 - `docs/ai/chatgpt-project-instructions.md`
 - `.specify/memory/constitution.md`
