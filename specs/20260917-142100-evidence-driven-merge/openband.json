@@ -1,7 +1,12 @@
 {
   "schemaVersion": 1,
-  "tier": "T3",
+  "tier": "T4",
   "issue": 81,
-  "riskTriggers": ["engineering-governance", "merge-policy"],
+  "riskTriggers": [
+    "engineering-governance",
+    "merge-policy",
+    "security-sensitive-privileged-workflow",
+    "repository-write-automation"
+  ],
   "dependsOn": []
 }
