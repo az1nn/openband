@@ -122,4 +122,44 @@ describe("source-aware renderers", () => {
     const out = new DataView(await blob.arrayBuffer());
     expect(readSigned24(out, 44)).toBeLessThan(0);
   });
+
+  it("renders the right-hand split from the later source segment", async () => {
+    (Platform as any).OS = "ios";
+    const wav = makeSegmentedWav(8);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ arrayBuffer: async () => wav }));
+    const { splitRegion } = await import("../src/lib/regionEdit");
+    const { audioSystem } = await import("../src/lib/universalAudio");
+    const [, right] = splitRegion(
+      { id: "r", start: 0, duration: 1, offset: 0, length: 1, url: "blob:segmented" },
+      0.5,
+    );
+    const blob = await audioSystem.renderMixdown([{
+      id: "t1", volume: 100, pan: 0, muted: false, solo: false, regions: [right],
+    }], 1, 8);
+    const out = new DataView(await blob.arrayBuffer());
+    const rightTimelineFrame = 4;
+    const bytesPerStereo24Frame = 6;
+    expect(readSigned24(out, 44 + rightTimelineFrame * bytesPerStereo24Frame)).toBeLessThan(0);
+  });
+
+  it("renders an inward start-trim from the later source segment", async () => {
+    (Platform as any).OS = "ios";
+    const wav = makeSegmentedWav(8);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ arrayBuffer: async () => wav }));
+    const { trimRegion } = await import("../src/lib/regionEdit");
+    const { audioSystem } = await import("../src/lib/universalAudio");
+    const trimmed = trimRegion(
+      { id: "r", start: 0, duration: 1, offset: 0, length: 1, url: "blob:segmented" },
+      "start",
+      0.5,
+      1,
+    );
+    const blob = await audioSystem.renderMixdown([{
+      id: "t1", volume: 100, pan: 0, muted: false, solo: false, regions: [trimmed],
+    }], 1, 8);
+    const out = new DataView(await blob.arrayBuffer());
+    const trimmedTimelineFrame = 4;
+    const bytesPerStereo24Frame = 6;
+    expect(readSigned24(out, 44 + trimmedTimelineFrame * bytesPerStereo24Frame)).toBeLessThan(0);
+  });
 });

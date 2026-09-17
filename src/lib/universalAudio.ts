@@ -383,12 +383,41 @@ class UniversalAudioSystem {
             const resp = await fetch(resolvedUrl, { credentials: "omit" });
             const ab = await resp.arrayBuffer();
             let buf = await this.decodeAudio(ab, ctx);
-            if (track.plugins && track.plugins.length > 0) {
+            let { offset, length } = resolveRegionSourceWindow(region, buf.duration);
+            if (track.plugins && track.plugins.length > 0 && length > 0) {
+              const sourceStartFrame = Math.min(
+                buf.length,
+                Math.floor(offset * buf.sampleRate),
+              );
+              const sourceFrameCount = Math.min(
+                Math.max(0, buf.length - sourceStartFrame),
+                Math.floor(length * buf.sampleRate),
+              );
+              if (sourceStartFrame > 0 || sourceFrameCount < buf.length) {
+                const selected = ctx.createBuffer(
+                  Math.max(1, buf.numberOfChannels),
+                  Math.max(1, sourceFrameCount),
+                  buf.sampleRate,
+                );
+                for (let channel = 0; channel < buf.numberOfChannels; channel++) {
+                  selected
+                    .getChannelData(channel)
+                    .set(
+                      buf
+                        .getChannelData(channel)
+                        .subarray(sourceStartFrame, sourceStartFrame + sourceFrameCount),
+                    );
+                }
+                buf = selected;
+                offset = 0;
+                length = Math.min(length, buf.duration);
+              }
               const { applyPluginChain } = await import("../lib/pluginChain");
               buf = await applyPluginChain(buf, track.plugins, sampleRate, {
                 duration,
                 modTime: region.start,
               });
+              length = Math.min(length, buf.duration);
             }
             const src = ctx.createBufferSource();
             src.buffer = buf;
@@ -403,7 +432,6 @@ class UniversalAudioSystem {
               gain.connect(pan);
               pan.connect(masterGain);
             }
-            const { offset, length } = resolveRegionSourceWindow(region, buf.duration);
             const playDur = Math.min(
               region.duration,
               length,
