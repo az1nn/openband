@@ -33,4 +33,4 @@ ONE TASK = ONE CHAT
 ONE CHAT = AT MOST ONE TASK
 ```
 
-A foreign-owned ACTIVE task may be inspected through the canonical skill's read-only observer tree, but routine `siga` never authorizes task takeover or mutation.
+A foreign-owned ACTIVE/WAITING task is occupied. Routine `siga` never authorizes takeover or mutation and must continue canonical `NEXT` discovery for independent work. `ACTIVE/OBSERVER` is used only when the user explicitly asks for read-only inspection. Ownership requires matching current-chat `SESSION_KEY` proof.

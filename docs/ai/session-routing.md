@@ -47,7 +47,7 @@ verify az1nn/openband
 -> route to ACTIVE/OWNED | ACTIVE/OBSERVER | WAITING | NEXT
 ```
 
-It does not mean "continue from chat memory" and it does not authorize a new task when an existing task/session still owns the work.
+It does not mean "continue from chat memory". An existing foreign session owns **its task**, not the new chat: routine `siga` must mark that work occupied and continue discovery for a distinct independent task.
 
 ## Canonical discovery probes
 
@@ -76,8 +76,9 @@ az1nn/openband @ <base-sha>
    ├─ EvidenceProbe ........ PASS | FAIL | RUNNING | STALE | BLOCKED
    ├─ DependencyProbe ...... <dependency summary>
    ├─ Active work
-   │  ├─ #<issue> / PR #<pr> [ACTIVE|WAITING|READY] owner=<session|none>
+   │  ├─ #<issue> / PR #<pr> [ACTIVE|WAITING|READY] owner=<this-session|foreign-session|none>
    │  └─ ...
+   ├─ Candidate work ....... #<issue> [READY|PLANNING] owner=<none>
    └─ Route ................ ACTIVE/OWNED | ACTIVE/OBSERVER | WAITING | NEXT | REPO_MISMATCH
 ```
 
@@ -116,6 +117,8 @@ UPDATED_AT: <ISO-8601 when available>
 
 The comment must be updated idempotently instead of creating a stream of lease comments.
 
+Ownership is positive, not inferred: this chat owns a lease only when it already established the same `SESSION_KEY`. Matching task, branch, PR, repository or GitHub user does not prove ownership. Without matching current-chat `SESSION_KEY` proof, an ACTIVE lease is foreign-owned.
+
 A session lease never overrides canonical task state. Git/PR/issue/Spec Kit/CI evidence may prove it stale. Elapsed time alone does not prove abandonment.
 
 ## Route A — ACTIVE/OWNED
@@ -128,7 +131,7 @@ Running CI belongs to the current task. It is not permission to select unrelated
 
 ## Route B — ACTIVE/OBSERVER
 
-Choose `ACTIVE/OBSERVER` when another live session owns the task.
+Choose `ACTIVE/OBSERVER` only when the user explicitly requests inspection/research/review of a task owned by another live session. Routine standalone `siga` marks that branch occupied and continues `NEXT` discovery instead.
 
 This chat does not acquire task authority. It must not mutate the task branch, product code, Spec Kit artifacts, PR state or the foreign session lease, and it must not start a competing implementation lifecycle.
 
@@ -161,22 +164,24 @@ Examples include a Design Gate, real browser/device/hardware validation, require
 
 The response must identify the task, exact gate/blocker, exact action required, and evidence that becomes stale afterward.
 
-Do not open a new task merely because the current one is waiting.
+This route applies when the waiting lease belongs to this chat. A foreign WAITING lease is shown in the tree but does not prevent an unbound chat from selecting independent work.
 
 ## Route D — NEXT
 
-Choose `NEXT` only when no conflicting live ownership blocks selection and this chat is unbound.
+Choose `NEXT` when this chat is unbound. Foreign ownership is task-scoped: it excludes occupied tasks from mutation but does not globally block selection.
 
-If prior work lacks formal closeout, run Caveman closeout first and set its lease to `CLOSED`.
+If this chat has prior owned work without formal closeout, close that owned task first. Do not close, update or take over a foreign lease.
+
+Before ranking candidates, exclude foreign ACTIVE tasks, foreign WAITING tasks that would require same-task mutation, and any candidate whose implementation would compete with an occupied branch.
 
 Discover the next task in this order:
 
-1. still-valid `NEXT` from the latest Caveman artifact;
-2. GitHub issue/PR dependency chain and unblockers;
-3. active Spec Kit task/dependency state;
-4. canonical roadmap direction.
+1. independent still-valid planned `NEXT` from handoff/Spec Kit state;
+2. independent ready GitHub issue/PR dependency-chain work;
+3. independent Spec Kit planning/design work;
+4. bounded planning/specification from canonical roadmap direction.
 
-Prefer work that advances or unblocks existing work over unrelated expansion.
+Prefer already-planned independent work. If implementation is occupied or structurally blocked, planning an independent future task is preferable to default observer mode.
 
 A new/unbound chat may bind to exactly one task, then delegate lifecycle entry to `.agents/skills/openband-ask/SKILL.md` and Spec Kit.
 
@@ -198,9 +203,9 @@ siga
 -> render OpenBand Agent Tree
 -> session-router
    -> ACTIVE/OWNED    -> continue-work
-   -> ACTIVE/OBSERVER -> read-only evidence fan-out
-   -> WAITING         -> surface exact gate/blocker
-   -> NEXT            -> bind one task -> openband-ask / Spec Kit
+   -> ACTIVE/OBSERVER -> explicit read-only inspection requested by user
+   -> WAITING         -> surface blocker for this chat's owned task
+   -> NEXT            -> exclude occupied work -> bind one independent task -> openband-ask / Spec Kit
    -> REPO_MISMATCH   -> stop with no mutation
 ```
 

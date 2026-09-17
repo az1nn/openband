@@ -9,15 +9,18 @@ az1nn/openband @ <master-sha>
    ├─ RepoProbe ............ PASS
    ├─ GitHubProbe .......... PASS
    ├─ SpecKitProbe ......... PASS
-   ├─ EvidenceProbe ........ FAIL
+   ├─ EvidenceProbe ........ PASS
    ├─ DependencyProbe ...... #80 blocked_by #82
    ├─ Active work
-   │  ├─ #82 / PR #82 [ACTIVE] owner=<foreign-session>
-   │  │  ├─ Governance/spec read ........ PASS
-   │  │  └─ CI evidence analysis ........ FAIL:web-launch-e2e
-   │  └─ #80 / PR #80 [WAITING] owner=<foreign-session>
+   │  ├─ #82 / PR #82 [ACTIVE] owner=<foreign-session> occupied
+   │  └─ #80 / PR #80 [WAITING] owner=<foreign-session> occupied
    │     └─ blocked_by #82
-   └─ Route ................ ACTIVE/OBSERVER
+   ├─ Candidate work
+   │  └─ #95 [READY] owner=<none>
+   │     └─ independent_of #82/#80
+   └─ Route ................ NEXT -> #95
 ```
 
-Observer mode may expand read-only evidence branches, but it cannot take over or mutate the foreign-owned task.
+Default `siga` does not attach itself to #82 or #80. Foreign branches stay visible and immutable while the router selects independent work. After #95 receives this chat's own lease/SESSION_KEY, its route becomes `ACTIVE/OWNED`.
+
+`ACTIVE/OBSERVER` is still available when the user explicitly asks to inspect a foreign-owned task; observer mode remains read-only.
