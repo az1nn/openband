@@ -131,10 +131,12 @@ assert_canaries_absent "$BAD_KEYSTORE_LOG"
 
 # 8. Create a one-run throwaway identity for invalid-alias and positive-path proof.
 EPHEMERAL_PASSWORD="$(openssl rand -hex 24)"
-EPHEMERAL_ALIAS="openband-ci-ephemeral"
-EPHEMERAL_KEYSTORE="$TMP_ROOT/openband-ci-ephemeral.p12"
+EPHEMERAL_ALIAS="openband-ci-ephemeral-${RANDOM}"
+EPHEMERAL_KEYSTORE="$TMP_ROOT/openband-ci-ephemeral-${RANDOM}.p12"
 if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
   echo "::add-mask::$EPHEMERAL_PASSWORD"
+  echo "::add-mask::$EPHEMERAL_ALIAS"
+  echo "::add-mask::$EPHEMERAL_KEYSTORE"
 fi
 keytool -genkeypair \
   -noprompt \
@@ -153,17 +155,23 @@ export OPENBAND_ANDROID_KEYSTORE_PATH="$EPHEMERAL_KEYSTORE"
 export OPENBAND_ANDROID_KEYSTORE_PASSWORD="$EPHEMERAL_PASSWORD"
 export OPENBAND_ANDROID_KEY_PASSWORD="$EPHEMERAL_PASSWORD"
 
-# 9. A readable keystore with an invalid alias must fail rather than silently changing trust domain.
-export OPENBAND_ANDROID_KEY_ALIAS="missing-ephemeral-alias"
+# 9. A readable keystore with an invalid alias must fail at our sanitized boundary.
+INVALID_ALIAS="missing-ephemeral-alias-${RANDOM}"
+export OPENBAND_ANDROID_KEY_ALIAS="$INVALID_ALIAS"
 INVALID_ALIAS_LOG="$(expect_gradle_failure invalid-alias ./gradlew assembleRelease -Popenband.android.signingMode=production)"
+grep -Fq "Production Android signing credentials are invalid or incompatible" "$INVALID_ALIAS_LOG" || fail "invalid alias did not fail at the sanitized signing boundary"
 assert_log_excludes "$INVALID_ALIAS_LOG" "$EPHEMERAL_PASSWORD"
+assert_log_excludes "$INVALID_ALIAS_LOG" "$EPHEMERAL_KEYSTORE"
+assert_log_excludes "$INVALID_ALIAS_LOG" "$INVALID_ALIAS"
 
-# 10. Complete ephemeral inputs must produce a verifiably signed test APK.
+# 10. Complete ephemeral inputs must produce a verifiably signed test APK without leaking signing values.
 export OPENBAND_ANDROID_KEY_ALIAS="$EPHEMERAL_ALIAS"
 rm -rf app/build/outputs/apk/release
 POSITIVE_LOG="$TMP_ROOT/positive-production.log"
 ./gradlew assembleRelease -Popenband.android.signingMode=production >"$POSITIVE_LOG" 2>&1
 assert_log_excludes "$POSITIVE_LOG" "$EPHEMERAL_PASSWORD"
+assert_log_excludes "$POSITIVE_LOG" "$EPHEMERAL_KEYSTORE"
+assert_log_excludes "$POSITIVE_LOG" "$EPHEMERAL_ALIAS"
 SIGNED_APK="$(find_release_apk)"
 [[ -n "$SIGNED_APK" ]] || fail "production-mode release APK was not produced"
 "$APKSIGNER" verify "$SIGNED_APK" >/dev/null 2>&1 || fail "ephemeral production-mode APK is not signed"
