@@ -78,6 +78,13 @@ Allowed evidence states:
 PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED | STALE
 ```
 
+When gate state is decision-relevant, preserve it explicitly:
+
+```text
+Design Gate: `NOT_REQUIRED | PENDING | APPROVED | INVALIDATED`
+Merge Gate: `NOT_REQUIRED | PENDING | SATISFIED | BLOCKED | INVALIDATED`
+```
+
 A running or queued workflow is not PASS. Evidence from an older relevant HEAD/base is STALE. A skipped job is acceptable only when explicitly not applicable.
 
 ## Compression rules
@@ -120,4 +127,4 @@ L1  active feature + impacted architecture/contracts/ADRs + Graph
 L2  relevant code + tests + specialists
 ```
 
-If previous PASS evidence is bound to a stale HEAD/base, rerun it before treating the task as verified. Continue from `NEXT` only after canonical state, evidence freshness and applicable human gates are confirmed.
+If previous PASS evidence is bound to a stale HEAD/base, rerun it before treating the task as verified. Continue from `NEXT` only after canonical state, evidence freshness, the human Design Gate when applicable, and the current evidence-driven Merge Gate state are confirmed.

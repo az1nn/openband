@@ -188,7 +188,7 @@ Neither session routing, continuation nor handoff can:
 - operate on a repository other than `az1nn/openband`;
 - approve a Design Gate;
 - mark verification PASS without current evidence;
-- authorize or perform a T2+ merge;
+- mark an evidence-driven Merge Gate as satisfied or perform merge automation directly;
 - lower risk tier;
 - override Spec Kit/Git/tests/Graph state;
 - retroactively approve a missing gate because a PR was merged;
@@ -199,7 +199,7 @@ Neither session routing, continuation nor handoff can:
 
 If the Design Baseline SHA changed materially, treat Design Gate as invalid until re-analysis and human approval.
 
-If verified HEAD/base changed, rerun affected verification before Merge Gate.
+If verified HEAD changed, or the target base moved materially, rerun affected verification before considering the Merge Gate satisfied.
 
 For T2+ work preserve:
 
@@ -215,7 +215,7 @@ preflight
 → implement
 → converge
 → verify
-→ HUMAN MERGE GATE
+→ EVIDENCE-DRIVEN MERGE GATE
 → cleanup
 ```
 

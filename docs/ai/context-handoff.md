@@ -4,7 +4,7 @@
 
 This policy defines how an AI-assisted OpenBand session handles conversation health without confusing a chat boundary with a task boundary.
 
-It does **not** create a workflow engine or source of truth. Spec Kit, Git, Architecture Graph, ADRs, contracts, code, tests, CI and human gates remain authoritative.
+It does **not** create a workflow engine or source of truth. Spec Kit, Git, Architecture Graph, ADRs, contracts, code, tests, CI, the human Design Gate, and the evidence-driven Merge Gate remain authoritative.
 
 Operational persistence is defined by `docs/ai/durable-context.md`.
 
@@ -176,7 +176,7 @@ A new chat verifies, at minimum:
 7. required tests/CI on the exact relevant state;
 8. Design Baseline / verification HEAD freshness.
 
-Any mismatch means the handoff is stale on that fact and canonical state wins.
+Any mismatch means the handoff is stale on that fact and canonical state wins. Material target-base movement also stales affected merge evidence.
 
 ## Progressive reconstruction
 
@@ -196,9 +196,9 @@ Neither `continue-work` nor Caveman can:
 
 - grant a Design Gate;
 - mark verification PASS without current evidence;
-- authorize a T2+ merge;
+- mark the evidence-driven Merge Gate as satisfied;
 - lower risk tier;
 - override Spec Kit/Git/tests/Graph;
-- retroactively treat a merged PR as missing human approval.
+- retroactively infer a missing Design Gate or missing merge evidence from a completed merge.
 
 Changing chats never resets, skips or satisfies lifecycle gates.
