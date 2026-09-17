@@ -5,7 +5,8 @@
 **Tier:** T3  
 **Issue:** #53  
 **Integration base:** `master` after #51 / PR #69 is merged and the feature branch is reconciled  
-**Durable contract:** `docs/contracts/region-source-semantics.md`
+**Durable contract:** `docs/contracts/region-source-semantics.md`  
+**ADR:** NOT REQUIRED — this feature makes an additive, backward-compatible project-shape extension inside existing persistence/audio boundaries; the durable cross-feature semantics are owned by the contract above.
 
 ## Current-state diagnosis
 
