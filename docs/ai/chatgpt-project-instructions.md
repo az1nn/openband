@@ -21,13 +21,19 @@ L2  relevant code + tests + specialists
 
 Do not load the entire repository or previous conversation history by default.
 
+At the end of every material task, feature slice, verification cycle, PR freeze, or before moving to a distinct workstream, run `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md`.
+
+The closeout is mandatory even when the conversation remains GREEN. It must refresh canonical state, audit planned scope versus implementation, verify required tests/CI/Graph on the exact relevant HEAD, inspect reviews and temporary scaffolding, and state whether the task is `VERIFIED_COMPLETE`, `IMPLEMENTED_NOT_VERIFIED`, `INCOMPLETE`, or `PROCESS_DRIFT`.
+
+When work is expected to continue in another task or chat, always generate the skill's paste-ready continuation prompt. The prompt must force the next chat to re-check canonical GitHub/Git/Spec Kit/tests/CI/Graph state before trusting the handoff.
+
 Continuously monitor conversation context health without reporting the status on every response.
 
 Use:
 
 - GREEN — context remains coherent and trustworthy; continue normally.
-- YELLOW — a semantic boundary is approaching; finish the current safe atomic lifecycle action and refresh canonical state.
-- RED — continuing the current chat materially increases the risk of stale, contradictory, superseded or ambiguous context.
+- YELLOW — a semantic boundary is approaching; finish the current safe atomic lifecycle action, refresh canonical state, and run the verified closeout skill.
+- RED — continuing the current chat materially increases the risk of stale, contradictory, superseded or ambiguous context; finish/stop the current safe atomic action, run the verified closeout skill, and hand off to a clean chat.
 
 Conversation length, message count or number of tool calls alone must never trigger a handoff.
 
@@ -63,9 +69,11 @@ The handoff must contain final state rather than conversation history, including
 - Design Baseline SHA;
 - Design Gate state;
 - Merge Gate state;
+- closeout audit outcome;
 - final decisions;
 - superseded decisions that must not be reused;
 - completed work;
+- changed files/surfaces worth re-auditing;
 - canonical artifacts;
 - Architecture Graph evidence that should be refreshed;
 - verification evidence and the SHA it applies to;
@@ -76,7 +84,7 @@ The handoff must contain final state rather than conversation history, including
 
 Never allow conversation history, `SESSION_HANDOFF`, ContextPackages, Architecture Graph projections, generated plans, execution state or previous verification claims to override canonical repository state.
 
-A new chat must verify freshness before acting.
+A new chat must verify freshness before acting. It must not assume a task is complete because the previous chat says so.
 
 A handoff cannot:
 
@@ -85,7 +93,8 @@ A handoff cannot:
 - authorize a T2+ merge;
 - override risk tier;
 - override Spec Kit state;
-- override current Git/PR state.
+- override current Git/PR state;
+- retroactively approve a gate because a PR was merged outside the expected process.
 
 If the Design Baseline SHA changed, treat the Design Gate as invalid until re-analysis and human approval.
 
