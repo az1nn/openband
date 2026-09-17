@@ -32,18 +32,25 @@
 - [x] `tasks.md` covers WORK.
 - [x] `verification.md` covers PROOF.
 - [x] `threat-model.md` covers adversarial/security assumptions.
-- [ ] SDD policy check passes on exact design HEAD.
-- [ ] Graph/Spec tests pass on exact design HEAD.
-- [ ] Engineering Graph CI passes on exact design HEAD.
-- [ ] Exact Design Baseline SHA frozen in PR.
-- [ ] Human Design Gate approves that exact SHA.
+- [x] SDD policy check passes on exact design HEAD.
+- [x] Graph/Spec tests pass on exact design HEAD.
+- [x] Engineering Graph CI passes on exact design HEAD.
+- [x] Exact Design Baseline SHA frozen in PR: `2a50d83e6e0a059948a0d1bc1cf8b7578583ddeb`.
+- [x] Human Design Gate approved that exact SHA on 2026-09-17.
 
-## Implementation lock
+## Implementation status
 
-Until the Human Design Gate is approved, do not modify:
+- [x] Default release verification no longer requires signing credentials.
+- [x] Production signing is explicit via `openband.android.signingMode=production`.
+- [x] Production inputs are external and complete-or-fail.
+- [x] Release→debug fallback and repository credential defaults are removed.
+- [x] Static regression tests lock the trust boundary and ordinary-CI secret policy.
+- [x] Adversarial native verification script covers unsigned proof, invalid/partial inputs, leakage canaries, ephemeral positive signing and recovery.
+- [ ] Exact implementation HEAD native adversarial job passes.
+- [ ] Exact implementation HEAD ordinary regression suite is reconciled.
+- [ ] Specialist post-implementation security review is reconciled.
+- [ ] Human Merge Gate approves the verified exact PR HEAD.
 
-- `android/app/build.gradle` signing behavior;
-- CI secret exposure/provisioning;
-- keystore files or signing credentials;
-- store publication paths;
-- application/package identity.
+## Scope lock
+
+Implementation must not introduce real production secret provisioning, store publication, package/application identity changes, production key generation for reuse, or production credentials into pull-request jobs. Any such requirement invalidates this baseline and requires fresh T4 analysis and approval.
