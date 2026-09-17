@@ -39,6 +39,17 @@ assert_log_excludes() {
   fi
 }
 
+assert_unsigned_apk() {
+  local apk="$1"
+  if "$APKSIGNER" verify "$apk" >/dev/null 2>&1; then
+    fail "verification APK is unexpectedly signed: ${apk}"
+  fi
+}
+
+find_release_apk() {
+  find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print | head -n 1
+}
+
 cd "$ROOT_DIR"
 npm ci
 
@@ -48,54 +59,77 @@ cd "$ANDROID_DIR"
 # 1. Default verification path must package release without signing authority.
 rm -rf app/build/outputs/apk/release
 ./gradlew assembleRelease
-UNSIGNED_APK="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print | head -n 1)"
-[[ -n "$UNSIGNED_APK" ]] || fail "verification release APK was not produced"
-if "$APKSIGNER" verify "$UNSIGNED_APK" >/dev/null 2>&1; then
-  fail "verification APK is unexpectedly signed"
-fi
-cp "$UNSIGNED_APK" "$TMP_ROOT/verification-release.apk"
+UNSIGNED_APK="$(find_release_apk)"
+[[ -n "$UNSIGNED_APK" ]] || fail "default verification release APK was not produced"
+assert_unsigned_apk "$UNSIGNED_APK"
 
-# 2. Unsupported mode must fail closed.
+# 2. Explicit verification mode must preserve the same unsigned trust domain.
+rm -rf app/build/outputs/apk/release
+./gradlew assembleRelease -Popenband.android.signingMode=verification
+EXPLICIT_UNSIGNED_APK="$(find_release_apk)"
+[[ -n "$EXPLICIT_UNSIGNED_APK" ]] || fail "explicit verification release APK was not produced"
+assert_unsigned_apk "$EXPLICIT_UNSIGNED_APK"
+
+# 3. Unsupported mode must fail closed.
 INVALID_LOG="$(expect_gradle_failure invalid-mode ./gradlew :app:tasks -Popenband.android.signingMode=invalid)"
 grep -Fq "Expected verification or production" "$INVALID_LOG" || fail "invalid mode did not fail with stable policy message"
 
-# 3. Production with no inputs must fail closed.
+# 4. Production with no inputs must fail closed.
 unset OPENBAND_ANDROID_KEYSTORE_PATH OPENBAND_ANDROID_KEYSTORE_PASSWORD OPENBAND_ANDROID_KEY_ALIAS OPENBAND_ANDROID_KEY_PASSWORD || true
 NO_INPUT_LOG="$(expect_gradle_failure no-inputs ./gradlew :app:tasks -Popenband.android.signingMode=production)"
 grep -Fq "Production Android signing requires external inputs" "$NO_INPUT_LOG" || fail "missing-input policy message absent"
 
-# 4. Every single missing input must remain a hard failure, without leaking values.
 CANARY_STORE_PASSWORD="store-canary-${RANDOM}-${RANDOM}"
 CANARY_KEY_PASSWORD="key-canary-${RANDOM}-${RANDOM}"
-CANARY_ALIAS="ci-canary-alias"
-CANARY_PATH="$TMP_ROOT/nonexistent-canary.p12"
-for missing in \
-  OPENBAND_ANDROID_KEYSTORE_PATH \
-  OPENBAND_ANDROID_KEYSTORE_PASSWORD \
-  OPENBAND_ANDROID_KEY_ALIAS \
-  OPENBAND_ANDROID_KEY_PASSWORD; do
+CANARY_ALIAS="ci-canary-alias-${RANDOM}"
+CANARY_PATH="$TMP_ROOT/nonexistent-canary-${RANDOM}.p12"
+INPUT_NAMES=(
+  OPENBAND_ANDROID_KEYSTORE_PATH
+  OPENBAND_ANDROID_KEYSTORE_PASSWORD
+  OPENBAND_ANDROID_KEY_ALIAS
+  OPENBAND_ANDROID_KEY_PASSWORD
+)
+
+set_canary_inputs() {
   export OPENBAND_ANDROID_KEYSTORE_PATH="$CANARY_PATH"
   export OPENBAND_ANDROID_KEYSTORE_PASSWORD="$CANARY_STORE_PASSWORD"
   export OPENBAND_ANDROID_KEY_ALIAS="$CANARY_ALIAS"
   export OPENBAND_ANDROID_KEY_PASSWORD="$CANARY_KEY_PASSWORD"
+}
+
+assert_canaries_absent() {
+  local log="$1"
+  assert_log_excludes "$log" "$CANARY_STORE_PASSWORD"
+  assert_log_excludes "$log" "$CANARY_KEY_PASSWORD"
+  assert_log_excludes "$log" "$CANARY_ALIAS"
+  assert_log_excludes "$log" "$CANARY_PATH"
+}
+
+# 5. Every individually absent input must remain a hard failure without leaking supplied values.
+for missing in "${INPUT_NAMES[@]}"; do
+  set_canary_inputs
   unset "$missing"
   LOG="$(expect_gradle_failure "missing-${missing}" ./gradlew :app:tasks -Popenband.android.signingMode=production)"
   grep -Fq "$missing" "$LOG" || fail "missing input ${missing} was not identified"
-  assert_log_excludes "$LOG" "$CANARY_STORE_PASSWORD"
-  assert_log_excludes "$LOG" "$CANARY_KEY_PASSWORD"
+  assert_canaries_absent "$LOG"
 done
 
-# 5. Complete but unreadable/nonexistent keystore must fail without echoing secrets.
-export OPENBAND_ANDROID_KEYSTORE_PATH="$CANARY_PATH"
-export OPENBAND_ANDROID_KEYSTORE_PASSWORD="$CANARY_STORE_PASSWORD"
-export OPENBAND_ANDROID_KEY_ALIAS="$CANARY_ALIAS"
-export OPENBAND_ANDROID_KEY_PASSWORD="$CANARY_KEY_PASSWORD"
+# 6. Empty strings are missing inputs, not a downgrade signal.
+for empty_input in "${INPUT_NAMES[@]}"; do
+  set_canary_inputs
+  export "$empty_input="
+  LOG="$(expect_gradle_failure "empty-${empty_input}" ./gradlew :app:tasks -Popenband.android.signingMode=production)"
+  grep -Fq "$empty_input" "$LOG" || fail "empty input ${empty_input} was not identified"
+  assert_canaries_absent "$LOG"
+done
+
+# 7. Complete but nonexistent keystore must fail with a sanitized reason.
+set_canary_inputs
 BAD_KEYSTORE_LOG="$(expect_gradle_failure bad-keystore ./gradlew :app:tasks -Popenband.android.signingMode=production)"
 grep -Fq "keystore is unavailable or unreadable" "$BAD_KEYSTORE_LOG" || fail "bad-keystore policy message absent"
-assert_log_excludes "$BAD_KEYSTORE_LOG" "$CANARY_STORE_PASSWORD"
-assert_log_excludes "$BAD_KEYSTORE_LOG" "$CANARY_KEY_PASSWORD"
+assert_canaries_absent "$BAD_KEYSTORE_LOG"
 
-# 6. Positive production-signing path uses a one-run throwaway identity only.
+# 8. Create a one-run throwaway identity for invalid-alias and positive-path proof.
 EPHEMERAL_PASSWORD="$(openssl rand -hex 24)"
 EPHEMERAL_ALIAS="openband-ci-ephemeral"
 EPHEMERAL_KEYSTORE="$TMP_ROOT/openband-ci-ephemeral.p12"
@@ -117,24 +151,29 @@ keytool -genkeypair \
 
 export OPENBAND_ANDROID_KEYSTORE_PATH="$EPHEMERAL_KEYSTORE"
 export OPENBAND_ANDROID_KEYSTORE_PASSWORD="$EPHEMERAL_PASSWORD"
-export OPENBAND_ANDROID_KEY_ALIAS="$EPHEMERAL_ALIAS"
 export OPENBAND_ANDROID_KEY_PASSWORD="$EPHEMERAL_PASSWORD"
+
+# 9. A readable keystore with an invalid alias must fail rather than silently changing trust domain.
+export OPENBAND_ANDROID_KEY_ALIAS="missing-ephemeral-alias"
+INVALID_ALIAS_LOG="$(expect_gradle_failure invalid-alias ./gradlew assembleRelease -Popenband.android.signingMode=production)"
+assert_log_excludes "$INVALID_ALIAS_LOG" "$EPHEMERAL_PASSWORD"
+
+# 10. Complete ephemeral inputs must produce a verifiably signed test APK.
+export OPENBAND_ANDROID_KEY_ALIAS="$EPHEMERAL_ALIAS"
 rm -rf app/build/outputs/apk/release
 POSITIVE_LOG="$TMP_ROOT/positive-production.log"
 ./gradlew assembleRelease -Popenband.android.signingMode=production >"$POSITIVE_LOG" 2>&1
 assert_log_excludes "$POSITIVE_LOG" "$EPHEMERAL_PASSWORD"
-SIGNED_APK="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print | head -n 1)"
+SIGNED_APK="$(find_release_apk)"
 [[ -n "$SIGNED_APK" ]] || fail "production-mode release APK was not produced"
 "$APKSIGNER" verify "$SIGNED_APK" >/dev/null 2>&1 || fail "ephemeral production-mode APK is not signed"
 
-# 7. Verification stays usable after privileged material is removed.
+# 11. Verification remains available after privileged material is removed.
 unset OPENBAND_ANDROID_KEYSTORE_PATH OPENBAND_ANDROID_KEYSTORE_PASSWORD OPENBAND_ANDROID_KEY_ALIAS OPENBAND_ANDROID_KEY_PASSWORD
 rm -rf app/build/outputs/apk/release
 ./gradlew assembleRelease >/dev/null
-RECOVERY_APK="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print | head -n 1)"
+RECOVERY_APK="$(find_release_apk)"
 [[ -n "$RECOVERY_APK" ]] || fail "verification release APK was not produced after privileged signing was disabled"
-if "$APKSIGNER" verify "$RECOVERY_APK" >/dev/null 2>&1; then
-  fail "verification recovery APK is unexpectedly signed"
-fi
+assert_unsigned_apk "$RECOVERY_APK"
 
 echo "android-signing-boundary: PASS"
