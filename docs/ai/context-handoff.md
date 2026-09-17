@@ -34,11 +34,11 @@ The skill must:
 4. verify required tests, CI and Graph evidence on the exact relevant HEAD;
 5. check review/thread state, base freshness and temporary workflows/scaffolding;
 6. classify the closeout as `VERIFIED_COMPLETE`, `IMPLEMENTED_NOT_VERIFIED`, `INCOMPLETE`, or `PROCESS_DRIFT`;
-7. produce a paste-ready continuation prompt when work will continue in another task/chat.
+7. automatically emit one compact Caveman handoff containing the verified final state and exact next action.
 
-The closeout prompt must instruct the next chat to reconstruct canonical state and prove the previous task rather than trusting the handoff summary.
+The Caveman handoff is automatic even when context is GREEN and the user did not separately request a continuation prompt. It compresses transferred text only; it must not reduce verification, reasoning, tool checks, or evidence requirements.
 
-This protocol is mandatory even when context is GREEN. YELLOW/RED additionally determine whether the current chat should be replaced.
+The handoff must instruct the next chat to reconstruct canonical state and prove freshness rather than trusting the summary.
 
 ## GREEN
 
@@ -51,6 +51,8 @@ Continue in the current chat when:
 - the conversation is helping rather than competing with canonical project artifacts.
 
 Length alone never turns GREEN into YELLOW or RED.
+
+A GREEN task closeout still emits the compact Caveman handoff; it does not require changing chats.
 
 ## YELLOW
 
@@ -90,31 +92,30 @@ When RED, explicitly say:
 
 > ⚠️ **Context boundary recommended — good moment to start a new chat.**
 
-Complete any safe atomic action already in progress first. Then run the verified task closeout skill and generate a `SESSION_HANDOFF.md` using `docs/ai/session-handoff-template.md`.
+Complete any safe atomic action already in progress first. Then run the verified task closeout skill and emit the Caveman handoff defined by `docs/ai/session-handoff-template.md`.
 
-## Handoff contract
+## Caveman handoff contract
 
-A handoff represents **final state**, not conversation history.
+A handoff represents **verified final state**, not conversation history.
 
-It must contain only context needed to resume safely:
+It must preserve only what is needed to resume safely:
 
-- objective;
-- repository / branch / worktree / PR / issue state;
-- active Spec Kit feature and lifecycle step;
-- risk tier and relevant triggers;
-- Design Gate / Merge Gate status and approved baseline SHA when applicable;
-- closeout audit outcome;
-- final decisions;
-- explicitly superseded decisions that must not be reused;
-- completed work;
-- changed files / surfaces worth re-auditing;
-- canonical artifacts and Architecture Graph evidence worth reloading;
-- verification evidence and its HEAD/freshness boundary;
-- blockers / open questions;
-- exact next action;
-- minimal new-chat bootstrap instructions.
+- repository / base / branch / worktree identity and exact SHAs;
+- issue / PR / active Spec Kit identity when applicable;
+- current lifecycle/risk state when decision-relevant;
+- closeout classification;
+- current-cycle delta;
+- verification evidence and freshness boundary;
+- blockers / human gates;
+- critical invariants / authority boundaries;
+- one exact next action;
+- verify-first instruction.
 
-Do not paste full transcripts, long logs, or speculative history into the handoff.
+Prefer compact IDs, SHAs, run IDs and canonical paths over repeated explanations. Do not paste full transcripts, long logs, full specs/plans/tasks, or architecture background already available canonically.
+
+The normal target is roughly 250–700 tokens. Correctness overrides the budget. Expansion is allowed only when compression would hide a blocker, ambiguity, human gate, process drift, or authority boundary.
+
+Do not duplicate the same closeout facts in a prose summary and again in the Caveman block. One complete compact artifact is the default.
 
 ## Freshness rules
 
@@ -126,8 +127,8 @@ A new chat must verify, at minimum:
 2. active branch/worktree and expected HEAD;
 3. issue and PR state;
 4. active Spec Kit feature and tasks;
-5. relevant ADRs/contracts/architecture;
-6. Architecture Graph evidence when available;
+5. relevant ADRs/contracts/architecture when needed by the next action;
+6. Architecture Graph evidence when required;
 7. required tests/CI on the exact relevant HEAD;
 8. whether the approved Design Baseline SHA or verification HEAD still matches the state being acted on.
 
@@ -150,7 +151,7 @@ A fresh chat should reconstruct the smallest sufficient L0 → L1 → L2 context
 A new chat does not reset or bypass lifecycle gates.
 
 - A handoff cannot grant a Design Gate.
-- A handoff cannot mark verification PASS.
+- A handoff cannot mark verification PASS without current evidence.
 - A handoff cannot authorize a T2+ merge.
 - A merged PR must not be treated as retroactive human gate approval.
 - If a Design Baseline SHA changed, the existing Design Gate is invalid until re-analysis and human approval.
@@ -158,7 +159,7 @@ A new chat does not reset or bypass lifecycle gates.
 
 ## Recommended semantic boundaries
 
-Good handoff points include:
+Good clean-chat handoff points include:
 
 - Design Gate approved and implementation is about to start in a fresh execution session;
 - an implementation slice converged and the next slice has a different objective;
@@ -167,4 +168,4 @@ Good handoff points include:
 - a stacked dependency landed and dependent work must be rebased/revalidated;
 - a major architecture exploration concluded and the approved design has been materialized canonically.
 
-Do not hand off merely because many messages or tool calls occurred.
+Do not change chats merely because many messages or tool calls occurred.
