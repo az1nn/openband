@@ -8,176 +8,134 @@ on:
 permissions:
   actions: read
   checks: read
-  contents: write
-  pull-requests: write
+  contents: read
+  issues: read
+  pull-requests: read
 
 jobs:
-  merge:
-    if: >-
-      github.event.workflow_run.event == 'pull_request' &&
-      github.event.workflow_run.conclusion == 'success'
+  openband-security:
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    outputs:
+      eligible: ${{ steps.p.outputs.eligible }}
+      pr: ${{ steps.p.outputs.pr }}
+      head: ${{ steps.p.outputs.head }}
+      tier: ${{ steps.p.outputs.tier }}
+      jobs: ${{ steps.p.outputs.jobs }}
     steps:
-      - name: Evaluate risk-derived evidence and merge exact HEAD
+      - id: p
         uses: actions/github-script@v7
         with:
           script: |
-            const run = context.payload.workflow_run;
-            const associated = run.pull_requests || [];
-            if (associated.length !== 1) {
-              core.setFailed(`Merge Gate BLOCKED: expected exactly one PR for run ${run.id}, got ${associated.length}`);
-              return;
+            const run=context.payload.workflow_run,{owner,repo}=context.repo,canon=`${owner}/${repo}`,rank={T0:0,T1:1,T2:2,T3:3,T4:4};
+            const fail=m=>core.setFailed(`OpenBand Security BLOCKED: ${m}`);
+            const assoc=run.pull_requests||[]; if(assoc.length!==1){fail(`PR count ${assoc.length}`);return}
+            const n=assoc[0].number,{data:pr}=await github.rest.pulls.get({owner,repo,pull_number:n});
+            core.setOutput('pr',String(n)); core.setOutput('head',pr.head.sha);
+            if(pr.state!=='open'||pr.draft){core.setOutput('eligible','false');return}
+            if(pr.base.ref!=='master'||!pr.head.repo||pr.head.repo.full_name!==canon||pr.head.sha!==run.head_sha){fail('repository/base/HEAD boundary mismatch');return}
+            const {data:mr}=await github.rest.git.getRef({owner,repo,ref:'heads/master'});
+            const {data:cmp}=await github.rest.repos.compareCommits({owner,repo,base:mr.object.sha,head:pr.head.sha});
+            if(!['ahead','identical'].includes(cmp.status)){fail(`stale base ${cmp.status}`);return}
+            const files=await github.paginate(github.rest.pulls.listFiles,{owner,repo,pull_number:n,per_page:100});
+            const changed=files.filter(f=>f.status!=='removed').map(f=>f.filename), labels=new Set(pr.labels.map(l=>l.name));
+            const trust=changed.some(p=>/^\.github\/workflows\//.test(p)||/^scripts\/(?:ci-merge-gate|sdd-policy-check|security-policy-check)\.mjs$/.test(p)||p==='.specify/memory/constitution.md'||p==='AGENTS.md');
+            const tiers=[],triggers=new Set(),checks=new Set(); let v2=0;
+            for(const path of changed.filter(p=>/^specs\/[^/]+\/openband\.json$/.test(p))){
+              const {data}=await github.rest.repos.getContent({owner,repo,path,ref:pr.head.sha});
+              const m=JSON.parse(Buffer.from(data.content,data.encoding||'base64').toString('utf8'));
+              if(!(m.tier in rank)){fail(`bad tier ${path}`);return} tiers.push(m.tier); for(const x of m.riskTriggers||[])triggers.add(x);
+              if(m.schemaVersion===2){v2++;if(!Array.isArray(m.requiredChecks)||!m.requiredChecks.length){fail('schema v2 missing requiredChecks');return}for(const x of m.requiredChecks)checks.add(x)}
+              else if(m.schemaVersion!==1){fail('unsupported metadata schema');return}
             }
+            for(const l of labels){const m=/^tier:(T[0-4])$/i.exec(l);if(m)tiers.push(m[1].toUpperCase())}
+            if(trust){tiers.push('T4');triggers.add('security-sensitive-privileged-workflow')}
+            if(!tiers.length){fail('missing tier');return}
+            const tier=tiers.sort((a,b)=>rank[b]-rank[a])[0]; core.setOutput('tier',tier);
+            if(rank[tier]>=2&&v2!==1){fail(`T2+ requires one schema v2 metadata file; found ${v2}`);return}
+           ÛÛÝÛÛ[Y[ÏX]ØZ]Ú]XYÚ[]JÚ]X\Ý\ÜÝY\Ë\ÝÛÛ[Y[ËÛÝÛ\\Ë\ÜÝYWÛ[X\\ÜYÙNLJNÂÛÛÝØ]OXÛÛ[Y[Ë[\ÏOË\Ù\ËÙÚ[OO[ÝÛ\ËÙ_	ÉÊK[ÛY\Ê	ÏKKHÜ[[Y\ÚYÛYØ]HKOÊJK]
+LJKY[JÊOOX]Ú
+]ÈYÑ^
+ÚßNÊÊI	ÛZIÊJ_×JVÌWOË[J
+NÂY[ÖÝY\OLYØ]J^ÙZ[
+	ÛZ\ÜÚ[È\ÚYÛØ]HÛÛ[Y[	ÊNÜ]\BYØ]J^ÂÛÛÝYØ]KÙ_	ÉË\ÙOYY[
+	ÐTÑSSWÔÒIÊKÝYY[
+	ÕQTÊKXÚ\Ú[ÛYY[
+	ÑPÒTÒSÓÊNÂÛÛÝÚ[]ÈÙ]
 
-            const { owner, repo } = context.repo;
-            const pull_number = associated[0].number;
-            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number });
+Y[
+	ÔTURTQÐÒWÒÐÉÊ_	ÉÊKÜ]
+	Ë	ÊKX\
+O[J
+JK[\ÛÛX[JKÜ[]ÈÙ]
 
-            if (pr.state !== 'open') {
-              core.notice(`PR #${pull_number} is not open; nothing to merge.`);
-              return;
-            }
-            if (pr.draft) {
-              core.notice(`PR #${pull_number} is draft; Merge Gate remains pending.`);
-              return;
-            }
-            if (pr.base.ref !== 'master') {
-              core.setFailed(`Merge Gate BLOCKED: unexpected base ${pr.base.ref}`);
-              return;
-            }
-            if (pr.head.sha !== run.head_sha) {
-              core.setFailed(`Merge Gate BLOCKED: CI verified ${run.head_sha}, current HEAD is ${pr.head.sha}`);
-              return;
-            }
+Y[
+	ÔTÒ×ÕQÑÑTÉÊ_	ÉÊKÜ]
+	Ë	ÊKX\
+O[J
+JK[\ÛÛX[JNÂYXÚ\Ú[ÛOOIÐTÕQ	ßX\Ù_YÝJÝ[[Ê_[ÖÙÝO[ÖÝY\J^ÙZ[
+	Ú[[Y\ÚYÛØ]IÊNÜ]\BÛÛÝÙ]NØßOX]ØZ]Ú]X\Ý\ÜËÛÛ\\PÛÛ[Z]ÊÛÝÛ\\Ë\ÙKXYXYÚ_JNÈYVÉØZXY	Ë	ÚY[XØ[	×K[ÛY\ÊØËÝ]\ÊJ^ÙZ[
+	Ñ\ÚYÛØ]H\Ù[[HÝ[Ù\ÝÜÊNÜ]\BY[ÖÝY\OLËÚXÚÜ×KÛÜ
 
-            const comparison = await github.rest.repos.compareCommits({
-              owner,
-              repo,
-              base: pr.base.sha,
-              head: pr.head.sha,
-            });
-            if (!['ahead', 'identical'].includes(comparison.data.status)) {
-              core.setFailed(`Merge Gate BLOCKED: candidate is not based on current master (${comparison.data.status})`);
-              return;
-            }
-            if (pr.mergeable === false || ['dirty', 'blocked'].includes(pr.mergeable_state)) {
-              core.setFailed(`Merge Gate BLOCKED: PR mergeable_state=${pr.mergeable_state}`);
-              return;
-            }
+KÚ[	Ë	ÊHOOVËÚKÛÜ
 
-            const files = await github.paginate(github.rest.pulls.listFiles, {
-              owner,
-              repo,
-              pull_number,
-              per_page: 100,
-            });
-            const changed = files.filter((file) => file.status !== 'removed').map((file) => file.filename);
-            const labels = new Set(pr.labels.map((label) => label.name));
+KÚ[	Ë	ÊJJ^ÙZ[
+	Ü\]Z\YÚXÚÜÈY\ÛH\ÝYÛÛXÝ	ÊNÜ]\BÜÛÛÝÙÜZY]YÙÙ\Ë\Ê
+J^ÙZ[
+\ÝY\ÚÈYÙÙ\[[ÝY	ÞX
+NÜ]\BBÛÛÝ\]Z\Y[]ÈÙ]
+ÉÙÜ\XÚXÚÉË	ÜÙXÝ\]K\ÛXÞIË	ÙÛ[]\XÚXÚÉË	ØXÚÙ[]\XÚXÚÉË	Ý]\Ý	Ë	ÛYØXÞK]\ÝÉË	ÝÙXXZ[	Ë	ÝÙX[][ÚYLIË	ÛY\ÙKYØ]IËÚXÚÜ×JNÂYX[Ë\Ê	Û]]KXZ[	Ê_Ú[ÙYÛÛYJOÝ\ÕÚ]
+	Ø[ÚYÉÊJJ\\]Z\YY
+	Ø[ÚYXZ[	ÊNÂYX[Ë\Ê	Û]]KXZ[	Ê_Ú[ÙYÛÛYJOÝ\ÕÚ]
+	Ù[XÝÛÉÊJJ\\]Z\YY
+	Ù[XÝÛXZ[	ÊNÂÛÜKÙ]Ý]]
+	ÚØÉËÓÓÝ[ÚYJË\]Z\YKÛÜ
 
-            const tierRank = { T0: 0, T1: 1, T2: 2, T3: 3, T4: 4 };
-            const tiers = [];
-            const riskTriggers = new Set();
+JJNØÛÜKÙ]Ý]]
+	Ù[YÚXIË	ÝYIÊNÂY]Y[ÙNYYÎÛÜ[[\ÙXÝ\]WBYYYËÜ[[\ÙXÝ\]K\Ý[OH	ÜÝXØÙ\ÜÉÈ	YYËÜ[[\ÙXÝ\]KÝ]]Ë[YÚXHOH	ÝYIÂ[Ë[ÛX[K[]\ÝÝ\ÎH\Ù\ÎXÝ[ÛËÙÚ]X\ØÜ\Â[PQ	ÞÈYYËÜ[[\ÙXÝ\]KÝ]]ËXY_BQT	ÞÈYYËÜ[[\ÙXÝ\]KÝ]]ËY\_BÚ]ØÜ\YØÙ\ÜË[QTOOIÕ	Ê\]\ÂÛÛÝÛÝÛ\\ßOXÛÛ^\ËXY\ØÙ\ÜË[PQXYX\Þ[ÈOØÛÛÝÙ]_OX]ØZ]Ú]X\Ý\ÜËÙ]ÛÛ[
+ÛÝÛ\\Ë]YXYJNÜ]\Y\ÛJ]KÛÛ[]K[ÛÙ[ß	Ø\ÙM	ÊKÔÝ[Ê	Ý]	Ê_NÂÛÛÝÏX]ØZ]XY
+	ËÚ]XÝÛÜÙÝÜËÙ]Y[ÙK[Y\ÙK[[	ÊNÂÜÛÛÝÙÉØXÝ[ÛËØÚXÚÛÝ]	Ë	ÙÝÛØYX\YXÝ	Ë	Ü[Ü\]Y\ÝÝ\Ù]	×JZYË[ÛY\Ê
+J]ÝÈ\ÜÜY[][YÙYÝ\XÙH	ÞX
+NÂÜÛÛÝÙÉÜXY\Ë[Û[YIËYÚXYËÛX\Ý\È	ÛÜ[[Y\ÚYÛYØ]IË	ÔTURTQÐÒWÒÐÉË	ÔTÒ×ÕQÑÑTÉË	ØÛÛ[ÎÜ]IË	Ü[\\]Y\ÝÎÜ]I×JZY]Ë[ÛY\Ê
+J]ÝÈ\ÜZ\ÜÚ[È\Ý[ÚÜ	ÞX
+NÂÛÛÝÚOX]ØZ]XY
+	ËÚ]XÝÛÜÙÝÜËØÚK[[	ÊNÙÜÛÛÝÙÉÛH[ÙÚXÚÉË	ÛH[ÙXÝ\]NÛXÞIË	ÛØÈK[Ñ[Z]	Ë	Û]\Ý[Ë	ÛH[\ÝYØXÞIË	ÛH[Z[	Ë	Û^]ÜYÚ\ÝLKÛ][ÚY\Ý\[ÜXËÉË	ÛH[Y\ÙNØ]I×JZYXÚK[ÛY\Ê
+J]ÝÈ\ÜÒH[ÚÜZ\ÜÚ[È	ÞX
+NÂÛÛÝÛX]ØZ]XY
+	ÜØÜ\ËÜÙ\ÛXÞKXÚXÚËZÉÊNÙÜÛÛÝÙÉÜ\]Z\YÚXÚÜÉË	ÜØÚ[XU\Ú[ÛË	ÕÔTÉ×JZY\Û[ÛY\Ê
+J]ÝÈ\ÜÛXÞH[ÚÜZ\ÜÚ[È	ÞX
+NÂÛÛÝXÏJ]ØZ]XY
+	ÙØÜËÛÜ\][ÛËÛY\ÙKX]]ÛX][Û\XÛÝ\KY	ÊJKÓÝÙ\Ø\ÙJ
+NÙÜÛÛÝÙÉÙ\ØXIË	Ü]\	Ë	Ø]Y]	Ë	ÜKY[XI×JZY\XË[ÛY\Ê
+J]ÝÈ\ÜXÛÝ\HZ\ÜÚ[È	ÞX
+NÂY\ÙNYYÎÛÜ[[\ÙXÝ\]KY]Y[ÙWBYYYËÜ[[\ÙXÝ\]K\Ý[OH	ÜÝXØÙ\ÜÉÈ	YYËY]Y[ÙK\Ý[OH	ÜÝXØÙ\ÜÙÂ[Ë[ÛX[K[]\Ý\Z\ÜÚ[ÛÎXÝ[ÛÎXYÚXÚÜÎXYÛÛ[ÎÜ]B\ÜÝY\ÎXY[\\]Y\ÝÎÜ]BÝ\ÎH\Ù\ÎXÝ[ÛËÙÚ]X\ØÜ\Â[SQÒPN	ÞÈYYËÜ[[\ÙXÝ\]KÝ]]Ë[YÚXH_B	ÞÈYYËÜ[[\ÙXÝ\]KÝ]]Ë_BPQ	ÞÈYYËÜ[[\ÙXÝ\]KÝ]]ËXY_BQT	ÞÈYYËÜ[[\ÙXÝ\]KÝ]]ËY\_BÐÎ	ÞÈYYËÜ[[\ÙXÝ\]KÝ]]ËØÈ_BÚ]ØÜ\YØÙ\ÜË[SQÒPHOOIÝYIÊ\]\ÂÛÛÝ[XÛÛ^^[ØYÛÜÙÝ×Ü[ÛÝÛ\\ßOXÛÛ^\ËØ[ÛX	ÛÝÛ\KÉÜ\ßXS[X\ØÙ\ÜË[KXY\ØÙ\ÜË[PQ\]Z\YRÓÓ\ÙJØÙ\ÜË[Ðß	Ö×IÊNÂ]Ù]NOX]ØZ]Ú]X\Ý[ËÙ]
+ÛÝÛ\\Ë[Û[X\JNÚYY\ÙXXOOO[[
+^Ø]ØZ]]ÈÛZ\ÙJOÙ][Y[Ý]
+Ì
+JNÊÙ]NOX]ØZ]Ú]X\Ý[ËÙ]
+ÛÝÛ\\Ë[Û[X\JJ_BYÝ]HOOIÛÜ[ßY
+\]\ÂY\ÙKYOOIÛX\Ý\ß\XY\ßXY\Ë[Û[YHOOXØ[ÛXYÚHOOZXYXYÚHOO\[XYÜÚJ^ØÛÜKÙ]Z[Y
+	ÓY\ÙHØ]HÐÒÑQY[]HÚ[ÙY	ÊNÜ]\BÛÛÝÙ]N\OX]ØZ]Ú]X\ÝÚ]Ù]YÛÝÛ\\ËYÚXYËÛX\Ý\ßJKÙ]NÛ\OX]ØZ]Ú]X\Ý\ÜËÛÛ\\PÛÛ[Z]ÊÛÝÛ\\Ë\ÙN\ØXÝÚKXYXYÚ_JNÂYVÉØZXY	Ë	ÚY[XØ[	×K[ÛY\ÊÛ\Ý]\Ê_Y\ÙXXHOO]Y_ÉÙ\IË	ØØÚÙY	×K[ÛY\ÊY\ÙXXWÜÝ]JJ^ØÛÜKÙ]Z[Y
+	ÓY\ÙHØ]HÐÒÑQÝ[KÝ[Y\ÙXXIÊNÜ]\BÛÛÝØÏX]ØZ]Ú]XYÚ[]JÚ]X\ÝXÝ[ÛË\ÝØÑÜÛÜÙÝÔ[ÛÝÛ\\Ë[ÚY[Y\ÜYÙNLJKÝ]O[]ÈX\
+ØËX\
+OÚ[YKÛÛÛ\Ú[ÛJJKY\\]Z\Y[\OÝ]KÙ]
+
+HOOIÜÝXØÙ\ÜÉÊNÂYY[Ý
+^ØÛÜKÙ]Z[Y
+Y\ÙHØ]HÐÒÑQ	ØYX\
+O	ÞOIÜÝ]KÙ]
+
+_	ÛZ\ÜÚ[ÉßX
+KÚ[	Ë	Ê_X
+NÜ]\BÛÛÝ]Y]ÜÏX]ØZ]Ú]XYÚ[]JÚ]X\Ý[Ë\Ý]Y]ÜËÛÝÛ\\Ë[Û[X\\ÜYÙNLJK]\Ý[]ÈX\
 
-            for (const file of changed.filter((name) => /^specs\/[^/]+\/openband\.json$/.test(name))) {
-              const { data } = await github.rest.repos.getContent({ owner, repo, path: file, ref: pr.head.sha });
-              if (Array.isArray(data) || data.type !== 'file') {
-                core.setFailed(`Merge Gate BLOCKED: cannot read ${file}`);
-                return;
-              }
-              const metadata = JSON.parse(Buffer.from(data.content, data.encoding || 'base64').toString('utf8'));
-              if (!(metadata.tier in tierRank)) {
-                core.setFailed(`Merge Gate BLOCKED: invalid tier in ${file}`);
-                return;
-              }
-              tiers.push(metadata.tier);
-              for (const trigger of metadata.riskTriggers || []) riskTriggers.add(trigger);
-            }
+NÙÜÛÛÝÙ]Y]ÜÊZY\Ù\ËÙÚ[[]\ÝÙ]
+\Ù\ÙÚ[Ý]JNÂÛÛÝØÚÙYVË]\ÝK[\
+Ë×JOOÏOOIÐÒSÑT×ÔTUQTÕQ	ÊKX\
 
-            for (const label of labels) {
-              const match = /^tier:(T[0-4])$/i.exec(label);
-              if (match) tiers.push(match[1].toUpperCase());
-            }
-
-            if (tiers.length === 0) {
-              core.setFailed('Merge Gate BLOCKED: no machine-readable risk tier. Add feature metadata or a tier:T0..T4 label.');
-              return;
-            }
-            const tier = tiers.sort((a, b) => tierRank[b] - tierRank[a])[0];
-            core.info(`Risk tier: ${tier}; triggers: ${[...riskTriggers].join(', ') || 'none declared'}`);
-
-            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
-              owner,
-              repo,
-              run_id: run.id,
-              per_page: 100,
-            });
-            const jobState = new Map(jobs.map((job) => [job.name, job.conclusion]));
-            const requiredJobs = new Set([
-              'graph-check',
-              'security-policy',
-              'frontend-typecheck',
-              'backend-typecheck',
-              'vitest',
-              'legacy-tests',
-              'web-build',
-              'web-launch-e2e',
-              'merge-gate',
-            ]);
-
-            const androidTouched = changed.some((name) => name.startsWith('android/'));
-            const electronTouched = changed.some((name) => name.startsWith('electron/'));
-            if (labels.has('native-build') || androidTouched) requiredJobs.add('android-build');
-            if (labels.has('native-build') || electronTouched) requiredJobs.add('electron-build');
-
-            const missingOrFailed = [...requiredJobs].filter((name) => jobState.get(name) !== 'success');
-            if (missingOrFailed.length > 0) {
-              core.setFailed(`Merge Gate BLOCKED: required jobs not PASS: ${missingOrFailed.map((name) => `${name}=${jobState.get(name) || 'missing'}`).join(', ')}`);
-              return;
-            }
-
-            const checkRuns = await github.paginate(github.rest.checks.listForRef, {
-              owner,
-              repo,
-              ref: pr.head.sha,
-              per_page: 100,
-            });
-            const successfulCheck = (name) => checkRuns.some((check) => check.name === name && check.conclusion === 'success');
-
-            if (tier === 'T4' && !successfulCheck('t4-evidence')) {
-              core.setFailed('Merge Gate BLOCKED: T4 requires an explicit successful t4-evidence check; no producer is trusted by default.');
-              return;
-            }
-            if ([...riskTriggers].some((trigger) => /security/i.test(trigger)) && !successfulCheck('openband-security')) {
-              core.setFailed('Merge Gate BLOCKED: security risk trigger requires successful openband-security check evidence.');
-              return;
-            }
-
-            const reviews = await github.paginate(github.rest.pulls.listReviews, {
-              owner,
-              repo,
-              pull_number,
-              per_page: 100,
-            });
-            const latestByReviewer = new Map();
-            for (const review of reviews) {
-              if (review.user?.login) latestByReviewer.set(review.user.login, review.state);
-            }
-            const blockingReviewers = [...latestByReviewer.entries()]
-              .filter(([, state]) => state === 'CHANGES_REQUESTED')
-              .map(([login]) => login);
-            if (blockingReviewers.length > 0) {
-              core.setFailed(`Merge Gate BLOCKED: active request changes from ${blockingReviewers.join(', ')}`);
-              return;
-            }
-
-            core.info(`Merge Gate SATISFIED for PR #${pull_number} at ${pr.head.sha}; merging exact HEAD.`);
-            const { data: merged } = await github.rest.pulls.merge({
-              owner,
-              repo,
-              pull_number,
-              sha: pr.head.sha,
-              merge_method: 'squash',
-            });
-            if (!merged.merged) {
-              core.setFailed(`Merge Gate was satisfied but GitHub refused merge: ${merged.message}`);
-            }
+ÝWJOOJNÚYØÚÙY[Ý
+^ØÛÜKÙ]Z[Y
+Y\ÙHØ]HÐÒÑQ\]Y\ÝÚ[Ù\È	ØØÚÙYÚ[	Ë	Ê_X
+NÜ]\BÛÛÝÙ]N_OX]ØZ]Ú]X\Ý[ËY\ÙJÛÝÛ\\Ë[Û[X\ÚNXYÚKY\ÙWÛY]ÙÜÜ]X\Ú	ßJNÚY[KY\ÙY
+XÛÜKÙ]Z[Y
+KY\ÜØYÙJNÂ
