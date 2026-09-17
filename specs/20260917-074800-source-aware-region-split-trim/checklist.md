@@ -40,7 +40,7 @@
 - [x] Product implementation completed within approved T3 scope.
 - [x] Architecture specialist review has no remaining blocker.
 - [x] Audio/DSP specialist review has no remaining blocker after remediation in `a058b162ca5676b006a467ef9f6893a9be3ecde5`.
-- [ ] Temporary implementation/Graph scaffolding removed.
+- [x] Temporary implementation/Graph scaffolding removed.
 - [ ] Exact clean HEAD passes SDD/Graph, typechecks, full Vitest, legacy, Web build and launch/export regressions required by CI.
 - [ ] PR review state and mergeability checked on the exact clean HEAD.
 - [ ] Exact verification HEAD frozen in PR evidence.
