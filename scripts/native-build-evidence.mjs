@@ -360,7 +360,10 @@ function collect(target, manifestPath, buildOutcome) {
   let artifactError = null;
 
   try {
-    artifacts = buildOutcome === "success" ? discoverArtifacts(target) : [];
+    // Always inspect any output already produced, even when a later packaging
+    // phase fails. Partial artifacts remain diagnostic evidence and must be
+    // hashed rather than silently omitted from a FAIL manifest.
+    artifacts = discoverArtifacts(target);
     classification = classifyEvidence({
       target,
       preflightOk,

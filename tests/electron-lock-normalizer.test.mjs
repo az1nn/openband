@@ -6,6 +6,7 @@ import { normalizeElectronLock } from "../scripts/normalize-electron-ci-lock.mjs
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const lockPath = path.join(repoRoot, "electron", "package-lock.json");
+const packagePath = path.join(repoRoot, "electron", "package.json");
 
 function loadLock() {
   return JSON.parse(readFileSync(lockPath, "utf8"));
@@ -67,5 +68,17 @@ describe("Electron CI lock normalization", () => {
     expect(() => normalizeElectronLock(lock)).toThrow(
       /postject already exists with unexpected metadata/,
     );
+  });
+});
+
+describe("Electron Linux package metadata", () => {
+  it("provides deterministic Debian maintainer metadata", () => {
+    const packageJson = JSON.parse(readFileSync(packagePath, "utf8"));
+
+    expect(packageJson.homepage).toBe("https://github.com/az1nn/openband");
+    expect(packageJson.author).toEqual({
+      name: "az1nn",
+      email: "80423834+az1nn@users.noreply.github.com",
+    });
   });
 });
