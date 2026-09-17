@@ -38,15 +38,17 @@ Retrieve before assuming. Do not load the whole repository by default.
 
 ### Conversation context handoff
 
-Continuously monitor whether the current chat remains a trustworthy bounded implementation context. Use `docs/ai/context-handoff.md` as the policy and `docs/ai/session-handoff-template.md` when a clean-chat handoff is warranted.
+Continuously monitor whether the current chat remains a trustworthy bounded implementation context. Use `docs/ai/context-handoff.md` as policy. `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md` owns verified closeout behavior; `docs/ai/session-handoff-template.md` owns its compact handoff shape.
 
 For ChatGPT Projects, `docs/ai/chatgpt-project-instructions.md` is the repository-owned source for the Project Instructions that mirror this policy into ChatGPT.
 
 - GREEN: continue normally; conversation length alone is irrelevant.
 - YELLOW: a semantic boundary is approaching; finish the current safe atomic step and refresh canonical state.
-- RED: continuing materially increases stale/conflicting-context risk; explicitly recommend a new chat and generate a `SESSION_HANDOFF.md`.
+- RED: continuing materially increases stale/conflicting-context risk; finish/stop the current safe atomic action, run verified closeout, and recommend a clean chat.
 
-At the end of every material task, feature slice, verification cycle, or PR freeze, run `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md` before moving to a new workstream. The skill performs a canonical closeout audit of scope, changed files, tests, CI, Graph evidence, reviews, gate freshness, and temporary scaffolding. If work will continue in another task/chat, emit its paste-ready verified continuation prompt even when context is still GREEN.
+At the end of every material task, feature slice, verification cycle, or PR freeze, run `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md` even when context is GREEN. The skill performs the full canonical audit of scope, changed files, tests, CI, Graph evidence, reviews, gate freshness, and temporary scaffolding, then automatically emits a Caveman handoff. Do not require a separate user request for a continuation prompt.
+
+Caveman Mode compresses transferred context only. It must preserve exact base/HEAD identity, work identifiers, closeout state, current-cycle delta, evidence freshness, blockers/human gates, critical invariants, one exact next action, and the verify-first contract. It must not reduce reasoning, tool checks, verification depth, or required evidence.
 
 A handoff is derived bootstrap context only. It must never override Git, Spec Kit, architecture/contracts/ADRs, tests, Graph evidence, risk tier, Design Gate, verification state, or Merge Gate. A new chat reconstructs bounded L0 → L1 → L2 context and verifies branch/worktree/HEAD, feature state and gate freshness before acting.
 
