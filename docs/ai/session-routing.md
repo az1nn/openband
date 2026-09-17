@@ -2,9 +2,21 @@
 
 ## Purpose
 
-Prevent duplicate chats, forgotten work and task drift by making every coding session reconstruct repository state before deciding what to do.
+Prevent duplicate chats, forgotten work, repository drift and task drift by making every coding session reconstruct canonical OpenBand state before deciding what to do.
 
 The session layer coordinates chats; it does not replace GitHub Issues, PRs, Spec Kit, CI, Architecture Graph, ADRs, contracts or human gates.
+
+## Canonical repository boundary
+
+Session routing in this repository is valid only for:
+
+```text
+az1nn/openband
+```
+
+A standalone `siga` must verify this exact repository identity from Git/GitHub state before task discovery or mutation. ChatGPT Project membership, model/account memory, organization ownership, a similar repository name, fork history or a previous chat are not repository proof.
+
+If the resolved repository differs, route to `REPO_MISMATCH`, show both identities and perform no mutation.
 
 ## Law
 
@@ -15,6 +27,12 @@ ONE CHAT = AT MOST ONE TASK
 
 A chat may continue its assigned task until completion or a genuine no-safe-work boundary. It may not silently roll into the next distinct task.
 
+Read the canonical project skill first:
+
+`.agents/skills/openband-session-router/SKILL.md`
+
+The historical `.qwen/skills/auto-skill-session-router/SKILL.md` path is only a compatibility adapter.
+
 ## Session command
 
 A standalone `siga` is the canonical OpenBand coding-session command.
@@ -22,27 +40,50 @@ A standalone `siga` is the canonical OpenBand coding-session command.
 It means:
 
 ```text
-reconstruct canonical state
+verify az1nn/openband
+-> reconstruct canonical state
+-> render OpenBand Agent Tree
 -> reconcile live session ownership
--> route to ACTIVE | WAITING | NEXT
+-> route to ACTIVE/OWNED | ACTIVE/OBSERVER | WAITING | NEXT
 ```
 
 It does not mean "continue from chat memory" and it does not authorize a new task when an existing task/session still owns the work.
 
-## Canonical discovery order
+## Canonical discovery probes
 
 At session entry inspect, as applicable:
 
-1. default branch and exact base SHA;
-2. open PRs/issues and their current state;
-3. marked live session leases;
-4. marked Caveman closeout records;
-5. active Spec Kit feature/tasks/dependencies;
-6. exact-HEAD reviews and CI/checks;
-7. applicable human gates/external blockers;
-8. canonical roadmap only after operational state is known.
+1. `RepoProbe` — default branch and exact base SHA;
+2. `GitHubProbe` — open PRs/issues, live session leases and Caveman handoffs;
+3. `SpecKitProbe` — active feature/tasks/dependencies;
+4. `EvidenceProbe` — exact-HEAD reviews, CI/checks and gates;
+5. `DependencyProbe` — explicit blockers and stacked-work relationships;
+6. domain specialists only when task impact requires them.
 
 Operational status belongs to GitHub Issues/PRs. `docs/roadmap.md` provides direction, not delivery truth.
+
+## Visible OpenBand Agent Tree
+
+Every standalone `siga` must show a compact operational tree before long work:
+
+```text
+OPENBAND AGENT TREE
+az1nn/openband @ <base-sha>
+└─ SessionRouter
+   ├─ RepoProbe ............ PASS | BLOCKED
+   ├─ GitHubProbe .......... PASS | BLOCKED
+   ├─ SpecKitProbe ......... PASS | NOT_REQUIRED | BLOCKED
+   ├─ EvidenceProbe ........ PASS | FAIL | RUNNING | STALE | BLOCKED
+   ├─ DependencyProbe ...... <dependency summary>
+   ├─ Active work
+   │  ├─ #<issue> / PR #<pr> [ACTIVE|WAITING|READY] owner=<session|none>
+   │  └─ ...
+   └─ Route ................ ACTIVE/OWNED | ACTIVE/OBSERVER | WAITING | NEXT | REPO_MISMATCH
+```
+
+The tree must expose explicit dependencies and dependency shape, not just a flat PR list. Example: if NOC work depends on merge-governance work, show the dependency beneath/alongside those task nodes.
+
+This is visibility over canonical evidence, not a second project-management system.
 
 ## Session lease
 
@@ -75,44 +116,58 @@ UPDATED_AT: <ISO-8601 when available>
 
 The comment must be updated idempotently instead of creating a stream of lease comments.
 
-A session lease never overrides canonical task state. Git/PR/issue/Spec Kit/CI evidence may prove it stale.
+A session lease never overrides canonical task state. Git/PR/issue/Spec Kit/CI evidence may prove it stale. Elapsed time alone does not prove abandonment.
 
-## Route A — ACTIVE
+## Route A — ACTIVE/OWNED
 
-Choose `ACTIVE` when the current task still has safe autonomous work, verification, remediation, cleanup or required CI in flight.
+Choose `ACTIVE/OWNED` when the current task still has safe autonomous work, verification, remediation, cleanup or required CI and this chat owns the matching live session.
 
-If the current chat owns that task, delegate to `continue-work`.
+Delegate to `continue-work` and remain on exactly this task.
 
-If another live session owns it, report that ownership and do not start a duplicate chat/task session.
+Running CI belongs to the current task. It is not permission to select unrelated next work.
 
-Running CI belongs to the current task. It is not permission to select unrelated next work unless the current session itself has reached an eligible closeout boundary and no conflicting session exists.
+## Route B — ACTIVE/OBSERVER
 
-## Route B — WAITING
+Choose `ACTIVE/OBSERVER` when another live session owns the task.
+
+This chat does not acquire task authority. It must not mutate the task branch, product code, Spec Kit artifacts, PR state or the foreign session lease, and it must not start a competing implementation lifecycle.
+
+It may fan out bounded **read-only evidence work** to understand the active branch:
+
+- research and specification/contract reading;
+- Spec Kit state inspection;
+- issue/PR dependency analysis;
+- CI/check/log analysis;
+- review-thread inspection;
+- architecture/impact reading;
+- specialist read-only review.
+
+The law is:
+
+```text
+READ-ONLY EVIDENCE MAY FAN OUT
+TASK AUTHORITY MAY NOT
+```
+
+Findings are surfaced to the user. Routine `siga` alone does not authorize writing them back to the foreign task.
+
+If the original session is genuinely abandoned and work must move here, perform an explicit takeover audit, preserve the previous session identity and issue a new session key before mutation.
+
+## Route C — WAITING
 
 Choose `WAITING` when no safe current-task work remains before a genuine human or external boundary.
 
-Examples:
+Examples include a Design Gate, real browser/device/hardware validation, required product/architecture decision, missing authorization, or an upstream dependency with no safe local progress remaining.
 
-- Human Design Gate;
-- required real browser/device/hardware validation;
-- explicit product/architecture decision;
-- missing authorization;
-- upstream dependency with no safe local progress remaining.
-
-The session response must identify:
-
-- task / issue / PR;
-- exact gate or blocker;
-- exact human/external action required;
-- whether any evidence would become stale after that action.
+The response must identify the task, exact gate/blocker, exact action required, and evidence that becomes stale afterward.
 
 Do not open a new task merely because the current one is waiting.
 
-## Route C — NEXT
+## Route D — NEXT
 
-Choose `NEXT` only when no conflicting `ACTIVE` or `WAITING` session exists for the work being considered.
+Choose `NEXT` only when no conflicting live ownership blocks selection and this chat is unbound.
 
-If the prior task has not been formally closed, run Caveman closeout first and set its lease to `CLOSED`.
+If prior work lacks formal closeout, run Caveman closeout first and set its lease to `CLOSED`.
 
 Discover the next task in this order:
 
@@ -121,53 +176,41 @@ Discover the next task in this order:
 3. active Spec Kit task/dependency state;
 4. canonical roadmap direction.
 
-Prefer the task that advances or unblocks existing work over unrelated expansion.
+Prefer work that advances or unblocks existing work over unrelated expansion.
 
-A new/unbound chat may bind to exactly one selected task and continue it.
+A new/unbound chat may bind to exactly one task, then delegate lifecycle entry to `.agents/skills/openband-ask/SKILL.md` and Spec Kit.
 
 A chat that already completed a different task may identify the next task and emit a compact next-session prompt, but must not execute it in the same chat.
 
-## Duplicate prevention
-
-A new chat using `siga` must not silently adopt an `ACTIVE` lease from another session.
-
-A lease may be reconciled as stale only from canonical evidence, such as a merged/closed PR, completed/superseded issue, or verified closeout that still matches current repository state.
-
-Elapsed time by itself does not prove abandonment.
-
-If abandoned-session recovery is necessary, perform an explicit recovery/takeover audit and issue a new session key. Routine `siga` is not takeover authorization.
-
 ## Relationship to task lifecycle
 
-Session routing owns **which task this chat may own**.
+Session routing owns **which task this chat may own and what the user can see about parallel work**.
+
+`openband-ask` + Spec Kit own **risk classification and lifecycle sequence**.
 
 `continue-work` owns **finishing safe work inside the selected task**.
 
 `caveman-handoff` owns **audited task closeout and durable continuation state**.
 
-`verified-context-handoff` remains a compatibility router for handoff requests.
-
 ```text
 siga
+-> verify az1nn/openband
+-> render OpenBand Agent Tree
 -> session-router
-   -> ACTIVE  -> continue-work
-   -> WAITING -> surface exact gate/blocker
-   -> NEXT    -> close prior task if needed -> bind exactly one new task
-
-continue-work
--> task complete / no-safe-work gate
--> caveman-handoff
+   -> ACTIVE/OWNED    -> continue-work
+   -> ACTIVE/OBSERVER -> read-only evidence fan-out
+   -> WAITING         -> surface exact gate/blocker
+   -> NEXT            -> bind one task -> openband-ask / Spec Kit
+   -> REPO_MISMATCH   -> stop with no mutation
 ```
 
 ## Minimal user-facing session status
 
-Every standalone `siga` should begin by showing:
+Every standalone `siga` should begin with the tree followed by:
 
 ```text
-SESSION: ACTIVE | WAITING | NEXT
+SESSION: ACTIVE/OWNED | ACTIVE/OBSERVER | WAITING | NEXT | REPO_MISMATCH
 TASK: <issue/PR/spec or selected task>
 WHY: <canonical-state reason>
-ACTION: <continue | human action | start exactly one task>
+ACTION: <continue | observe | human action | start exactly one task | stop wrong repo>
 ```
-
-This status is intentionally compact. Detailed repository evidence should be loaded only as needed for the selected task.

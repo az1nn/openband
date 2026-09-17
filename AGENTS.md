@@ -25,7 +25,11 @@ Minimum T3: persistence model, architecture boundary, or cross-runtime contract 
 
 ## Entry and context
 
-A standalone `siga` is the preferred coding-session command. It must run `.qwen/skills/auto-skill-session-router/SKILL.md` before selecting work. `siga` reconstructs canonical repository/GitHub state and routes the session to exactly one of `ACTIVE`, `WAITING`, or `NEXT`; it never means "continue from chat memory".
+A standalone `siga` is the preferred coding-session command. Its canonical project skill is `.agents/skills/openband-session-router/SKILL.md`; `.qwen/skills/auto-skill-session-router/SKILL.md` is only the compatibility entrypoint and must delegate to it before selecting work.
+
+`Siga` is valid only for canonical repository identity `az1nn/openband`. The router must verify that exact Git/GitHub identity before task discovery or mutation; model/account memory and ChatGPT Project context are never repository proof. Every `siga` must render the visible `OPENBAND AGENT TREE` before long work.
+
+Session routing reconstructs canonical repository/GitHub state and routes the session to `ACTIVE/OWNED`, `ACTIVE/OBSERVER`, `WAITING`, `NEXT`, or `REPO_MISMATCH`; it never means "continue from chat memory". `ACTIVE/OBSERVER` may fan out bounded read-only evidence/research when another session owns the task, but it may not mutate that task or acquire its lease.
 
 Session routing follows `docs/ai/session-routing.md` and persists live task ownership through one idempotent marked PR/issue session lease. A new chat must not silently duplicate or take over a task with a live `ACTIVE` lease. `WAITING` surfaces the exact human/external gate and does not select another task. `NEXT` may bind a new/unbound chat to exactly one task; a chat that already completed another task may identify the next task but must not execute it.
 
@@ -47,7 +51,8 @@ Continuously monitor whether the current chat remains a trustworthy bounded impl
 
 Task-lifecycle ownership is explicit:
 
-- `.qwen/skills/auto-skill-session-router/SKILL.md` owns session selection/ownership before task execution;
+- `.agents/skills/openband-session-router/SKILL.md` owns canonical OpenBand repository locking, visible agent-tree construction, and session routing;
+- `.qwen/skills/auto-skill-session-router/SKILL.md` is the compatibility entrypoint and must delegate to the canonical OpenBand skill;
 - `.qwen/skills/auto-skill-continue-work/SKILL.md` owns finishing all safe work in the active task before closeout;
 - `.qwen/skills/auto-skill-caveman-handoff/SKILL.md` owns closeout audit, durable persistence, and compact Caveman emission only after a genuine task closeout boundary;
 - `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md` is a compatibility router between continuation and closeout;

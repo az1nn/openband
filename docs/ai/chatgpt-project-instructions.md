@@ -15,32 +15,60 @@ ONE TASK = ONE CHAT
 ONE CHAT = AT MOST ONE TASK
 ```
 
-A standalone `siga` is the canonical coding-session command. Before selecting or continuing work, read and follow:
+A standalone `siga` is the canonical coding-session command. Before selecting or continuing work, read and follow the canonical project skill:
 
-- `.qwen/skills/auto-skill-session-router/SKILL.md`;
+- `.agents/skills/openband-session-router/SKILL.md`;
+- `.qwen/skills/auto-skill-session-router/SKILL.md` only as its compatibility entrypoint;
 - `docs/ai/session-routing.md`.
 
-`Siga` means reconstruct current canonical repository/GitHub state and route the session to exactly one of:
+### Hard repository lock
+
+`Siga` is valid only when canonical Git/GitHub state resolves to exactly:
 
 ```text
-ACTIVE
-WAITING
-NEXT
+az1nn/openband
 ```
 
-- `ACTIVE`: the current task still owns work. Continue it if this chat owns the matching session; if another live session owns it, show that session/task and do not duplicate it.
+Never infer the repository from ChatGPT Project membership, model/account memory, a previous chat, organization ownership or a similarly named repository. If the resolved repository is different, emit `REPO_MISMATCH`, show the resolved and required repositories, and perform no mutation.
+
+### Visible OpenBand Agent Tree
+
+Every standalone `siga` must show an `OPENBAND AGENT TREE` before long work. At minimum it shows the repository/base identity, SessionRouter, the canonical probes `RepoProbe`, `GitHubProbe`, `SpecKitProbe`, `EvidenceProbe`, and `DependencyProbe`, relevant active task branches, ownership, explicit dependencies, and the selected route.
+
+`Siga` then routes to exactly one of:
+
+```text
+ACTIVE/OWNED
+ACTIVE/OBSERVER
+WAITING
+NEXT
+REPO_MISMATCH
+```
+
+- `ACTIVE/OWNED`: the current task still owns work and this chat owns the matching session; continue it.
+- `ACTIVE/OBSERVER`: another live session owns the task; this chat may fan out bounded read-only research/specification, Spec Kit inspection, CI/review/dependency analysis and specialist review, but it must not mutate that task, lease, branch, PR, Spec Kit artifacts or product code.
 - `WAITING`: no safe autonomous work remains before a human/external boundary. Show the exact gate/blocker and required action; do not select another task.
-- `NEXT`: no conflicting active/waiting task owns the session slot. A new/unbound chat may bind to exactly one next task. A chat that already completed another task may identify the next task but must not execute it.
+- `NEXT`: no conflicting live ownership blocks selection. A new/unbound chat may bind to exactly one next task, then route lifecycle execution through `openband-ask` and Spec Kit.
+- `REPO_MISMATCH`: stop without mutation because the current repository is not `az1nn/openband`.
+
+The observer law is:
+
+```text
+READ-ONLY EVIDENCE MAY FAN OUT
+TASK AUTHORITY MAY NOT
+```
 
 Persist live task ownership through the idempotent marked PR/issue session lease defined by `docs/ai/session-routing.md`. A routine `siga` never silently takes over another `ACTIVE` lease.
 
 At the beginning of a material development session:
 
-1. Run the session-router semantics above.
-2. Refresh repository, branch, worktree, issue and PR state.
-3. Read `AGENTS.md`.
-4. Follow `docs/ai/context-handoff.md` and `docs/ai/durable-context.md`.
-5. Reconstruct context progressively:
+1. Verify canonical repository identity is exactly `az1nn/openband`.
+2. Read `.agents/skills/openband-session-router/SKILL.md`.
+3. Render the OpenBand Agent Tree.
+4. Refresh repository, branch, worktree, issue and PR state.
+5. Read `AGENTS.md`.
+6. Follow `docs/ai/context-handoff.md` and `docs/ai/durable-context.md`.
+7. Reconstruct context progressively:
 
 ```text
 L0  Constitution + AGENTS + feature/tier
@@ -157,6 +185,7 @@ Then reconstruct L0 → L1 → L2 and continue safe task work. Emit Caveman only
 
 Neither session routing, continuation nor handoff can:
 
+- operate on a repository other than `az1nn/openband`;
 - approve a Design Gate;
 - mark verification PASS without current evidence;
 - authorize or perform a T2+ merge;
@@ -164,6 +193,7 @@ Neither session routing, continuation nor handoff can:
 - override Spec Kit/Git/tests/Graph state;
 - retroactively approve a missing gate because a PR was merged;
 - silently take over another active session lease;
+- mutate a foreign-owned task from observer mode;
 - start a second distinct task in a chat already bound to one task.
 
 If the Design Baseline SHA changed materially, treat Design Gate as invalid until re-analysis and human approval.
