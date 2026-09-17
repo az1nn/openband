@@ -96,6 +96,12 @@ test(
     page.on("dialog", (dialog) => void dialog.accept());
 
     await page.goto("/");
+    await expect(page.getByText("Make music. Keep the project.")).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(page.getByText("Web alpha")).toBeVisible();
+    await page.getByTestId("launch-start-creating").click();
+
     await expect(page.getByText("Começar sem conta")).toBeVisible({
       timeout: 15000,
     });

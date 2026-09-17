@@ -8,9 +8,9 @@ A local-first, open-source browser music studio for recording, arranging, mixing
 [![License: MIT](https://img.shields.io/badge/license-MIT-white.svg)](LICENSE)
 [![Web alpha](https://img.shields.io/badge/status-web_alpha-ff3b30.svg)](https://openband-one.vercel.app)
 
-[Try the web alpha](https://openband-one.vercel.app) · [Understand the product](docs/product.md) · [See the roadmap](ROADMAP.md) · [Contribute](CONTRIBUTING.md)
+[Try the web alpha](https://openband-one.vercel.app) · [Release limits & browser evidence](docs/release/web-alpha.md) · [Understand the product](docs/product.md) · [See the roadmap](ROADMAP.md) · [Contribute](CONTRIBUTING.md)
 
-> **Alpha:** explore without an account, but keep an independent backup of important work. Platform availability and service-backed features vary by release and configuration.
+> **Alpha:** explore without an account, but keep an independent backup of important work. Platform availability and service-backed features vary by release and configuration. Browser/permission/storage evidence lives in the [Web alpha release runbook](docs/release/web-alpha.md).
 >
 > **Naming note:** OpenBand is the repository's working name while same-category brand clearance is completed. See the [brand gate](docs/marketing/brand.md#naming-gate).
 
@@ -22,7 +22,7 @@ A local-first, open-source browser music studio for recording, arranging, mixing
 
 Music ideas often get stranded between a recorder, a beat tool, a DAW, stem services, mastering tools, and closed clouds. OpenBand organizes the journey as **start → hear → shape → finish → keep or share**.
 
-- **Start with momentum:** enter as a visitor or choose a genre and mood starter.
+- **Start with momentum:** enter as a visitor and choose Record audio, Instrument, Drums / sample, or Import audio as the first creative action.
 - **Shape in context:** work with audio, MIDI, instruments, guitar tools, effects, stems, and focused creative modes.
 - **Finish the track:** mix, meter, master, save, and export without changing products.
 - **Keep the project:** use local workflows, inspect the source, and opt into cloud or BYOK AI services only where configured.
@@ -33,7 +33,7 @@ Open source is the proof. Creative control is the benefit.
 
 | Path | What it helps you do | Representative tools |
 | --- | --- | --- |
-| Start | Move past a blank project | Visitor mode, genre/mood starters, samples |
+| Start | Move past a blank project | Visitor mode, Record audio, Instrument, Drums / sample, Import audio |
 | Record and arrange | Capture and structure musical material | Multitrack audio, MIDI, piano roll, looper, chord track |
 | Create sound | Build a part around the instrument or idea | Sampler, synth, beatmaker, guitar pedalboard, amp/cab chain |
 | Transform | Prepare or reuse existing material | Stem separation, tuning, time/pitch tools, BYOK helpers |
@@ -47,7 +47,7 @@ Detailed, code-backed capability status lives in [`docs/features-implementation.
 
 | Surface | Status | How to use it |
 | --- | --- | --- |
-| Web | Public alpha | [Open the demo](https://openband-one.vercel.app) |
+| Web | Public alpha; browser support is evidence-gated | [Open the demo](https://openband-one.vercel.app) · [Release evidence](docs/release/web-alpha.md) |
 | Electron desktop | Build from source | `npm run desktop` |
 | Android | Codebase target / local build | `npm run android` |
 | iOS | Codebase target / macOS local build | `npm run ios` |
@@ -159,6 +159,7 @@ CI is the source of truth for the complete merge gate. A locally skipped or mask
 | Topic | Document |
 | --- | --- |
 | Product strategy and honest claims | [`docs/product.md`](docs/product.md) |
+| Web alpha release evidence and rollback | [`docs/release/web-alpha.md`](docs/release/web-alpha.md) |
 | Architecture | [`docs/architecture.md`](docs/architecture.md) |
 | Build and runtime setup | [`BUILD.md`](BUILD.md) |
 | Feature implementation status | [`docs/features-implementation.md`](docs/features-implementation.md) |
