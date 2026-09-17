@@ -1,0 +1,50 @@
+name: OpenBand #43 on #73 integration proof
+
+on:
+  push:
+    branches:
+      - agent/73-43-integration-proof
+
+jobs:
+  android-43-on-73:
+    runs-on: ubuntu-latest
+    env:
+      OPENBAND_SOURCE_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: npm ci
+      - name: Initialize #43 evidence
+        run: node scripts/native-build-evidence.mjs init --target android --manifest .artifacts/native-build/android.json
+      - name: Preflight #43 evidence
+        id: preflight
+        continue-on-error: true
+        run: node scripts/native-build-evidence.mjs preflight --target android --manifest .artifacts/native-build/android.json
+      - name: Build #73 release verification APK
+        id: android-build-command
+        if: steps.preflight.outcome == 'success'
+        continue-on-error: true
+        run: |
+          cd android
+          ./gradlew assembleRelease
+      - name: Collect #43 evidence
+        if: always()
+        run: node scripts/native-build-evidence.mjs collect --target android --manifest .artifacts/native-build/android.json --build-outcome "${{ steps.android-build-command.outcome }}"
+      - name: Upload #43 integration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-43-on-73-android-evidence
+          path: .artifacts/native-build/android.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Enforce #43 evidence
+        if: always()
+        run: node scripts/native-build-evidence.mjs enforce --manifest .artifacts/native-build/android.json
