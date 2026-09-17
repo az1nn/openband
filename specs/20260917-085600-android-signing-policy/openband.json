@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "tier": "T4",
+  "issue": 73,
+  "riskTriggers": [
+    "security-sensitive-credential",
+    "release-signing-identity",
+    "privileged-release-path"
+  ],
+  "dependsOn": []
+}
