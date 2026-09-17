@@ -81,7 +81,7 @@ az1nn/openband @ <base-sha>
    └─ Route ................ ACTIVE/OWNED | ACTIVE/OBSERVER | WAITING | NEXT | REPO_MISMATCH
 ```
 
-The tree must expose dependency shape, not just a flat PR list. Example: if NOC work depends on merge-governance work, show the dependency beneath/alongside those task nodes.
+The tree must expose explicit dependencies and dependency shape, not just a flat PR list. Example: if NOC work depends on merge-governance work, show the dependency beneath/alongside those task nodes.
 
 This is visibility over canonical evidence, not a second project-management system.
 
