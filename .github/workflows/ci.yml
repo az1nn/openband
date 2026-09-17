@@ -19,6 +19,7 @@ jobs:
       - run: npm ci
       - run: npm run sdd:check
       - run: npm run test:graph-sdd
+      - run: node --test tests/android-signing-policy.test.mjs
       - run: npm run graph:ci
 
   frontend-typecheck:
@@ -92,6 +93,24 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test e2e/launch-first-run.spec.ts
+
+  android-signing-boundary:
+    needs: [graph-check, frontend-typecheck, backend-typecheck, vitest, legacy-tests, web-build]
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'native-build')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'npm'
+      - name: Verify Android signing trust boundary
+        run: bash scripts/verify-android-signing-boundary.sh
 
   android-build:
     needs: [graph-check, frontend-typecheck, backend-typecheck, vitest, legacy-tests, web-build]
