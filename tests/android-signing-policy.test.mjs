@@ -38,17 +38,31 @@ test('release cannot downgrade to debug signing', () => {
   assert.match(releaseBlock, /signingConfigs\.production/);
 });
 
-test('ordinary CI does not source Android production credentials from GitHub secrets', () => {
+test('production credentials are prevalidated behind value-free errors', () => {
+  assert.match(gradle, /java\.security\.KeyStore\.getInstance/);
+  assert.match(gradle, /keyStore\.containsAlias\(productionKeyAlias\)/);
+  assert.match(gradle, /keyStore\.getKey\(productionKeyAlias, productionKeyPassword\.toCharArray\(\)\)/);
+  assert.match(
+    gradle,
+    /Production Android signing credentials are invalid or incompatible\./,
+  );
+  assert.doesNotMatch(gradle, /throw new GradleException\([^\n]*productionKeyAlias/);
+  assert.doesNotMatch(gradle, /throw new GradleException\([^\n]*productionKeystore/);
+});
+
+test('ordinary CI does not source or activate production signing', () => {
   for (const input of productionInputs) {
     assert.doesNotMatch(
       workflow,
       new RegExp(`${input}[^\\n]*\\$\\{\\{\\s*secrets\\.`, 'i'),
     );
   }
+  assert.doesNotMatch(workflow, /openband\.android\.signingMode=production/);
 });
 
 test('production signing failures are value-safe', () => {
   assert.match(gradle, /Production Android signing requires external inputs:/);
   assert.match(gradle, /Production Android signing keystore is unavailable or unreadable\./);
+  assert.match(gradle, /Production Android signing credentials are invalid or incompatible\./);
   assert.doesNotMatch(gradle, /println[^\n]*OPENBAND_ANDROID_/);
 });
