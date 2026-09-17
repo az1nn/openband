@@ -8,9 +8,9 @@
 - [x] T006 Reconcile current `master` session-router/handoff policy into PR #82 without losing #90–#94 changes.
 - [x] T007 Detect process drift: privileged repository-write `workflow_run` makes this feature minimum T4.
 - [x] T008 Re-analyze threat model, fail-closed trust boundary, adversarial verification and recovery strategy as T4.
-- [ ] T009 Obtain a fresh Human Design Gate for the revised T4 baseline. No further implementation mutation is authorized before approval.
-- [ ] T010 Implement the trusted default-branch privileged evaluator, fork blocking, path/risk-derived minimum tier, and machine-readable required-evidence contract.
-- [ ] T011 Add trusted `openband-security` + `t4-evidence` producers and adversarial regression fixtures.
+- [x] T009 Obtain a fresh Human Design Gate for the revised T4 baseline. No further implementation mutation is authorized before approval.
+- [x] T010 Implement the trusted default-branch privileged evaluator, fork blocking, path/risk-derived minimum tier, and machine-readable required-evidence contract.
+- [x] T011 Add trusted `openband-security` + `t4-evidence` producers and adversarial regression fixtures.
 - [ ] T012 Converge live governance/policy checks and remove any candidate-controlled trust loophole.
 - [ ] T013 Run exact-HEAD SDD/Graph/security/T4/full CI verification and audit recovery evidence.
 - [ ] T014 Record the verified HEAD and complete integration under the policy valid for this bootstrap PR.

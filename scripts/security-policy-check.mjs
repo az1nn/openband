@@ -64,6 +64,30 @@ for (const relative of trackedFiles()) {
   }
 }
 
+const evidenceMerge = readText(".github/workflows/evidence-merge.yml");
+if (evidenceMerge !== null) {
+  for (const forbidden of ["actions/" + "checkout", "download-" + "artifact", "pull_request" + "_target"]) {
+    if (evidenceMerge.includes(forbidden)) {
+      errors.push(`.github/workflows/evidence-merge.yml: forbidden privileged surface ${forbidden}`);
+    }
+  }
+  for (const anchor of [
+    "openband-security:",
+    "t4-evidence:",
+    "pr.head.repo.full_name",
+    "heads/master",
+    "openband-design-gate",
+    "REQUIRED_CI_JOBS",
+    "RISK_TRIGGERS",
+    "contents: write",
+    "pull-requests: write",
+  ]) {
+    if (!evidenceMerge.includes(anchor)) {
+      errors.push(`.github/workflows/evidence-merge.yml: missing trust anchor ${anchor}`);
+    }
+  }
+}
+
 if (errors.length === 0) {
   process.stdout.write("Security policy: PASS\n");
 } else {

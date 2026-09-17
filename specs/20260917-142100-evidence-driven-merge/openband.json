@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "tier": "T4",
   "issue": 81,
   "riskTriggers": [
@@ -8,5 +8,16 @@
     "security-sensitive-privileged-workflow",
     "repository-write-automation"
   ],
-  "dependsOn": []
+  "dependsOn": [],
+  "requiredChecks": [
+    "graph-check",
+    "security-policy",
+    "frontend-typecheck",
+    "backend-typecheck",
+    "vitest",
+    "legacy-tests",
+    "web-build",
+    "web-launch-e2e",
+    "merge-gate"
+  ]
 }

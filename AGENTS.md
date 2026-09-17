@@ -149,6 +149,8 @@ PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED | STALE
 
 Only `PASS` and justified `NOT_REQUIRED` satisfy required evidence. `FAIL`, `BLOCKED`, `FLAKY`, `STALE`, missing, cancelled, or timed-out required evidence blocks the gate.
 
+Changes to the privileged merger, CI evidence producers, tier/evidence policy, Constitution merge semantics, or repository-write automation are minimum T4. The privileged post-CI evaluator must run trusted default-branch policy and must not execute candidate code or candidate artifacts.
+
 The Merge Gate is evaluated against the exact merge-candidate HEAD and its target-base relationship. If HEAD changes, or the base moves in a way that can affect the candidate, rerun the affected evidence. Generic CI completion is not enough when the risk-derived contract requires stronger proof.
 
 When the complete contract is satisfied, repository automation may merge T0–T4 without a separate human merge approval. Higher tiers require stronger evidence; they do not require a different merge ceremony. Unresolved policy violations, contradictory spec/implementation evidence, or active request-for-changes state block automatic merge.

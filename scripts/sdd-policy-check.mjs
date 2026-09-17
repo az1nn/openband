@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const TIERS = new Set(["T0", "T1", "T2", "T3", "T4"]);
-const ALLOWED_KEYS = new Set(["schemaVersion", "tier", "issue", "riskTriggers", "dependsOn"]);
+const ALLOWED_KEYS = new Set(["schemaVersion", "tier", "issue", "riskTriggers", "dependsOn", "requiredChecks"]);
 const T2_PLUS = new Set(["T2", "T3", "T4"]);
 const T3_PLUS = new Set(["T3", "T4"]);
 const FORBIDDEN_MUTABLE_KEYS = new Set([
@@ -123,13 +123,21 @@ export function checkFeature(root, dir) {
     }
   }
 
-  if (metadata.schemaVersion !== 1) errors.push(`${feature}: schemaVersion must be 1`);
+  if (![1, 2].includes(metadata.schemaVersion)) errors.push(`${feature}: schemaVersion must be 1 or 2`);
   if (!TIERS.has(metadata.tier)) errors.push(`${feature}: tier must be T0, T1, T2, T3 or T4`);
   if (!Number.isInteger(metadata.issue) || metadata.issue < 1) {
     errors.push(`${feature}: issue must be a positive integer`);
   }
   checkStringArray(errors, feature, "riskTriggers", metadata.riskTriggers);
   checkStringArray(errors, feature, "dependsOn", metadata.dependsOn);
+  if (metadata.requiredChecks !== undefined) checkStringArray(errors, feature, "requiredChecks", metadata.requiredChecks);
+  if (
+    metadata.schemaVersion === 2 &&
+    T2_PLUS.has(metadata.tier) &&
+    (!Array.isArray(metadata.requiredChecks) || metadata.requiredChecks.length === 0)
+  ) {
+    errors.push(`${feature}: schemaVersion 2 T2+ requires non-empty requiredChecks`);
+  }
 
   for (const dependency of Array.isArray(metadata.dependsOn) ? metadata.dependsOn : []) {
     if (!fs.existsSync(path.join(root, "specs", dependency))) {

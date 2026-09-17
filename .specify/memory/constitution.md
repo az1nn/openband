@@ -32,6 +32,8 @@ Agents and automation receive only the permissions needed for their phase. Desig
 
 Merge authorization does not authorize destructive runtime actions. Rollback, redeploy, credential rotation, access-control changes, data repair/deletion, or comparable production mutations follow their own explicit authorization policy.
 
+Privileged post-CI merge automation MUST execute trusted default-branch policy only, MUST NOT execute candidate PR code or candidate artifacts, and MUST fail closed for untrusted head repositories, stale HEAD/base identity, or missing approved evidence.
+
 ## Governance
 
 `AGENTS.md` defines operational agent policy; this Constitution defines durable invariants. A conflict is resolved in favor of this Constitution. Material amendments require a dedicated governance PR with rationale, impact analysis, verification, and human Design Gate approval.

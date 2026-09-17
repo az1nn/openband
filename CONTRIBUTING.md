@@ -38,7 +38,7 @@ Node.js 22 or newer is required. Python/Demucs, Supabase, Redis, and object stor
 2. Identify the issue/request and creator-visible outcome.
 3. Confirm current behavior with a minimal reproduction.
 4. Read only the relevant architecture, contract, ADR, spec, and source context.
-5. Determine the risk tier. T2+ work follows the Spec Kit lifecycle and requires a human Design Gate before implementation; merge eligibility is evidence-driven for every tier.
+5. Determine the risk tier. T2+ work follows the Spec Kit lifecycle and requires a human Design Gate before implementation; merge eligibility is evidence-driven for every tier. New T2+ feature metadata uses `schemaVersion: 2` and declares the Design-Gate-approved `requiredChecks` contract.
 6. Create a branch; never push a production change directly to `master`.
 
 ## Branches and pull requests
