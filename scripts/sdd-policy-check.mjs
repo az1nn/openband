@@ -28,14 +28,13 @@ const LIVE_GOVERNANCE_FILES = [
   "docs/ai/session-handoff-template.md",
 ];
 
-const STALE_MERGE_PATTERNS = [
-  [/HUMAN MERGE GATE/i, "HUMAN MERGE GATE"],
-  [/human Merge Gate/i, "human Merge Gate"],
-  [/READY_FOR_HUMAN/i, "READY_FOR_HUMAN"],
-  [/human design\/merge gates/i, "human design/merge gates"],
-  [/merged by a human/i, "merged by a human"],
-  [/human merges the verified PR HEAD/i, "human merges the verified PR HEAD"],
-  [/authorize a T2\+ merge/i, "authorize a T2+ merge"],
+const STALE_MERGE_PHRASES = [
+  "human merge gate",
+  "ready_for_human",
+  "human design/merge gates",
+  "merged by a human",
+  "human merges the verified pr head",
+  "authorize a t2+ merge",
 ];
 
 function readText(file) {
@@ -157,8 +156,11 @@ export function checkLiveGovernance(root) {
   for (const relative of LIVE_GOVERNANCE_FILES) {
     const content = readText(path.join(root, relative));
     if (content === null) continue;
-    for (const [pattern, label] of STALE_MERGE_PATTERNS) {
-      if (pattern.test(content)) errors.push(`${relative}: stale merge semantics '${label}'`);
+    const normalized = content.toLowerCase();
+    for (const phrase of STALE_MERGE_PHRASES) {
+      if (normalized.includes(phrase)) {
+        errors.push(`${relative}: stale merge semantics '${phrase}'`);
+      }
     }
   }
 
