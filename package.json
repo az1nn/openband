@@ -31,6 +31,7 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.25.2",
     "react-native-url-polyfill": "^3.0.0",
+    "react-native-web": "~0.21.0",
     "soundfont-player": "^0.12.0",
     "tailwindcss": "^3.4.17",
     "three": "^0.160.0",
@@ -46,6 +47,8 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "cors": "^2.8.5",
     "express": "^4.21.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^1.4.12",
@@ -66,6 +69,8 @@
     "test": "npx vitest run",
     "test:legacy": "npx tsx --test tests/presets.test.ts tests/types.test.ts",
     "test:graph-sdd": "node --test tests/graph-engineer.test.mjs tests/graph-engineer-v2.test.mjs tests/graph-engineer-v3.test.mjs tests/graph-speckit.test.mjs tests/governance-policy.test.mjs tests/evidence-merge-policy.test.mjs",
+    "test:marketing-kb": "node --test tests/marketing-kb-check.test.mjs",
+    "marketing:kb:check": "node scripts/marketing-kb-check.mjs",
     "test:ui": "npx vitest --ui",
     "test:ui:screenshot": "node scripts/screenshot-vitest-ui.mjs",
     "build": "expo export --platform web --clear && node scripts/post-export.js",
@@ -76,8 +81,6 @@
     "desktop": "npm run build && cd electron && npm start",
     "desktop:dev": "concurrently \"expo start --web\" \"sleep 5 && cd electron && npm start\"",
     "sdd:check": "node scripts/sdd-policy-check.mjs",
-    "security:policy": "node scripts/security-policy-check.mjs",
-    "merge:gate": "node scripts/ci-merge-gate.mjs",
     "graph:build": "node graph/cli.mjs build",
     "graph:validate": "node graph/cli.mjs validate",
     "graph:deps": "node graph/cli.mjs deps",
@@ -88,7 +91,9 @@
     "graph:render": "node graph/cli.mjs render",
     "graph:ci": "node graph/cli.mjs ci",
     "graph:doc": "node graph/cli.mjs doc",
-    "graph:report": "node graph/cli.mjs report"
+    "graph:report": "node graph/cli.mjs report",
+    "security:policy": "node scripts/security-policy-check.mjs",
+    "merge:gate": "node scripts/ci-merge-gate.mjs"
   },
   "engines": {
     "node": ">=22"

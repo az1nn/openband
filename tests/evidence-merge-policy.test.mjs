@@ -42,6 +42,7 @@ describe("privileged evidence merge trust boundary", () => {
     assert.equal(workflow.includes("filter((file) => file.status !== 'removed')"), false);
     for (const required of [
       "packageTrustTouched",
+      "marketing-kb-check",
       "productRuntimeTouched",
       "architectureTouched",
       "securityPathTouched",
@@ -74,6 +75,8 @@ describe("privileged evidence merge trust boundary", () => {
     for (const command of [
       "npm run sdd:check",
       "npm run security:policy",
+      "npm run test:marketing-kb",
+      "npm run marketing:kb:check",
       "npx tsc --noEmit",
       "npx vitest run",
       "npm run test:legacy",

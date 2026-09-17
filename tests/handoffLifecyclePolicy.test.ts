@@ -60,17 +60,39 @@ describe("task-lived handoff lifecycle policy", () => {
     expect(sessionPolicy).toContain("explicit dependencies");
   });
 
-  it("keeps foreign active sessions read-only instead of duplicating ownership", () => {
+  it("requires positive session-key proof before claiming task ownership", () => {
+    for (const source of [sessionRouter, sessionPolicy, projectInstructions]) {
+      expect(source).toContain("SESSION_KEY");
+      expect(source).toContain("ownership");
+    }
+
+    expect(sessionRouter).toContain("matching issue, PR, branch, user identity");
+    expect(sessionPolicy).toContain("Matching task, branch, PR, repository or GitHub user");
+    expect(projectInstructions).toContain("task/branch/PR/user similarity is insufficient");
+  });
+
+  it("routes routine siga around foreign occupied sessions instead of competing", () => {
     for (const source of [sessionRouter, sessionPolicy, projectInstructions]) {
       expect(source).toContain("ACTIVE/OBSERVER");
-      expect(source).toContain("READ-ONLY EVIDENCE MAY FAN OUT");
-      expect(source).toContain("TASK AUTHORITY MAY NOT");
+      expect(source).toContain("foreign");
+      expect(source).toContain("independent");
+    }
+
+    expect(sessionRouter).toContain("A routine standalone `siga` does **not** stop on a foreign-owned task");
+    expect(sessionRouter).toContain("Prefer already-planned independent work");
+    expect(sessionPolicy).toContain("Foreign ownership is task-scoped");
+    expect(projectInstructions).toContain("continues discovery for independent work");
+  });
+
+  it("keeps explicit observer mode read-only", () => {
+    for (const source of [sessionRouter, sessionPolicy, projectInstructions]) {
+      expect(source).toContain("ACTIVE/OBSERVER");
     }
 
     expect(sessionRouter).toContain("must **not** duplicate implementation");
     expect(sessionRouter).toContain("Routine `siga` alone does not grant write authority");
     expect(sessionPolicy).toContain("must not mutate the task branch");
-    expect(projectInstructions).toContain("must not mutate that task");
+    expect(projectInstructions).toContain("never mutate that task");
   });
 
   it("keeps Spec Kit as lifecycle authority after session routing", () => {

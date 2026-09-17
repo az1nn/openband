@@ -45,10 +45,10 @@ NEXT
 REPO_MISMATCH
 ```
 
-- `ACTIVE/OWNED`: the current task still owns work and this chat owns the matching session; continue it.
-- `ACTIVE/OBSERVER`: another live session owns the task; this chat may fan out bounded read-only research/specification, Spec Kit inspection, CI/review/dependency analysis and specialist review, but it must not mutate that task, lease, branch, PR, Spec Kit artifacts or product code.
-- `WAITING`: no safe autonomous work remains before a human/external boundary. Show the exact gate/blocker and required action; do not select another task.
-- `NEXT`: no conflicting live ownership blocks selection. A new/unbound chat may bind to exactly one next task, then route lifecycle execution through `openband-ask` and Spec Kit.
+- `ACTIVE/OWNED`: the current task still owns work and this chat positively proves the matching `SESSION_KEY`; continue it.
+- `ACTIVE/OBSERVER`: only when the user explicitly requests read-only inspection of another live session's task; never mutate that task, lease, branch, PR, Spec Kit artifacts or product code.
+- `WAITING`: this chat owns a task that has no safe autonomous progress before a human/external boundary. A foreign WAITING task is occupancy information, not a global stop.
+- `NEXT`: a new/unbound chat excludes foreign-owned occupied tasks and selects exactly one independent task, preferring existing planned work and otherwise safe planning/specification.
 - `REPO_MISMATCH`: stop without mutation because the current repository is not `az1nn/openband`.
 
 The observer law is:
@@ -58,7 +58,7 @@ READ-ONLY EVIDENCE MAY FAN OUT
 TASK AUTHORITY MAY NOT
 ```
 
-Persist live task ownership through the idempotent marked PR/issue session lease defined by `docs/ai/session-routing.md`. A routine `siga` never silently takes over another `ACTIVE` lease.
+Persist live task ownership through the idempotent marked PR/issue session lease defined by `docs/ai/session-routing.md`. Ownership requires matching current-chat `SESSION_KEY` proof; task/branch/PR/user similarity is insufficient. A routine `siga` never silently takes over another `ACTIVE` lease and does not stop there: it continues discovery for independent work.
 
 At the beginning of a material development session:
 
@@ -193,6 +193,7 @@ Neither session routing, continuation nor handoff can:
 - override Spec Kit/Git/tests/Graph state;
 - retroactively approve a missing gate because a PR was merged;
 - silently take over another active session lease;
+- infer lease ownership without matching current-chat `SESSION_KEY` proof;
 - mutate a foreign-owned task from observer mode;
 - start a second distinct task in a chat already bound to one task.
 

@@ -18,6 +18,8 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run sdd:check
+      - run: npm run test:marketing-kb
+      - run: npm run marketing:kb:check
       - run: npm run test:graph-sdd
       - run: npm run graph:ci
 

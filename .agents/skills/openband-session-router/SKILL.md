@@ -29,7 +29,9 @@ Never substitute a repository from model memory, account memory, another ChatGPT
 
 ## Purpose
 
-A standalone `siga` starts or resumes an OpenBand coding session from canonical project state. It never means "continue from chat memory".
+A standalone `siga` starts or resumes one available OpenBand coding task from canonical project state. It never means "continue from chat memory".
+
+A foreign live lease is an **occupancy signal**, not the default destination of a new session. The router must avoid competing with occupied work and continue discovery for a distinct available task.
 
 The router owns **session selection and visibility**. Spec Kit remains the engineering lifecycle authority after routing.
 
@@ -75,8 +77,9 @@ az1nn/openband @ <base-sha>
    ├─ EvidenceProbe ........ PASS | FAIL | RUNNING | STALE | BLOCKED
    ├─ DependencyProbe ...... <active dependency summary>
    ├─ Active work
-   │  ├─ #<issue> / PR #<pr> [ACTIVE|WAITING|READY] owner=<session|none>
+   │  ├─ #<issue> / PR #<pr> [ACTIVE|WAITING|READY] owner=<this-session|foreign-session|none>
    │  └─ ...
+   ├─ Candidate work ....... #<issue> [READY|PLANNING] owner=<none>
    └─ Route ................ ACTIVE/OWNED | ACTIVE/OBSERVER | WAITING | NEXT | REPO_MISMATCH
 ```
 
@@ -87,6 +90,8 @@ Rules:
 - do not invent agents that were not needed;
 - if a specialist is loaded, add it beneath the task that required it;
 - if another session owns a task, mark that branch `owner=<foreign-session>` and never imply this chat owns it;
+- treat foreign-owned ACTIVE/WAITING branches as occupied and exclude them from mutation candidates;
+- show the independent task selected for this chat, or the planning candidate chosen when no implementation task is safely available;
 - keep the tree concise enough to be read at session start.
 
 ## Session lease
@@ -112,6 +117,9 @@ Rules:
 - update the existing marked comment instead of creating duplicates;
 - lease state never overrides Git/PR/issue/Spec Kit/CI truth;
 - elapsed time alone never proves abandonment;
+- ownership requires positive proof: this chat owns a lease only when this chat previously established the same `SESSION_KEY`;
+- matching issue, PR, branch, user identity, repository, or task topic is never ownership proof;
+- without matching current-chat `SESSION_KEY` proof, an ACTIVE lease is `owner=<foreign-session>`;
 - a new chat must not silently steal an `ACTIVE` lease.
 
 ## Routes
@@ -142,9 +150,11 @@ Running CI, remediation, verification, cleanup and convergence all remain part o
 
 ### ACTIVE/OBSERVER
 
-Use when another live chat/session owns the current task.
+Use only when the user explicitly asks this chat to inspect, research, review, or diagnose a task owned by another live session.
 
-The new chat must **not** duplicate implementation, mutate the branch, update the lease, edit Spec Kit artifacts, change PR state, or start a competing lifecycle.
+A routine standalone `siga` does **not** stop on a foreign-owned task. It marks that branch occupied and continues `NEXT` discovery for a distinct task.
+
+The observer chat must **not** duplicate implementation, mutate the branch, update the lease, edit Spec Kit artifacts, change PR state, or start a competing lifecycle.
 
 It may perform bounded read-only observer work that improves project visibility without taking ownership:
 
@@ -181,20 +191,26 @@ Show:
 - smallest action required to unblock;
 - evidence that will become stale after the action.
 
-Keep/update the owning lease as `WAITING`. Do not select unrelated next work merely because a task is waiting.
+Keep/update the owning lease as `WAITING`. This route applies only when **this chat owns** that waiting task. A foreign WAITING lease is occupancy information and does not stop an unbound `siga` from selecting a different independent task.
 
 ### NEXT
 
-Use only when no conflicting live ownership blocks selection and this chat is unbound.
+Use when this chat is unbound and does not positively prove ownership of an existing lease. Foreign live ownership blocks **that task**, not the whole repository.
+
+Before ranking candidates, remove:
+
+- every ACTIVE task owned by another `SESSION_KEY`;
+- every WAITING task owned by another session when continuing it would mutate the same task;
+- any candidate whose implementation would directly compete with, overwrite, or require takeover of an occupied branch.
 
 Discovery order:
 
-1. still-valid `NEXT` from the latest verified Caveman handoff;
-2. GitHub issue/PR dependency chain and unblockers;
-3. active Spec Kit task/dependency state;
-4. canonical roadmap direction.
+1. an independent still-valid planned `NEXT` from verified handoff/Spec Kit state;
+2. an independent ready GitHub issue/PR dependency-chain task;
+3. an independent active Spec Kit planning/design task that does not mutate occupied work;
+4. a bounded planning/specification task from canonical roadmap direction.
 
-Prefer work that unblocks existing dependency chains.
+Prefer already-planned independent work over inventing new work. If all implementation candidates are occupied or structurally blocked, select safe planning/specification for a future independent task rather than defaulting to observer mode.
 
 Before material mutation:
 
@@ -266,6 +282,7 @@ This skill cannot:
 - approve a human gate;
 - relabel stale/failing/running evidence as PASS;
 - lower risk tier;
+- infer ownership without matching current-chat `SESSION_KEY` proof;
 - silently steal an active task;
 - mutate a foreign-owned task in observer mode;
 - start a second distinct task in a chat already bound to one;

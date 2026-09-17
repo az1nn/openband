@@ -110,7 +110,8 @@ jobs:
 
             const trustRootPatterns = [
               /^\.github\/workflows\//,
-              /^scripts\/(?:ci-merge-gate|sdd-policy-check|security-policy-check)\.mjs$/,
+              /^scripts\/(?:ci-merge-gate|sdd-policy-check|security-policy-check|marketing-kb-check)\.mjs$/,
+              /^tests\/marketing-kb-check\.test\.mjs$/,
               /^tests\/evidence-merge-policy\.test\.mjs$/,
               /^docs\/operations\/merge-automation-recovery\.md$/,
               /^\.specify\/memory\/constitution\.md$/,
@@ -390,6 +391,8 @@ jobs:
             for (const command of [
               'npm run sdd:check',
               'npm run security:policy',
+              'npm run test:marketing-kb',
+              'npm run marketing:kb:check',
               'npx tsc --noEmit',
               'npx vitest run',
               'npm run test:legacy',
@@ -457,10 +460,19 @@ jobs:
               'sdd:check': 'node scripts/sdd-policy-check.mjs',
               'security:policy': 'node scripts/security-policy-check.mjs',
               'merge:gate': 'node scripts/ci-merge-gate.mjs',
+              'test:marketing-kb': 'node --test tests/marketing-kb-check.test.mjs',
+              'marketing:kb:check': 'node scripts/marketing-kb-check.mjs',
             };
             for (const [name, expected] of Object.entries(expectedScripts)) {
               if (packageJson.scripts?.[name] !== expected) {
                 throw new Error('package script ' + name + ' no longer points to trusted producer');
+              }
+            }
+
+            const marketingPolicy = await read('scripts/marketing-kb-check.mjs');
+            for (const anchor of ['validateMarketingKb', 'DUPLICATE_ID', 'UNRESOLVED_ID', 'BROKEN_LINK', 'process.exitCode = 1']) {
+              if (!marketingPolicy.includes(anchor)) {
+                throw new Error('marketing KB evidence producer missing fail-closed anchor: ' + anchor);
               }
             }
 
