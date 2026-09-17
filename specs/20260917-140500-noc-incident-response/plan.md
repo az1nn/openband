@@ -2,12 +2,12 @@
 
 ## Approach
 
-Extend the existing specialist model with an operational/NOC reviewer. Keep orchestration, risk classification and human gates owned by the current Spec Kit/OpenBand policy.
+Extend the existing specialist model with an operational/NOC reviewer. Keep orchestration, risk classification, Design Gate and merge eligibility owned by the canonical Spec Kit/OpenBand governance rather than creating NOC-specific lifecycle rules.
 
 ## Changes
 
 1. Add `.agents/skills/openband-noc/SKILL.md` as a read-mostly operational specialist.
-2. Add `docs/operations/incident-response.md` with severity, evidence, escalation and human-approval rules.
+2. Add `docs/operations/incident-response.md` with severity, evidence, escalation and production-action approval rules.
 3. Add `docs/operations/runbooks/api-regression.md` as the first concrete runtime runbook.
 4. Reconcile `AGENTS.md` specialist guidance only if a direct reference improves discoverability without duplicating policy.
 5. Do not add an observability vendor, autonomous rollback or production credentials in this slice.
@@ -23,11 +23,14 @@ The NOC specialist may:
 The NOC specialist may not, without explicit human approval:
 - rollback/redeploy production;
 - rotate credentials or alter access controls;
-- repair/delete production data;
-- merge T2+ changes;
-- suppress required checks to restore green status.
+- repair/delete production data.
 
-Security indicators escalate to `openband-security`; code remediation re-enters the normal risk-tier lifecycle.
+The NOC specialist may never:
+- suppress required checks to restore green status;
+- bypass the canonical Merge Gate;
+- reinterpret `FAIL`, `BLOCKED` or `FLAKY` evidence as success.
+
+Security indicators escalate to `openband-security`; code remediation re-enters the normal risk-tier lifecycle. Merge eligibility follows the project-wide evidence contract defined by canonical governance.
 
 ## Verification
 
@@ -35,7 +38,8 @@ Security indicators escalate to `openband-security`; code remediation re-enters 
 - run `npm run test:graph-sdd` and `npm run graph:ci` if the feature metadata/docs affect graph policy;
 - inspect the NOC skill against `AGENTS.md` for lifecycle duplication or weakened gates;
 - walk the API-regression scenario and verify the output separates facts, hypotheses and recommended actions;
-- confirm no runtime/product files changed.
+- confirm no runtime/product files changed;
+- confirm NOC remediation cannot bypass or weaken required merge evidence.
 
 ## Architecture Decision
 
