@@ -119,6 +119,24 @@ A Caveman handoff MUST be emitted automatically at the end of every material tas
 
 Do not ask permission to generate it. The only exception is an explicit user instruction in the current turn not to produce a handoff/prompt.
 
+### Performance preservation
+
+Caveman Mode MUST save tokens by removing repeated prose, not by skipping reasoning, verification, tool checks, or required evidence.
+
+The execution model is:
+
+```text
+full audit + full verification -> compressed durable handoff
+```
+
+Never use:
+
+```text
+compressed audit -> compressed confidence
+```
+
+If the next action requires a fact that is absent from the compact handoff, the next session retrieves it from the referenced canonical artifact instead of carrying that artifact's full contents forward.
+
 ## Mandatory triggers
 
 Run this skill when any of the following is true:
