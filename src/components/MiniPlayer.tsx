@@ -1,12 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { View, Text, Pressable, Platform } from "react-native";
+import { View, Text, Pressable, Platform, type GestureResponderEvent } from "react-native";
 import { useRouter } from "expo-router";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { useWebAudioPlayer } from "../hooks/useWebAudioPlayer";
-
-interface NativeTouchEvent {
-  nativeEvent: { pageX: number; pageY: number };
-}
 
 interface MiniPlayerState {
   title: string;
@@ -46,6 +42,25 @@ function fmt(s: number): string {
   return `${m}:${sec.toString().padStart(2, "0")}`;
 }
 
+export function calculateMiniPlayerSeekTime(
+  locationX: number,
+  progressWidth: number,
+  duration: number,
+): number | null {
+  if (
+    !Number.isFinite(locationX) ||
+    !Number.isFinite(progressWidth) ||
+    !Number.isFinite(duration) ||
+    progressWidth <= 0 ||
+    duration <= 0
+  ) {
+    return null;
+  }
+
+  const ratio = Math.max(0, Math.min(1, locationX / progressWidth));
+  return ratio * duration;
+}
+
 export function MiniPlayer() {
   const router = useRouter();
   const state = useMiniPlayerState();
@@ -62,8 +77,8 @@ export function MiniPlayer() {
 
   const progress = status.duration > 0 ? (status.currentTime / status.duration) * 100 : 0;
 
-  const progressBarRef = useRef<View>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const progressWidthRef = useRef(0);
+  const isDraggingRef = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
   const playerRef = useRef(player);
   playerRef.current = player;
@@ -81,34 +96,41 @@ export function MiniPlayer() {
     if (mountedRef.current) setIsLoading(loading);
   }, []);
 
-  const calculateSeekPosition = useCallback((x: number, containerWidth: number) => {
-    if (!status.duration || containerWidth <= 0) return;
-    const ratio = Math.max(0, Math.min(1, x / containerWidth));
-    player.seekTo(ratio * status.duration);
-  }, [player, status.duration]);
+  const seekToLocationX = useCallback(
+    (locationX: number) => {
+      const seekTime = calculateMiniPlayerSeekTime(
+        locationX,
+        progressWidthRef.current,
+        status.duration,
+      );
+      if (seekTime == null) return;
+      player.seekTo(seekTime);
+    },
+    [player, status.duration],
+  );
 
   const handleResponderGrant = useCallback(() => {
-    setIsDragging(true);
+    isDraggingRef.current = true;
   }, []);
 
-  const handleResponderMove = useCallback((event: NativeTouchEvent) => {
-    if (!isDragging) return;
-    const x = event.nativeEvent.pageX;
-    const containerWidth = typeof window !== "undefined" ? window.innerWidth : 300;
-    calculateSeekPosition(Math.max(0, Math.min(containerWidth, x)), containerWidth);
-  }, [isDragging, calculateSeekPosition]);
+  const handleResponderMove = useCallback(
+    (event: GestureResponderEvent) => {
+      if (!isDraggingRef.current) return;
+      seekToLocationX(event.nativeEvent.locationX);
+    },
+    [seekToLocationX],
+  );
 
   const handleResponderRelease = useCallback(() => {
-    setIsDragging(false);
+    isDraggingRef.current = false;
   }, []);
 
-  const handleProgressPress = useCallback((_e: import("react-native").GestureResponderEvent) => {
-    // RN web events don't have offsetX, so use the screen width as fallback
-    const x = typeof window !== "undefined" ? window.innerWidth / 2 : 150;
-    if (status.duration) {
-      player.seekTo((x / 300) * status.duration);
-    }
-  }, [player, status.duration]);
+  const handleProgressPress = useCallback(
+    (event: GestureResponderEvent) => {
+      seekToLocationX(event.nativeEvent.locationX);
+    },
+    [seekToLocationX],
+  );
 
   useEffect(() => {
     const load = async () => {
@@ -170,12 +192,16 @@ export function MiniPlayer() {
     <View className="absolute bottom-0 left-0 right-0 bg-dark-surface/95 backdrop-blur-sm border-t border-dark-border">
       {/* Progress bar (draggable) */}
       <Pressable
-        ref={progressBarRef}
+        testID="mini-player-progress"
         className="h-1.5 bg-dark-muted overflow-hidden cursor-pointer"
+        onLayout={(event) => {
+          progressWidthRef.current = event.nativeEvent.layout.width;
+        }}
         onPress={handleProgressPress}
         onResponderGrant={handleResponderGrant}
         onResponderMove={handleResponderMove}
         onResponderRelease={handleResponderRelease}
+        onResponderTerminate={handleResponderRelease}
       >
         <View
           className="h-full bg-brand-primary transition-all"
