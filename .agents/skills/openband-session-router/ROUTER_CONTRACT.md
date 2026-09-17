@@ -8,6 +8,9 @@ The session router is project-local and repository-locked.
 - Compatibility adapter: `.qwen/skills/auto-skill-session-router/SKILL.md`
 - Lifecycle authority after routing: `openband-ask` + GitHub Spec Kit
 - Visible start-of-session output: `OPENBAND AGENT TREE`
-- Foreign-owned active task mode: `ACTIVE/OBSERVER` (read-only)
+- Ownership proof: matching current-chat `SESSION_KEY`
+- Foreign-owned active/waiting task handling: mark occupied, do not mutate, continue `NEXT` discovery
+- Foreign-task observer mode: `ACTIVE/OBSERVER` only for explicit user-requested read-only inspection
+- Parallel selection: prefer independent already-planned work; otherwise safe independent planning/specification
 
 Any repository mismatch is fail-closed and mutation-free.
