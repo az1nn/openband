@@ -18,6 +18,26 @@ const FORBIDDEN_MUTABLE_KEYS = new Set([
   "finalApproved",
 ]);
 
+const LIVE_GOVERNANCE_FILES = [
+  ".specify/memory/constitution.md",
+  "AGENTS.md",
+  "CONTRIBUTING.md",
+  ".agents/skills/openband-ask/SKILL.md",
+  "docs/ai/chatgpt-project-instructions.md",
+  "docs/ai/context-handoff.md",
+  "docs/ai/session-handoff-template.md",
+];
+
+const STALE_MERGE_PATTERNS = [
+  [/HUMAN MERGE GATE/i, "HUMAN MERGE GATE"],
+  [/human Merge Gate/i, "human Merge Gate"],
+  [/READY_FOR_HUMAN/i, "READY_FOR_HUMAN"],
+  [/human design\/merge gates/i, "human design/merge gates"],
+  [/merged by a human/i, "merged by a human"],
+  [/human merges the verified PR HEAD/i, "human merges the verified PR HEAD"],
+  [/authorize a T2\+ merge/i, "authorize a T2+ merge"],
+];
+
 function readText(file) {
   try {
     return fs.readFileSync(file, "utf8");
@@ -131,9 +151,49 @@ export function checkFeature(root, dir) {
   return errors;
 }
 
+export function checkLiveGovernance(root) {
+  const errors = [];
+
+  for (const relative of LIVE_GOVERNANCE_FILES) {
+    const content = readText(path.join(root, relative));
+    if (content === null) continue;
+    for (const [pattern, label] of STALE_MERGE_PATTERNS) {
+      if (pattern.test(content)) errors.push(`${relative}: stale merge semantics '${label}'`);
+    }
+  }
+
+  const agents = readText(path.join(root, "AGENTS.md"));
+  if (agents !== null) {
+    if (!/HUMAN DESIGN GATE/.test(agents)) {
+      errors.push("AGENTS.md: must preserve HUMAN DESIGN GATE for T2+");
+    }
+    if (!/EVIDENCE-DRIVEN MERGE GATE/.test(agents)) {
+      errors.push("AGENTS.md: must define EVIDENCE-DRIVEN MERGE GATE");
+    }
+    if (!/exact merge-candidate HEAD/i.test(agents)) {
+      errors.push("AGENTS.md: Merge Gate must be bound to the exact merge-candidate HEAD");
+    }
+  }
+
+  const constitution = readText(path.join(root, ".specify/memory/constitution.md"));
+  if (constitution !== null) {
+    if (!/evidence-driven/i.test(constitution) || !/exact candidate HEAD/i.test(constitution)) {
+      errors.push("constitution: PR-first governance must define evidence-driven exact-HEAD merge authorization");
+    }
+  }
+
+  const handoff = readText(path.join(root, "docs/ai/session-handoff-template.md"));
+  if (handoff !== null && !/Merge Gate: `[^`]*SATISFIED/.test(handoff)) {
+    errors.push("session handoff: Merge Gate state must include SATISFIED");
+  }
+
+  return errors;
+}
+
 export function checkRepository(root = process.cwd()) {
   const errors = [];
   for (const dir of featureDirs(root)) errors.push(...checkFeature(root, dir));
+  errors.push(...checkLiveGovernance(root));
   return errors;
 }
 

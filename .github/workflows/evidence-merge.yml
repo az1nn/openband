@@ -1,0 +1,183 @@
+name: OpenBand Evidence Merge
+
+on:
+  workflow_run:
+    workflows: ["OpenBand CI V2"]
+    types: [completed]
+
+permissions:
+  actions: read
+  checks: read
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate risk-derived evidence and merge exact HEAD
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const associated = run.pull_requests || [];
+            if (associated.length !== 1) {
+              core.setFailed(`Merge Gate BLOCKED: expected exactly one PR for run ${run.id}, got ${associated.length}`);
+              return;
+            }
+
+            const { owner, repo } = context.repo;
+            const pull_number = associated[0].number;
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number });
+
+            if (pr.state !== 'open') {
+              core.notice(`PR #${pull_number} is not open; nothing to merge.`);
+              return;
+            }
+            if (pr.draft) {
+              core.notice(`PR #${pull_number} is draft; Merge Gate remains pending.`);
+              return;
+            }
+            if (pr.base.ref !== 'master') {
+              core.setFailed(`Merge Gate BLOCKED: unexpected base ${pr.base.ref}`);
+              return;
+            }
+            if (pr.head.sha !== run.head_sha) {
+              core.setFailed(`Merge Gate BLOCKED: CI verified ${run.head_sha}, current HEAD is ${pr.head.sha}`);
+              return;
+            }
+
+            const comparison = await github.rest.repos.compareCommits({
+              owner,
+              repo,
+              base: pr.base.sha,
+              head: pr.head.sha,
+            });
+            if (!['ahead', 'identical'].includes(comparison.data.status)) {
+              core.setFailed(`Merge Gate BLOCKED: candidate is not based on current master (${comparison.data.status})`);
+              return;
+            }
+            if (pr.mergeable === false || ['dirty', 'blocked'].includes(pr.mergeable_state)) {
+              core.setFailed(`Merge Gate BLOCKED: PR mergeable_state=${pr.mergeable_state}`);
+              return;
+            }
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number,
+              per_page: 100,
+            });
+            const changed = files.filter((file) => file.status !== 'removed').map((file) => file.filename);
+            const labels = new Set(pr.labels.map((label) => label.name));
+
+            const tierRank = { T0: 0, T1: 1, T2: 2, T3: 3, T4: 4 };
+            const tiers = [];
+            const riskTriggers = new Set();
+
+            for (const file of changed.filter((name) => /^specs\/[^/]+\/openband\.json$/.test(name))) {
+              const { data } = await github.rest.repos.getContent({ owner, repo, path: file, ref: pr.head.sha });
+              if (Array.isArray(data) || data.type !== 'file') {
+                core.setFailed(`Merge Gate BLOCKED: cannot read ${file}`);
+                return;
+              }
+              const metadata = JSON.parse(Buffer.from(data.content, data.encoding || 'base64').toString('utf8'));
+              if (!(metadata.tier in tierRank)) {
+                core.setFailed(`Merge Gate BLOCKED: invalid tier in ${file}`);
+                return;
+              }
+              tiers.push(metadata.tier);
+              for (const trigger of metadata.riskTriggers || []) riskTriggers.add(trigger);
+            }
+
+            for (const label of labels) {
+              const match = /^tier:(T[0-4])$/i.exec(label);
+              if (match) tiers.push(match[1].toUpperCase());
+            }
+
+            if (tiers.length === 0) {
+              core.setFailed('Merge Gate BLOCKED: no machine-readable risk tier. Add feature metadata or a tier:T0..T4 label.');
+              return;
+            }
+            const tier = tiers.sort((a, b) => tierRank[b] - tierRank[a])[0];
+            core.info(`Risk tier: ${tier}; triggers: ${[...riskTriggers].join(', ') || 'none declared'}`);
+
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              owner,
+              repo,
+              run_id: run.id,
+              per_page: 100,
+            });
+            const jobState = new Map(jobs.map((job) => [job.name, job.conclusion]));
+            const requiredJobs = new Set([
+              'graph-check',
+              'security-policy',
+              'frontend-typecheck',
+              'backend-typecheck',
+              'vitest',
+              'legacy-tests',
+              'web-build',
+              'web-launch-e2e',
+              'merge-gate',
+            ]);
+
+            const androidTouched = changed.some((name) => name.startsWith('android/'));
+            const electronTouched = changed.some((name) => name.startsWith('electron/'));
+            if (labels.has('native-build') || androidTouched) requiredJobs.add('android-build');
+            if (labels.has('native-build') || electronTouched) requiredJobs.add('electron-build');
+
+            const missingOrFailed = [...requiredJobs].filter((name) => jobState.get(name) !== 'success');
+            if (missingOrFailed.length > 0) {
+              core.setFailed(`Merge Gate BLOCKED: required jobs not PASS: ${missingOrFailed.map((name) => `${name}=${jobState.get(name) || 'missing'}`).join(', ')}`);
+              return;
+            }
+
+            const checkRuns = await github.paginate(github.rest.checks.listForRef, {
+              owner,
+              repo,
+              ref: pr.head.sha,
+              per_page: 100,
+            });
+            const successfulCheck = (name) => checkRuns.some((check) => check.name === name && check.conclusion === 'success');
+
+            if (tier === 'T4' && !successfulCheck('t4-evidence')) {
+              core.setFailed('Merge Gate BLOCKED: T4 requires an explicit successful t4-evidence check; no producer is trusted by default.');
+              return;
+            }
+            if ([...riskTriggers].some((trigger) => /security/i.test(trigger)) && !successfulCheck('openband-security')) {
+              core.setFailed('Merge Gate BLOCKED: security risk trigger requires successful openband-security check evidence.');
+              return;
+            }
+
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              owner,
+              repo,
+              pull_number,
+              per_page: 100,
+            });
+            const latestByReviewer = new Map();
+            for (const review of reviews) {
+              if (review.user?.login) latestByReviewer.set(review.user.login, review.state);
+            }
+            const blockingReviewers = [...latestByReviewer.entries()]
+              .filter(([, state]) => state === 'CHANGES_REQUESTED')
+              .map(([login]) => login);
+            if (blockingReviewers.length > 0) {
+              core.setFailed(`Merge Gate BLOCKED: active request changes from ${blockingReviewers.join(', ')}`);
+              return;
+            }
+
+            core.info(`Merge Gate SATISFIED for PR #${pull_number} at ${pr.head.sha}; merging exact HEAD.`);
+            const { data: merged } = await github.rest.pulls.merge({
+              owner,
+              repo,
+              pull_number,
+              sha: pr.head.sha,
+              merge_method: 'squash',
+            });
+            if (!merged.merged) {
+              core.setFailed(`Merge Gate was satisfied but GitHub refused merge: ${merged.message}`);
+            }

@@ -6,7 +6,7 @@
 - [x] T004 Amend Constitution PR-first governance and Merge Gate semantics.
 - [x] T005 Reconcile `AGENTS.md` risk table, lifecycle and verification/merge rules.
 - [x] T006 Reconcile contributor, agent-router and AI handoff/project instructions.
-- [ ] T007 Add/update executable policy tests so stale human-merge semantics cannot silently return on live surfaces.
-- [ ] T008 Add the CI evidence aggregator and repository-local exact-HEAD automatic merge workflow.
+- [x] T007 Add/update executable policy tests so stale human-merge semantics cannot silently return on live surfaces.
+- [x] T008 Add the CI evidence aggregator and repository-local exact-HEAD automatic merge workflow.
 - [ ] T009 Run SDD/Graph/policy verification and audit exact-HEAD/fail-closed semantics.
 - [ ] T010 Record verified HEAD and let the evidence-driven Merge Gate perform merge when eligible.
