@@ -241,6 +241,7 @@ BASE: <branch>@<sha>
 HEAD: <branch>@<sha>
 WORK: issue=<id|-> pr=<id/state|-> spec=<id|-> tier=<tier|->
 STATE: <VERIFIED_COMPLETE|IMPLEMENTED_NOT_VERIFIED|INCOMPLETE|PROCESS_DRIFT>
+PERSIST: <pr-comment|issue-comment|file:<path>|unavailable>
 
 DONE:
 - <delta-only completed facts>
@@ -276,6 +277,7 @@ Always preserve when applicable:
 - issue/PR/Spec identity;
 - tier/lifecycle only when relevant to decisions;
 - closeout state;
+- durable persistence sink;
 - current-cycle delta;
 - verification evidence + freshness;
 - blocker/human gate;
@@ -309,6 +311,7 @@ Before persisting/emitting, validate the artifact itself:
 - [ ] exact base and HEAD are present when Git work exists;
 - [ ] closeout classification matches current evidence;
 - [ ] no running/queued/stale check is labeled PASS;
+- [ ] `PERSIST` identifies the durable operational sink when one exists;
 - [ ] `DONE` contains only current-cycle delta;
 - [ ] `PROOF` contains only decision-relevant evidence;
 - [ ] `BLOCK` names only active blockers/gates;
