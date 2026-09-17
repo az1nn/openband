@@ -22,6 +22,7 @@ Every requested native verification target emits exactly one terminal state:
 4. A target may be `BLOCKED` only for a documented prerequisite condition; product/build errors are `FAIL`, not `BLOCKED`.
 5. CI logs and evidence manifests MUST identify the exact source commit SHA and the checkout commit SHA used by the runner.
 6. Produced proof artifacts MUST be hashed with SHA-256 and retained alongside the manifest when available.
+7. Dependency preparation MUST remain deterministic. Native verification MUST NOT replace a frozen install with an unconstrained `npm install` merely to make CI green.
 
 ## Stable reason codes
 
@@ -61,7 +62,9 @@ Declared environment baseline:
 - repository dependency installation and Web export/build completed;
 - `electron/npm ci` completed before packaging.
 
-Expected command family: repository Web build followed by the repository-owned Electron Linux packaging command.
+The Electron lock currently contains the known npm optional-peer stub for `@electron/windows-sign -> postject`. CI may normalize only that exact known stub to the pinned `postject@1.0.0-alpha.6` and nested `commander@9.5.0` metadata before the frozen `npm ci`. The normalizer is fail-closed: if the upstream package version, dependency contract or already-versioned metadata changes, verification fails rather than guessing or running a mutable install.
+
+Expected command family: deterministic lock normalization, repository Web build, frozen Electron dependency install, then the repository-owned Electron Linux packaging command.
 
 Expected proof artifacts: both an AppImage and a Debian package under `electron/out`.
 
