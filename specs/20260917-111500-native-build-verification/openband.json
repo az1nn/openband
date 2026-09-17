@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "tier": "T3",
+  "issue": 43,
+  "riskTriggers": [
+    "native-build-ci",
+    "cross-runtime-packaging",
+    "artifact-evidence"
+  ],
+  "dependsOn": []
+}
