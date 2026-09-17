@@ -46,6 +46,8 @@ For ChatGPT Projects, `docs/ai/chatgpt-project-instructions.md` is the repositor
 - YELLOW: a semantic boundary is approaching; finish the current safe atomic step and refresh canonical state.
 - RED: continuing materially increases stale/conflicting-context risk; explicitly recommend a new chat and generate a `SESSION_HANDOFF.md`.
 
+At the end of every material task, feature slice, verification cycle, or PR freeze, run `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md` before moving to a new workstream. The skill performs a canonical closeout audit of scope, changed files, tests, CI, Graph evidence, reviews, gate freshness, and temporary scaffolding. If work will continue in another task/chat, emit its paste-ready verified continuation prompt even when context is still GREEN.
+
 A handoff is derived bootstrap context only. It must never override Git, Spec Kit, architecture/contracts/ADRs, tests, Graph evidence, risk tier, Design Gate, verification state, or Merge Gate. A new chat reconstructs bounded L0 → L1 → L2 context and verifies branch/worktree/HEAD, feature state and gate freshness before acting.
 
 ## T2+ lifecycle
