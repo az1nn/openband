@@ -26,7 +26,7 @@
 - Risk triggers:
 - Design Baseline SHA:
 - Design Gate: `NOT_REQUIRED | PENDING | APPROVED | INVALIDATED`
-- Merge Gate: `NOT_REQUIRED | PENDING | READY_FOR_HUMAN | INVALIDATED`
+- Merge Gate: `NOT_REQUIRED | PENDING | SATISFIED | BLOCKED | INVALIDATED`
 
 ## Final Decisions
 
@@ -66,7 +66,7 @@
 
 Allowed states: `PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED`.
 
-Verification is stale if its relevant HEAD changed.
+Verification is stale if its relevant HEAD changed or if target-base movement invalidates the evidence.
 
 ## Open / Blocked
 
@@ -94,4 +94,4 @@ L2  relevant code + tests + specialists
 
 Then verify this handoff against current canonical state. Treat any mismatch as stale handoff data, not as authority.
 
-Continue from **Next Action** only after confirming branch/worktree/HEAD, Spec Kit lifecycle state, risk tier, and applicable human gates.
+Continue from **Next Action** only after confirming branch/worktree/HEAD, Spec Kit lifecycle state, risk tier, human Design Gate when applicable, and the current evidence-driven Merge Gate state.

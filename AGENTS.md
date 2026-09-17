@@ -8,7 +8,8 @@ OpenBand uses GitHub Spec Kit as its SDD lifecycle. This file defines operationa
 - Work through branches and PRs. Never push directly to `master`.
 - Stop on decisions, not routine plumbing.
 - Direct `/speckit.*` commands may bypass `openband-ask`, never this policy.
-- Evidence beats claims: masked, blocked, or flaky required checks are not PASS.
+- Evidence beats claims: masked, missing, blocked, or flaky required checks are not PASS.
+- Risk increases required assurance, not manual merge ceremony.
 
 ## Risk tiers
 
@@ -16,8 +17,8 @@ OpenBand uses GitHub Spec Kit as its SDD lifecycle. This file defines operationa
 |---|---|---|
 | T0 | typo / isolated rename | focused check |
 | T1 | localized bug with known behavior | diagnosis + regression proof |
-| T2 | bounded new capability | Spec Kit + Design Gate + human Merge Gate |
-| T3 | architecture, persistence, cross-runtime contract | T2 + architecture assessment + specialist review |
+| T2 | bounded new capability | Spec Kit + human Design Gate + evidence-driven Merge Gate |
+| T3 | architecture, persistence, cross-runtime contract | T2 + architecture assessment + specialist evidence |
 | T4 | security, corruption/loss, CRDT/concurrency, critical deterministic DSP | T3 + adversarial review + recovery + expanded verification |
 
 Minimum T3: persistence model, architecture boundary, or cross-runtime contract change. Minimum T4: security-sensitive work, possible data corruption, CRDT/concurrency correctness, or critical deterministic DSP. Architecture Graph may elevate a tier; it may not lower one.
@@ -53,7 +54,7 @@ A handoff is derived bootstrap context only. It must never override Git, Spec Ki
 ```text
 preflight
 → specify
-→ clarify? 
+→ clarify?
 → plan
 → checklist?
 → tasks
@@ -62,7 +63,7 @@ preflight
 → implement
 → converge
 → verify
-→ HUMAN MERGE GATE
+→ EVIDENCE-DRIVEN MERGE GATE
 → cleanup
 ```
 
@@ -108,7 +109,7 @@ If gaps persist, blast radius grows, or design assumptions change, stop patching
 
 ### Verification and Merge Gate
 
-Verification is risk- and impact-derived. Required evidence can include acceptance tests, typecheck, build, `graph:ci`, specialist review, dependency validation, and normative documentation reconciliation.
+Verification is risk- and impact-derived. Required evidence can include acceptance tests, regression tests, typecheck, build, `graph:ci`, architecture checks, security checks, specialist evidence, dependency validation, recovery evidence, and normative documentation reconciliation.
 
 Allowed evidence states:
 
@@ -116,9 +117,15 @@ Allowed evidence states:
 PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED
 ```
 
-`FAIL`, `BLOCKED`, or `FLAKY` blocks a required gate.
+Only `PASS` and justified `NOT_REQUIRED` satisfy required evidence. `FAIL`, `BLOCKED`, `FLAKY`, missing, cancelled, timed-out, or stale required evidence blocks the gate.
 
-For T2+, the human merges the verified PR HEAD. If HEAD changes after verification, rerun affected checks. Agents do not merge T2+.
+The Merge Gate is evaluated against the exact merge-candidate HEAD and its target-base relationship. If HEAD changes, or the base moves in a way that can affect the candidate, rerun the affected evidence. Generic CI completion is not enough when the risk-derived contract requires stronger proof.
+
+When the complete contract is satisfied, automation may merge T0–T4 without a separate human merge approval. Higher tiers require stronger evidence; they do not require a different merge ceremony. Unresolved policy violations, contradictory spec/implementation evidence, or active request-for-changes state block automatic merge.
+
+If the repository cannot yet produce a required class of evidence, the state is `BLOCKED`. The remedy is to add the missing evidence producer, not to bypass the gate.
+
+Merge authorization is distinct from production mutation authorization. Rollback/redeploy, credential rotation, access-control changes, destructive data repair, and similar runtime actions retain their independent approval rules.
 
 ## Architecture and knowledge
 
@@ -148,12 +155,12 @@ Frontend code under `app/` and `src/` must not call Node filesystem, Electron, o
 
 ## Emergency and degraded operation
 
-Urgency can compress sequencing, never assurance. T2+ still requires material intent, Design Gate, regression proof, convergence, critical verification, normative knowledge reconciliation, and human merge.
+Urgency can compress sequencing, never assurance. T2+ still requires material intent, Design Gate, regression proof, convergence, critical verification, normative knowledge reconciliation, and an evidence-satisfied Merge Gate.
 
 If Spec Kit tooling fails, use degraded SDD only as a temporary tooling fallback: preserve tiers, artifacts, gates and evidence; record the tooling failure and fix it separately. Never reactivate OpenSpec.
 
 ## Specialists
 
-Load specialists only when impact requires them. Useful project skills include domain modeling, architecture/Graph, TDD, audio/DSP, security, cross-platform review, debugging, and code review.
+Load specialists only when impact requires them. Useful project skills include domain modeling, architecture/Graph, TDD, audio/DSP, security, cross-platform review, debugging, code review, and runtime/NOC operations.
 
 Detailed product/runtime knowledge belongs in architecture/docs/skills, not in this policy file.

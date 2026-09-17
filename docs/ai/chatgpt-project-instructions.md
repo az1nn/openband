@@ -82,14 +82,14 @@ A handoff cannot:
 
 - approve a Design Gate;
 - mark verification as PASS;
-- authorize a T2+ merge;
+- mark an evidence-driven Merge Gate as satisfied;
 - override risk tier;
 - override Spec Kit state;
 - override current Git/PR state.
 
 If the Design Baseline SHA changed, treat the Design Gate as invalid until re-analysis and human approval.
 
-If verified HEAD changed, rerun affected verification before considering the Merge Gate satisfied.
+If verified HEAD changed, or the target base changed materially, rerun affected verification before considering the Merge Gate satisfied.
 
 For T2+ work, preserve the OpenBand lifecycle:
 
@@ -105,7 +105,7 @@ preflight
 → implement
 → converge
 → verify
-→ HUMAN MERGE GATE
+→ EVIDENCE-DRIVEN MERGE GATE
 → cleanup
 ```
 

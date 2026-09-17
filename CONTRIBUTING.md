@@ -38,7 +38,7 @@ Node.js 22 or newer is required. Python/Demucs, Supabase, Redis, and object stor
 2. Identify the issue/request and creator-visible outcome.
 3. Confirm current behavior with a minimal reproduction.
 4. Read only the relevant architecture, contract, ADR, spec, and source context.
-5. Determine the risk tier. T2+ work follows the Spec Kit lifecycle and human design/merge gates.
+5. Determine the risk tier. T2+ work follows the Spec Kit lifecycle and requires a human Design Gate before implementation; merge eligibility is evidence-driven for every tier.
 6. Create a branch; never push a production change directly to `master`.
 
 ## Branches and pull requests
@@ -71,7 +71,7 @@ Do not hide failing checks, unrelated cleanup, generated secrets, personal data,
 
 ## Verification
 
-Select checks from the change impact; CI runs the complete merge matrix.
+Select checks from the change impact; CI runs the common merge matrix and the risk contract may require additional evidence.
 
 ```bash
 npm run lint
@@ -90,7 +90,11 @@ npm ci
 npx tsc --noEmit
 ```
 
-Use focused tests while iterating, then run the risk-appropriate gate. If a required check is blocked or flaky, report that state; it is not a pass.
+Use focused tests while iterating, then run the risk-appropriate gate. If a required check is missing, blocked, flaky, stale, cancelled, or failing, it is not a pass.
+
+The exact PR HEAD is merge-eligible only after every required item is `PASS` or justified `NOT_REQUIRED`. A changed HEAD or materially stale base invalidates affected evidence. Once the complete contract is satisfied, repository automation may merge the PR without a separate human merge approval.
+
+If a class of regression matters but has no reliable check yet, add the evidence producer before relying on automatic merge for that class.
 
 ## Audio and visual evidence
 
@@ -109,4 +113,4 @@ Marketing claims must follow the guardrails in [`docs/marketing/messaging.md`](d
 
 ## Review expectations
 
-Maintainers may ask to reduce scope, add proof, revisit a design gate, or separate follow-up work. T2+ changes are merged by a human only after the verified PR head passes the required gate.
+Maintainers may ask to reduce scope, add proof, revisit a Design Gate, or separate follow-up work. Review comments and requests for changes are evidence: unresolved blocking review state prevents automatic merge. The merge decision itself is made from the exact-HEAD evidence contract, not from a mandatory final human click.

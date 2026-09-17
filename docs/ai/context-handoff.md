@@ -4,7 +4,7 @@
 
 This policy defines when an AI-assisted OpenBand work session should remain in the current chat and when it should hand off to a clean chat.
 
-It does **not** create a new workflow engine, project state machine, or source of truth. OpenBand's Spec Kit lifecycle, Git state, Architecture Graph, ADRs, contracts, code, tests, and human gates remain authoritative.
+It does **not** create a new workflow engine, project state machine, or source of truth. OpenBand's Spec Kit lifecycle, Git state, Architecture Graph, ADRs, contracts, code, tests, human Design Gate, and evidence-driven Merge Gate remain authoritative.
 
 ## Core rule
 
@@ -127,9 +127,10 @@ A new chat does not reset or bypass lifecycle gates.
 
 - A handoff cannot grant a Design Gate.
 - A handoff cannot mark verification PASS.
-- A handoff cannot authorize a T2+ merge.
+- A handoff cannot satisfy the evidence-driven Merge Gate.
 - If a Design Baseline SHA changed, the existing Design Gate is invalid until re-analysis and human approval.
 - If verified HEAD changed, affected checks must be rerun before Merge Gate.
+- If the target base moved materially, affected evidence must be refreshed before Merge Gate.
 
 ## Recommended semantic boundaries
 
