@@ -10,7 +10,7 @@ At the beginning of a material development session:
 
 1. Refresh repository, branch, worktree, issue and PR state.
 2. Read `AGENTS.md`.
-3. Follow `docs/ai/context-handoff.md`.
+3. Follow `docs/ai/context-handoff.md` and `docs/ai/durable-context.md`.
 4. Reconstruct context progressively:
 
 ```text
@@ -19,13 +19,17 @@ L1  feature spec + impacted architecture/contracts/ADRs + Graph
 L2  relevant code + tests + specialists
 ```
 
-Do not load the entire repository or previous conversation history by default.
+Do not load the entire repository or previous conversation history by default. Treat chat and model memory as disposable bootstrap context, never as required project state.
 
 At the end of every material task, feature slice, verification cycle, PR freeze, or before moving to a distinct workstream, run `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md`.
 
 The closeout is mandatory even when the conversation remains GREEN. It must refresh canonical state, audit planned scope versus implementation, verify required tests/CI/Graph on the exact relevant HEAD, inspect reviews and temporary scaffolding, and classify the task as `VERIFIED_COMPLETE`, `IMPLEMENTED_NOT_VERIFIED`, `INCOMPLETE`, or `PROCESS_DRIFT`.
 
-After the full audit, automatically emit one compact Caveman handoff. Do not require the user to separately ask for a continuation prompt. Caveman Mode saves tokens by compressing the transferred context, never by skipping reasoning, tests, CI, Graph checks, review inspection, or gate validation.
+Before emitting the handoff, promote any newly discovered long-lived project fact to its owning canonical artifact. Do not leave architecture decisions, contracts, workflow policy, acceptance criteria, or project invariants only in chat/model memory or a handoff.
+
+Then persist short-lived continuation state using `docs/ai/durable-context.md`: prefer one idempotent marked PR comment, otherwise an issue comment, and use a repository handoff file only when no non-HEAD-mutating sink exists. Persistence must never silently invalidate a verified HEAD.
+
+After the full audit and persistence step, automatically emit one compact Caveman handoff. Do not require the user to separately ask for a continuation prompt. Caveman Mode saves tokens by compressing the transferred context, never by skipping reasoning, tests, CI, Graph checks, review inspection, or gate validation.
 
 The Caveman handoff must preserve, when applicable:
 
@@ -46,9 +50,9 @@ Continuously monitor conversation context health without reporting the status on
 
 Use:
 
-- GREEN — context remains coherent and trustworthy; continue normally. A material task closeout still emits Caveman automatically.
+- GREEN — context remains coherent and trustworthy; continue normally. A material task closeout still persists + emits Caveman automatically.
 - YELLOW — a semantic boundary is approaching; finish the current safe atomic lifecycle action, refresh canonical state, and run verified closeout.
-- RED — continuing the current chat materially increases the risk of stale, contradictory, superseded or ambiguous context; finish/stop the current safe atomic action, run verified closeout, emit Caveman, and recommend a clean chat.
+- RED — continuing the current chat materially increases the risk of stale, contradictory, superseded or ambiguous context; finish/stop the current safe atomic action, run verified closeout, persist + emit Caveman, and recommend a clean chat.
 
 Conversation length, message count or number of tool calls alone must never trigger a chat change.
 
@@ -71,7 +75,7 @@ When RED, explicitly tell the user:
 
 Do not abandon a safe atomic action already in progress. Finish or explicitly stop the current lifecycle step first.
 
-Then emit the Caveman artifact defined by `docs/ai/session-handoff-template.md`.
+Then persist and emit the Caveman artifact defined by `docs/ai/session-handoff-template.md`.
 
 A handoff cannot:
 
