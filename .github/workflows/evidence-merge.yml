@@ -366,7 +366,7 @@ jobs:
             }
 
             for (const forbidden of [
-              /pull_request_target\s*:/,
+              new RegExp('pull_request' + '_target\\s*:'),
               /(?:contents|pull-requests|checks|actions):\s*write/,
               /continue-on-error:\s*true/,
               /\|\|\s*(?:true|echo)\b/,
