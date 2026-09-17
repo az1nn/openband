@@ -137,6 +137,16 @@ compressed audit -> compressed confidence
 
 If the next action requires a fact that is absent from the compact handoff, the next session retrieves it from the referenced canonical artifact instead of carrying that artifact's full contents forward.
 
+### Default behavior after implementation work
+
+When an implementation cycle finishes, Caveman Mode is part of the definition of done for the agent response:
+
+```text
+implement -> verify -> classify -> caveman handoff
+```
+
+Do not make “generate continuity prompt” a separate user task. The handoff is emitted as the final compact continuation artifact of the cycle.
+
 ## Mandatory triggers
 
 Run this skill when any of the following is true:
