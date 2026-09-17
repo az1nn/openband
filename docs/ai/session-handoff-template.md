@@ -4,7 +4,7 @@
 
 ## Default handoff — Caveman Mode
 
-The verified-context-handoff skill performs the full closeout audit, then emits this compact artifact by default. Compression applies to the transferred text, never to verification depth.
+The verified-context-handoff skill performs the full closeout audit, promotes durable project knowledge, persists short-lived continuation state, then emits this compact artifact by default. Compression applies to the transferred text, never to verification depth.
 
 ```text
 CAVEMAN HANDOFF v1
@@ -14,6 +14,7 @@ BASE: <branch>@<sha>
 HEAD: <branch>@<sha>
 WORK: issue=<id|-> pr=<id/state|-> spec=<id|-> tier=<tier|->
 STATE: <VERIFIED_COMPLETE|IMPLEMENTED_NOT_VERIFIED|INCOMPLETE|PROCESS_DRIFT>
+PERSIST: <pr-comment|issue-comment|file:<path>|unavailable>
 
 DONE:
 - <delta-only completed facts>
@@ -36,6 +37,8 @@ Reconstruct GitHub/Git/Spec Kit/tests/CI/Graph from canonical state before actin
 PR: <direct URL when applicable>
 ```
 
+`PERSIST` identifies where the same operational handoff was durably stored. Prefer an idempotent marked PR/issue comment because it does not mutate Git HEAD. See `docs/ai/durable-context.md`.
+
 ## Required semantics
 
 The compact handoff must preserve, when applicable:
@@ -45,6 +48,7 @@ The compact handoff must preserve, when applicable:
 - issue, PR and Spec Kit identity;
 - risk tier / lifecycle state;
 - closeout classification;
+- durable persistence sink;
 - current-cycle implementation delta;
 - verification evidence bound to the relevant HEAD;
 - blocking review, human gate, or freshness risk;
@@ -64,6 +68,8 @@ A running workflow is not PASS. Evidence from an older relevant HEAD is STALE. A
 
 - Emit the Caveman handoff automatically at every material task, feature slice, verification cycle, PR freeze, or context boundary.
 - Do not require a separate user request for a continuation prompt.
+- Promote durable decisions to canonical docs before final verification; do not trap them in the handoff.
+- Persist the operational artifact using the sink order in `docs/ai/durable-context.md`.
 - Prefer SHAs, IDs, run IDs, paths and short state labels over prose.
 - Carry only the current delta plus facts required to execute `NEXT` safely.
 - Reference canonical specs/ADRs/docs instead of copying their contents.
