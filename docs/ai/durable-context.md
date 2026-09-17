@@ -78,6 +78,23 @@ Rules:
 - Never call a previous SHA verified after a persistence commit changed the branch.
 - Do not create a post-freeze documentation commit only to store operational state when a PR/issue comment is available.
 
+## Baseline failure triage
+
+A failed closeout check does not automatically mean the active branch caused the defect.
+
+When a required check fails outside the changed scope or in behavior shared by multiple independent PRs:
+
+1. keep the active work `IMPLEMENTED_NOT_VERIFIED`; never relabel the failure as PASS or ignore it;
+2. compare the failure with current `master` / target-base lineage and another independent run when available;
+3. classify the defect as branch regression only when evidence ties it to the active diff;
+4. if evidence proves a baseline defect, create an isolated issue + branch + PR for that defect instead of contaminating the original feature PR;
+5. fix the product/process defect without weakening the failing test;
+6. verify and land the baseline fix under its own evidence;
+7. mark all prior evidence for the original PR as `STALE` when the target base changes;
+8. rerun the original PR against the corrected base before merge.
+
+A baseline defect is a blocker, not an excuse to bypass assurance. The purpose of triage is to assign the fix to the correct workstream while preserving the original verification contract.
+
 ## Handoff comment contract
 
 The durable PR/issue comment should contain only:
