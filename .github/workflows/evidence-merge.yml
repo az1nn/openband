@@ -123,11 +123,15 @@ jobs:
             const trustRootTouched = packageTrustTouched || changed.some((name) =>
               trustRootPatterns.some((pattern) => pattern.test(name)),
             );
+            const productRuntimeTouched = changed.some((name) =>
+              /^(?:app|src|backend|electron|android)\//.test(name),
+            );
             const architectureTouched = changed.some((name) =>
               /^(?:android|electron)\//.test(name) ||
-              /(?:persistence|storage|sqlite|database|bridge|native)/i.test(name),
+              /^(?:app|src|backend)\/.*(?:persistence|storage|sqlite|database|bridge|native)/i.test(name),
             );
             const securityPathTouched = changed.some((name) =>
+              /^(?:app|src|backend|electron|android)\//.test(name) &&
               /(?:^|\/)(?:auth|security|crypto|permissions|rbac|secrets?)(?:\/|\.|-)/i.test(name),
             );
 
@@ -136,6 +140,7 @@ jobs:
             const declaredChecks = new Set();
             let schemaV2Count = 0;
             let schemaV2Issue = null;
+            let schemaV2Path = null;
 
             for (const path of changed.filter((name) => /^specs\/[^/]+\/openband\.json$/.test(name))) {
               const { data } = await github.rest.repos.getContent({
@@ -161,6 +166,7 @@ jobs:
               if (metadata.schemaVersion === 2) {
                 schemaV2Count += 1;
                 schemaV2Issue = metadata.issue;
+                schemaV2Path = path;
                 if (!Array.isArray(metadata.requiredChecks) || metadata.requiredChecks.length === 0) {
                   block(path + ' schemaVersion 2 requires non-empty requiredChecks');
                   return;
@@ -183,7 +189,13 @@ jobs:
               if (match) tiers.push(match[1].toUpperCase());
             }
 
-            if (architectureTouched) tiers.push('T3');
+            if (architectureTouched) {
+              tiers.push('T3');
+              riskTriggers.add('architecture-boundary-change');
+            }
+            if (productRuntimeTouched) {
+              riskTriggers.add('product-runtime-change');
+            }
             if (securityPathTouched) {
               tiers.push('T4');
               riskTriggers.add('security-sensitive-path');
@@ -267,13 +279,38 @@ jobs:
                   block('requiredChecks differ from Design Gate contract');
                   return;
                 }
-              }
 
-              for (const trigger of gateTriggers) {
-                if (!riskTriggers.has(trigger)) {
-                  block('approved risk trigger removed after Design Gate: ' + trigger);
+                if (!schemaV2Path) {
+                  block('T2+ evidence metadata path is missing');
                   return;
                 }
+                const featureDir = schemaV2Path.replace(/\/openband\.json$/, '');
+                const readTextAt = async (path, ref) => {
+                  const { data } = await github.rest.repos.getContent({ owner, repo, path, ref });
+                  if (Array.isArray(data) || data.type !== 'file') {
+                    throw new Error('cannot read design artifact ' + path + ' at ' + ref);
+                  }
+                  return Buffer.from(data.content, data.encoding || 'base64').toString('utf8');
+                };
+                for (const designName of ['spec.md', 'plan.md']) {
+                  const designPath = featureDir + '/' + designName;
+                  const baselineText = await readTextAt(designPath, baseline);
+                  const candidateText = await readTextAt(designPath, pr.head.sha);
+                  if (baselineText !== candidateText) {
+                    block('material design artifact changed after approved baseline: ' + designPath);
+                    return;
+                  }
+                }
+              }
+
+              const actualTriggers = [...riskTriggers].sort().join(',');
+              const approvedTriggers = [...gateTriggers].sort().join(',');
+              if (actualTriggers !== approvedTriggers) {
+                block(
+                  'risk triggers differ from Design Gate contract: approved=' +
+                  (approvedTriggers || 'none') + ' actual=' + (actualTriggers || 'none'),
+                );
+                return;
               }
             }
 

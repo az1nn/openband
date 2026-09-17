@@ -42,8 +42,14 @@ describe("privileged evidence merge trust boundary", () => {
     assert.equal(workflow.includes("filter((file) => file.status !== 'removed')"), false);
     for (const required of [
       "packageTrustTouched",
+      "productRuntimeTouched",
       "architectureTouched",
       "securityPathTouched",
+      "architecture-boundary-change",
+      "product-runtime-change",
+      "schemaV2Path",
+      "material design artifact changed after approved baseline",
+      "risk triggers differ from Design Gate contract",
       "gateIssue !== schemaV2Issue",
       "continue-on-error",
       "CI evidence producer contains fail-open pattern",
