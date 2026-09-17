@@ -33,7 +33,7 @@ Never infer the repository from ChatGPT Project membership, model/account memory
 
 ### Visible OpenBand Agent Tree
 
-Every standalone `siga` must show an `OPENBAND AGENT TREE` before long work. At minimum it shows the repository/base identity, SessionRouter, Repo/GitHub/Spec Kit/evidence/dependency probes, relevant active task branches, ownership, explicit dependencies, and the selected route.
+Every standalone `siga` must show an `OPENBAND AGENT TREE` before long work. At minimum it shows the repository/base identity, SessionRouter, the canonical probes `RepoProbe`, `GitHubProbe`, `SpecKitProbe`, `EvidenceProbe`, and `DependencyProbe`, relevant active task branches, ownership, explicit dependencies, and the selected route.
 
 `Siga` then routes to exactly one of:
 
