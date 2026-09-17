@@ -10,40 +10,40 @@
 - [x] Define durable `PASS|FAIL|BLOCKED` evidence contract.
 - [x] Preserve opt-in `native-build` label / workflow-dispatch scheduling.
 - [x] Exclude signing/keystore/secrets from T3 scope.
-- [ ] Run SDD/Graph checks on exact Design Baseline SHA.
-- [ ] Freeze exact Design Baseline SHA.
-- [ ] HUMAN DESIGN GATE — approve exact baseline before CI/product mutation.
+- [x] Run SDD/Graph checks on exact Design Baseline SHA.
+- [x] Freeze exact Design Baseline SHA `20ebab49acfede3f39e63626f937fcc74b04faef`.
+- [x] HUMAN DESIGN GATE — approved exact baseline on 2026-09-17.
 
 ## Implementation
 
-- [ ] Add `scripts/native-build-evidence.mjs` with pure classifier + target adapters.
-- [ ] Record exact commit SHA, toolchain context, stable reason code and terminal evidence state.
-- [ ] Validate Android prerequisites before executing Gradle.
-- [ ] Execute repository-owned Android release assembly without failure masking.
-- [ ] Validate Android APK existence and compute size/SHA-256.
-- [ ] Validate Electron prerequisites before packaging.
-- [ ] Execute repository-owned Electron Linux packaging without failure masking.
-- [ ] Validate expected AppImage/deb outputs and compute size/SHA-256.
-- [ ] Write `.artifacts/native-build/android.json` and `electron.json`.
-- [ ] Add mandatory `enforce` behavior that rejects `FAIL` and `BLOCKED`.
-- [ ] Refactor existing CI native jobs to use evidence harness.
-- [ ] Keep only evidence-producing build step non-fatal when needed for `always()` artifact upload.
-- [ ] Upload evidence manifest with `if: always()`.
-- [ ] Upload native artifacts when produced.
-- [ ] Preserve conditional native scheduling.
-- [ ] Do not alter Android signing credentials/policy or runtime bridge code.
+- [x] Add `scripts/native-build-evidence.mjs` with pure classifier + target adapters.
+- [x] Record exact commit SHA, checkout SHA, toolchain context, stable reason code and terminal evidence state.
+- [x] Validate Android prerequisites before executing Gradle.
+- [x] Execute repository-owned Android release assembly without failure masking.
+- [x] Validate Android APK existence and compute size/SHA-256.
+- [x] Validate Electron prerequisites before packaging.
+- [x] Execute repository-owned Electron Linux packaging without failure masking.
+- [x] Validate expected AppImage/deb outputs and compute size/SHA-256.
+- [x] Write `.artifacts/native-build/android.json` and `electron.json`.
+- [x] Add mandatory `enforce` behavior that rejects `FAIL` and `BLOCKED`.
+- [x] Refactor existing CI native jobs to use evidence harness.
+- [x] Keep only evidence-producing build/preflight steps non-fatal when needed for final enforcement and `always()` artifact upload.
+- [x] Upload evidence manifest with `if: always()`.
+- [x] Upload native artifacts when produced.
+- [x] Preserve conditional native scheduling.
+- [x] Do not alter Android signing credentials/policy or runtime bridge code.
 
 ## Regression proof
 
-- [ ] Classifier: missing declared prerequisite → BLOCKED.
-- [ ] Classifier: build non-zero → FAIL.
-- [ ] Classifier: command success + missing output → FAIL.
-- [ ] Classifier: valid output + hash → PASS.
-- [ ] Enforce rejects BLOCKED.
-- [ ] Enforce rejects FAIL.
-- [ ] Workflow policy test rejects native `|| echo` / equivalent masking.
-- [ ] Workflow policy test proves `native-build` label/manual scheduling remains.
-- [ ] Manifest schema and exact-SHA binding tests PASS.
+- [x] Classifier: missing declared prerequisite → BLOCKED.
+- [x] Classifier: build non-zero → FAIL.
+- [x] Classifier: command success + missing output → FAIL.
+- [x] Classifier: valid output + hash-capable artifact contract → PASS.
+- [x] Enforce rejects BLOCKED.
+- [x] Enforce rejects FAIL.
+- [x] Workflow policy test rejects native `|| echo` / equivalent masking.
+- [x] Workflow policy test proves `native-build` label/manual scheduling remains.
+- [ ] Manifest schema and exact-SHA binding inspected in real CI evidence.
 
 ## Final verification
 
@@ -56,7 +56,7 @@
 - [ ] Full Vitest PASS.
 - [ ] Legacy tests PASS.
 - [ ] Web build PASS.
-- [ ] Apply `native-build` label to implementation PR.
+- [x] Apply `native-build` label to implementation PR.
 - [ ] Android job executes and produces trustworthy terminal evidence.
 - [ ] Electron job executes and produces trustworthy terminal evidence.
 - [ ] Evidence manifests retained and inspected.
