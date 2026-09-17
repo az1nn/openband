@@ -23,7 +23,7 @@ describe("task-lived handoff lifecycle policy", () => {
   it("keeps continue-work responsible for live tasks", () => {
     expect(continueSkill).toContain("safe work remains? continue it");
     expect(continueSkill).toContain("ONLY_USER_SAID_GENERATE_HANDOFF");
-    expect(continueSkill).toContain("It never emits a handoff itself").not;
+    expect(continueSkill).toContain("It never emits a handoff itself");
     expect(continueSkill).toContain(
       ".qwen/skills/auto-skill-caveman-handoff/SKILL.md",
     );
