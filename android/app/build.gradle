@@ -24,9 +24,9 @@ react {
      //   The root of your project, i.e. where "package.json" lives. Default is '../..'
     // root = file("../../")
     //   The folder where the react-native NPM package is. Default is ../../node_modules/react-native
-    // reactNativeDir = file("../../node_modules/react-native")
+    // reactNativeDir = new File("../../node_modules/react-native")
     //   The folder where the react-native Codegen package is. Default is ../../node_modules/@react-native/codegen
-    // codegenDir = file("../../node_modules/@react-native/codegen")
+    // codegenDir = new File("../../node_modules/@react-native/codegen")
 
     /* Variants */
     //   The list of variants that are debuggable. By default this is just 'debug'.
@@ -84,15 +84,38 @@ if (openbandAndroidSigningMode == 'production') {
     }
 
     def productionKeystore = file(System.getenv('OPENBAND_ANDROID_KEYSTORE_PATH'))
+    def productionStorePassword = System.getenv('OPENBAND_ANDROID_KEYSTORE_PASSWORD')
+    def productionKeyAlias = System.getenv('OPENBAND_ANDROID_KEY_ALIAS')
+    def productionKeyPassword = System.getenv('OPENBAND_ANDROID_KEY_PASSWORD')
+
     if (!productionKeystore.exists() || !productionKeystore.isFile() || !productionKeystore.canRead()) {
         throw new GradleException('Production Android signing keystore is unavailable or unreadable.')
     }
 
+    // Pre-validate the keystore and requested key entry before handing any
+    // values to the Android Gradle Plugin. Upstream signing exceptions can
+    // include aliases or paths, so collapse all incompatibilities to a
+    // value-free error at this boundary.
+    try {
+        def keyStore = java.security.KeyStore.getInstance(productionKeystore, productionStorePassword.toCharArray())
+        if (!keyStore.containsAlias(productionKeyAlias) || !keyStore.isKeyEntry(productionKeyAlias)) {
+            throw new GradleException('Production Android signing credentials are invalid or incompatible.')
+        }
+        def signingKey = keyStore.getKey(productionKeyAlias, productionKeyPassword.toCharArray())
+        if (signingKey == null) {
+            throw new GradleException('Production Android signing credentials are invalid or incompatible.')
+        }
+    } catch (GradleException error) {
+        throw error
+    } catch (Exception ignored) {
+        throw new GradleException('Production Android signing credentials are invalid or incompatible.')
+    }
+
     openbandProductionSigning = [
         storeFile: productionKeystore,
-        storePassword: System.getenv('OPENBAND_ANDROID_KEYSTORE_PASSWORD'),
-        keyAlias: System.getenv('OPENBAND_ANDROID_KEY_ALIAS'),
-        keyPassword: System.getenv('OPENBAND_ANDROID_KEY_PASSWORD')
+        storePassword: productionStorePassword,
+        keyAlias: productionKeyAlias,
+        keyPassword: productionKeyPassword
     ]
 }
 
