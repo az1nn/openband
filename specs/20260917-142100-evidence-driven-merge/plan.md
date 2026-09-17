@@ -9,7 +9,7 @@ Keep human approval at the Design Gate, but make merge eligibility a determinist
 1. Amend `.specify/memory/constitution.md` so PR-first governance requires human Design Gate for T2+ and evidence-driven Merge Gate for all tiers.
 2. Reconcile `AGENTS.md` risk table, lifecycle diagram, verification semantics and merge behavior.
 3. Reconcile `CONTRIBUTING.md` so contributors understand automatic merge eligibility and exact-HEAD evidence.
-4. Reconcile `.agents/skills/openband-ask/SKILL.md` so the router stops at Design Gate but does not wait for a human Merge Gate.
+4. Reconcile `.agents/skills/openband-ask/SKILL.md` so the router stops at Design Gate but does not wait for a mandatory human merge approval.
 5. Reconcile `docs/ai/chatgpt-project-instructions.md`, `docs/ai/context-handoff.md` and `docs/ai/session-handoff-template.md` with the new gate states.
 6. Do not rewrite historical feature specs; they remain records of the policy in force when authored.
 
@@ -40,12 +40,14 @@ All tiers may auto-merge after their own evidence contract is satisfied. Higher 
 
 - run `npm run sdd:check`;
 - run `npm run test:graph-sdd` and `npm run graph:ci`;
-- search all live governance surfaces for stale `human Merge Gate`, `READY_FOR_HUMAN`, and equivalent semantics;
+- search all live governance surfaces for stale mandatory-human-merge semantics;
 - verify historical `specs/` are not modified except this feature;
 - verify Design Gate remains human for T2+;
 - verify fail-closed states and exact-HEAD freshness remain explicit;
-- verify CI/workflow behavior does not claim auto-merge is enabled unless repository settings/tooling actually support it.
+- verify CI/workflow behavior does not claim automatic merge is active unless repository settings/tooling actually support it.
 
 ## Architecture Decision
 
-This is a constitution/governance amendment rather than runtime architecture. No ADR is required; the canonical durable change is the constitution plus live agent/governance surfaces.
+ADR: NOT REQUIRED
+
+This is a constitution/governance amendment rather than runtime architecture. The canonical durable change is the Constitution plus live agent/governance surfaces.
