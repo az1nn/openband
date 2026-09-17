@@ -2,17 +2,17 @@
 
 ## Review scope
 
-This is the pre-implementation T4 specialist review of the proposed repository-side signing boundary. It reviews trust separation, privilege, downgrade behavior, leakage risk, recovery and dependency impact. It does not approve any real production credential, secret store or Play Console configuration.
+This T4 specialist review covers the repository-side Android signing boundary: trust separation, privilege, downgrade behavior, leakage risk, recovery and dependency impact. It does not approve any real production credential, secret store or Play Console configuration.
 
 ## Findings
 
-### SR-001 — Current release path mixes trust domains
+### SR-001 — Current release path mixed trust domains
 
 **Severity:** High
 
-Release packaging currently requires a signing configuration and can fall back to debug signing semantics. That coupling makes an engineering build proof depend on identity material and permits a trust downgrade by configuration.
+The pre-change release path coupled packaging to signing configuration and could fall back to debug signing semantics. That made engineering build proof depend on identity material and allowed configuration-level trust downgrade.
 
-**Design disposition:** Addressed by ADR separation of unsigned verification from explicit production signing.
+**Disposition:** Addressed by separating unsigned verification from explicit production signing.
 
 ### SR-002 — Repository-owned credential assumptions are not an acceptable production authority
 
@@ -20,7 +20,7 @@ Release packaging currently requires a signing configuration and can fall back t
 
 Credential-shaped defaults in source create disclosure/reuse risk and make rotation dependent on source history.
 
-**Design disposition:** Production inputs become external-only; source keeps names/interface but no secret values. Historical actual use remains an operational inventory question and is not assumed safe.
+**Disposition:** Addressed in implementation. Production source now carries only interface names; prior repository-relative keystore/password/alias defaults were removed. Historical real-world use remains an operational inventory question and is not assumed safe.
 
 ### SR-003 — PR jobs must not become privileged merely to obtain green CI
 
@@ -28,7 +28,7 @@ Credential-shaped defaults in source create disclosure/reuse risk and make rotat
 
 Giving production credentials to pull-request verification would create a direct exfiltration path and violate least privilege.
 
-**Design disposition:** Ordinary PR path remains unsigned verification only. Positive signing proof uses a throwaway runtime identity, not production material.
+**Disposition:** Addressed. Ordinary PR/native verification receives no production signing inputs. Positive-path proof creates a throwaway runtime identity on the ephemeral runner.
 
 ### SR-004 — Unsigned artifacts need explicit trust labeling
 
@@ -36,23 +36,23 @@ Giving production credentials to pull-request verification would create a direct
 
 An unsigned release APK is valid engineering evidence but must not be mistaken for a store-ready artifact.
 
-**Design disposition:** ADR and verification matrix separate build integrity from publication authority and require signature-state proof.
+**Disposition:** Addressed by ADR/spec semantics and behavioral signature-state checks: verification output must fail `apksigner verify`; ephemeral production-path output must pass it.
 
 ### SR-005 — Fail-closed validation must precede signing configuration use
 
 **Severity:** High
 
-Partial or malformed external inputs can otherwise produce ambiguous Gradle failures or unintended fallback behavior.
+Partial or malformed external inputs can otherwise produce ambiguous Gradle/AGP failures or unintended fallback behavior.
 
-**Design disposition:** Production mode validates the complete input set and rejects unknown/partial modes before successful signing.
+**Disposition:** Addressed. Mode and complete input presence are validated first. Keystore readability, store password, alias/key-entry presence and key password are then prevalidated through Java `KeyStore` before values are handed to the Android Gradle Plugin. Incompatibilities collapse to a value-free error.
 
 ### SR-006 — Logging is a separate attack surface
 
 **Severity:** High
 
-Even when credentials are external, shell tracing, Gradle exceptions or test diagnostics can disclose values.
+Even when credentials are external, shell tracing, Gradle exceptions or upstream signing diagnostics can disclose values.
 
-**Design disposition:** Canary-based leakage verification is mandatory. Tests assert absence without emitting canary values themselves.
+**Disposition:** Addressed in code and adversarial test design. Errors contain only stable policy text or missing input names. Runtime canaries cover passwords, alias and path; the positive path masks ephemeral values in GitHub Actions and scans captured Gradle output for leakage.
 
 ### SR-007 — Rotation cannot be automated from repository evidence alone
 
@@ -60,32 +60,46 @@ Even when credentials are external, shell tracing, Gradle exceptions or test dia
 
 The repository cannot establish whether any historical credential assumption was paired with a real production/upload key.
 
-**Design disposition:** Inventory is human/account-level. If real use occurred or cannot be excluded, privileged signing remains disabled until the affected credential/upload key is rotated or reset through the platform-supported process and verification reruns.
+**Disposition:** Remains an explicit human/account-level recovery condition. If real use occurred or cannot be excluded, privileged signing stays disabled until the affected credential/upload key is rotated or reset through the platform-supported process and verification reruns.
+
+## Post-implementation exact-diff review
+
+The implementation diff was reviewed after the Human Design Gate and before final runtime verification.
+
+Observed properties:
+
+1. `release` has no `signingConfigs.debug` reference and receives `signingConfigs.production` only when `openband.android.signingMode=production`.
+2. Default mode is `verification`; unsupported modes fail before Android signing configuration succeeds.
+3. Production inputs are only `OPENBAND_ANDROID_KEYSTORE_PATH`, `OPENBAND_ANDROID_KEYSTORE_PASSWORD`, `OPENBAND_ANDROID_KEY_ALIAS` and `OPENBAND_ANDROID_KEY_PASSWORD`.
+4. No real secret value, persistent keystore, repository password, repository alias default, store publication step or package/application identity change was introduced.
+5. CI does not map production inputs from GitHub secrets and does not invoke production mode for ordinary PR verification.
+6. The T4 positive path uses only a runner-temporary PKCS12 identity generated at runtime and removed with the temporary directory/runner.
+7. The adversarial matrix covers default and explicit unsigned verification, invalid mode, zero inputs, each missing input, each empty input, missing keystore, invalid alias, signed ephemeral positive path, leakage checks and recovery to unsigned verification.
+8. Electron/native hardening outside Android signing remains owned by #43; it is not silently folded into this security boundary.
 
 ## Abuse cases reviewed
 
 - malicious PR attempts to read signing environment → production inputs absent;
 - developer accidentally requests production mode locally with incomplete config → deterministic failure;
-- missing prod key causes debug fallback → prohibited by design;
+- missing prod key causes debug fallback → prohibited structurally and behaviorally;
+- malformed store/alias/key reaches upstream diagnostics → prevalidated and collapsed to value-free failure;
 - attacker commits replacement default password → architecture provides no repository secret default to replace;
-- unsigned artifact is uploaded as release → repository policy does not grant publication authority to verification artifact;
-- logs expose password through error interpolation → canary leakage test must fail the gate;
-- positive test accidentally uses persistent key → test requires throwaway runner-scoped identity;
+- unsigned artifact is treated as production → signature-state evidence and policy deny publication authority;
+- logs expose password/path/alias → runtime canary leakage test fails the gate;
+- positive test accidentally uses persistent key → test generates a runner-scoped one-run identity;
 - incident recovery restores old hard-coded fallback for availability → explicitly prohibited.
 
-## Required specialist re-review after implementation
+## Runtime proof still required for final convergence
 
-Security review must be repeated against exact implementation HEAD and inspect at minimum:
+The post-implementation code review is **PASS**, subject to exact-HEAD runtime evidence. Human Merge Gate remains blocked until the final candidate demonstrates:
 
-1. Gradle property/environment resolution and validation order;
-2. absence of secret values in the diff;
-3. absence of release→debug signing fallback;
-4. PR workflow privilege and conditions;
-5. negative-input and canary leakage test output;
-6. ephemeral-key lifecycle and signature verification;
-7. recovery documentation against actual behavior;
-8. #43 reconciliation proof.
+- unsigned verification APK production and signature-state proof;
+- complete negative input matrix with sanitized output;
+- ephemeral production signing and signature verification;
+- recovery back to unsigned verification;
+- SDD/Graph/typecheck/Vitest/legacy/Web regression gates on the affected final HEAD;
+- classification of inherited #43/#69 failures without weakening #73 requirements.
 
-## Pre-implementation conclusion
+## Conclusion
 
-The proposed design is internally consistent with the repository's T4 policy and least-privilege constitution. No product/security mutation should begin until the remaining design gates pass and a human approves the exact Design Baseline SHA.
+The implemented trust boundary remains inside the approved T4 design and materially improves least privilege and failure isolation. No review finding requires a new trust model or Design Gate. Runtime evidence, not this review alone, decides readiness for the Human Merge Gate.
