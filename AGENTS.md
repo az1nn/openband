@@ -38,15 +38,27 @@ Retrieve before assuming. Do not load the whole repository by default.
 
 ### Conversation context handoff
 
-Continuously monitor whether the current chat remains a trustworthy bounded implementation context. Use `docs/ai/context-handoff.md` as policy. `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md` owns verified closeout behavior; `docs/ai/session-handoff-template.md` owns its compact handoff shape; `docs/ai/durable-context.md` owns persistence and promotion rules for short-lived chats.
+Continuously monitor whether the current chat remains a trustworthy bounded implementation context. Use `docs/ai/context-handoff.md` as policy.
+
+Task-lifecycle ownership is explicit:
+
+- `.qwen/skills/auto-skill-continue-work/SKILL.md` owns finishing all safe work in the active task before closeout;
+- `.qwen/skills/auto-skill-caveman-handoff/SKILL.md` owns closeout audit, durable persistence, and compact Caveman emission only after a genuine task closeout boundary;
+- `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md` is a compatibility router between those two skills;
+- `docs/ai/session-handoff-template.md` owns the compact handoff shape;
+- `docs/ai/durable-context.md` owns persistence and promotion rules.
 
 For ChatGPT Projects, `docs/ai/chatgpt-project-instructions.md` is the repository-owned source for the Project Instructions that mirror this policy into ChatGPT.
 
 - GREEN: continue normally; conversation length alone is irrelevant.
-- YELLOW: a semantic boundary is approaching; finish the current safe atomic step and refresh canonical state.
-- RED: continuing materially increases stale/conflicting-context risk; finish/stop the current safe atomic action, run verified closeout, and recommend a clean chat.
+- YELLOW: a semantic boundary is approaching; finish the current safe work and drive the active task toward closeout.
+- RED: refresh canonical state aggressively; continue only trustworthy work derived from canonical evidence. RED alone does not authorize an early handoff.
 
-At the end of every material task, feature slice, verification cycle, or PR freeze, run `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md` even when context is GREEN. The skill performs the full canonical audit of scope, changed files, tests, CI, Graph evidence, reviews, gate freshness, and temporary scaffolding; promotes long-lived decisions to their owning canonical docs; persists short-lived continuation state to a safe durable GitHub/repository sink; then automatically emits one Caveman handoff. Do not require a separate user request for a continuation prompt.
+A Caveman handoff is eligible only when the active task is complete or no safe autonomous work remains because of a genuine human gate/external blocker. If safe work remains, run `continue-work` instead.
+
+When the user asks `gere handoff`, `generate handoff`, `handoff`, a continuity prompt, or a new-chat prompt while the active task is still live, do **not** stop merely to emit a handoff. Run `continue-work`, complete and verify all safe current-task work, give the user a concise lifecycle notice of what was completed or what genuine blocker remains, then run `caveman-handoff`.
+
+At the genuine end of every material task, run `caveman-handoff` even when context is GREEN. A feature slice, verification cycle, or PR freeze counts only when it is the current task's actual closeout boundary; a routine intermediate checkpoint does not.
 
 Caveman Mode compresses transferred context only. It must preserve exact base/HEAD identity, work identifiers, closeout state, current-cycle delta, evidence freshness, blockers/human gates, critical invariants, one exact next action, and the verify-first contract. It must not reduce reasoning, tool checks, verification depth, or required evidence.
 
