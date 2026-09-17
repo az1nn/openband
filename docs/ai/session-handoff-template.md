@@ -2,96 +2,106 @@
 
 > Derived bootstrap context only. Canonical Git-backed project state wins on conflict.
 
-## Objective
+## Default handoff — Caveman Mode
 
-- Session objective:
-- Why this handoff exists:
+The verified-context-handoff skill performs the full closeout audit, promotes durable project knowledge, persists short-lived continuation state, then emits this compact artifact by default. Compression applies to the transferred text, never to verification depth.
 
-## Repository State
+```text
+CAVEMAN HANDOFF v1
 
-- Repository: `az1nn/openband`
-- Base branch:
-- Working branch:
-- Worktree:
-- Current HEAD:
-- Issue:
-- PR:
-- PR state:
+REPO: <url>
+BASE: <branch>@<sha>
+HEAD: <branch>@<sha>
+WORK: issue=<id|-> pr=<id/state|-> spec=<id|-> tier=<tier|->
+STATE: <VERIFIED_COMPLETE|IMPLEMENTED_NOT_VERIFIED|INCOMPLETE|PROCESS_DRIFT>
+PERSIST: <pr-comment|issue-comment|file:<path>|unavailable>
 
-## Spec Kit State
+DONE:
+- <delta-only completed facts>
 
-- Active feature:
-- Lifecycle step:
-- Risk tier:
-- Risk triggers:
-- Design Baseline SHA:
-- Design Gate: `NOT_REQUIRED | PENDING | APPROVED | INVALIDATED`
-- Merge Gate: `NOT_REQUIRED | PENDING | READY_FOR_HUMAN | INVALIDATED`
+PROOF:
+- <check/run>: <PASS|FAIL|BLOCKED|FLAKY|NOT_REQUIRED|STALE>@<sha-or-reason>
 
-## Final Decisions
+BLOCK:
+- <none | unresolved blocker/human gate>
 
-- 
+KEEP:
+- <critical invariant/authority boundary only>
 
-## Superseded — Do Not Reuse
+NEXT:
+1. <single exact next action>
 
-- 
+VERIFY-FIRST:
+Reconstruct GitHub/Git/Spec Kit/tests/CI/Graph from canonical state before acting. Canonical state wins on conflict; stale PASS must be rerun.
 
-## Completed
+PR: <direct URL when applicable>
+```
 
-- 
+`PERSIST` identifies where the same operational handoff was durably stored. Prefer an idempotent marked PR/issue comment because it does not mutate Git HEAD. See `docs/ai/durable-context.md`.
 
-## Canonical Artifacts
+## Required semantics
 
-- Constitution:
-- `AGENTS.md`:
-- Feature spec:
-- Plan:
-- Tasks:
-- Architecture:
-- Contracts:
-- ADRs:
-- Relevant code/tests:
-- Architecture Graph queries/evidence to refresh:
+The compact handoff must preserve, when applicable:
 
-## Verification State
+- target base and exact base SHA;
+- working branch/worktree and exact HEAD;
+- issue, PR and Spec Kit identity;
+- risk tier / lifecycle state;
+- closeout classification;
+- durable persistence sink;
+- current-cycle implementation delta;
+- verification evidence bound to the relevant HEAD;
+- blocking review, human gate, or freshness risk;
+- critical invariants / authority boundaries;
+- one exact next action;
+- verify-first contract.
 
-| Evidence | State | Bound to SHA / notes |
-|---|---|---|
-| Acceptance / focused tests |  |  |
-| Typecheck |  |  |
-| Build |  |  |
-| Graph / SDD validation |  |  |
-| Specialist review |  |  |
-| Other required evidence |  |  |
+Allowed evidence states:
 
-Allowed states: `PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED`.
+```text
+PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED | STALE
+```
 
-Verification is stale if its relevant HEAD changed.
+A running workflow is not PASS. Evidence from an older relevant HEAD is STALE. A skipped job is acceptable only when explicitly not applicable.
 
-## Open / Blocked
+## Compression rules
 
-- 
+- Emit the Caveman handoff automatically at every material task, feature slice, verification cycle, PR freeze, or context boundary.
+- Do not require a separate user request for a continuation prompt.
+- Promote durable decisions to canonical docs before final verification; do not trap them in the handoff.
+- Persist the operational artifact using the sink order in `docs/ai/durable-context.md`.
+- Prefer SHAs, IDs, run IDs, paths and short state labels over prose.
+- Carry only the current delta plus facts required to execute `NEXT` safely.
+- Reference canonical specs/ADRs/docs instead of copying their contents.
+- Omit empty optional fields.
+- Normal target: roughly 250–700 tokens; correctness overrides the budget.
+- Expand only when compression would hide a blocker, ambiguity, human gate, process drift, or authority boundary.
 
-## Freshness Risks
+## Fallback expansion
 
-- 
+If Caveman format cannot safely encode the handoff, add only the missing operational fields rather than restoring a project-history dump. Useful optional fields:
 
-## Next Action
+```text
+GATES: design=<...> merge=<...> human=<...>
+REVIEW: threads=<...> blocking=<...>
+FILES: <only unexpected or next-action-critical paths>
+GRAPH: <run/evidence/freshness>
+CI: <workflow/run + per-job exceptions>
+DRIFT: <canonical mismatch/process drift>
+```
 
-1. 
+## New-chat verification contract
 
-## New Chat Bootstrap
+Do **not** assume a task is complete because the previous chat says so.
 
-Start by refreshing Git/PR state and reading `AGENTS.md` plus `docs/ai/context-handoff.md`.
+Before acting, reconstruct canonical state from GitHub/Git/Spec Kit/tests/CI/Architecture Graph. Treat any mismatch with the handoff as stale handoff data.
 
-Reconstruct bounded context progressively:
+Bootstrap progressively:
 
 ```text
 L0  Constitution + AGENTS + feature/tier
-L1  feature spec + impacted architecture/contracts/ADRs + Graph
+L1  active feature + impacted architecture/contracts/ADRs + Graph
 L2  relevant code + tests + specialists
 ```
 
-Then verify this handoff against current canonical state. Treat any mismatch as stale handoff data, not as authority.
-
-Continue from **Next Action** only after confirming branch/worktree/HEAD, Spec Kit lifecycle state, risk tier, and applicable human gates.
+If previous PASS evidence is bound to a stale HEAD, rerun it before treating the task as verified. Continue from `NEXT` only after canonical state, evidence freshness and applicable human gates are confirmed.
