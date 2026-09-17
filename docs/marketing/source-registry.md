@@ -28,6 +28,7 @@
 | Product feature / plan entitlement | 60 days |
 | App-store availability / naming collision | 30 days |
 | Company audience/community scale | 90 days |
+| Platform policy / discovery guidance | 90 days and before a major launch |
 | Annual industry report | when next annual edition is published |
 | Legal/trademark/domain availability | at decision time; never rely on an old snapshot |
 
@@ -184,6 +185,130 @@
   - Spotify reports that the 100,000th-highest-earning artist generated more than US$7,300.
 - Caveat: artist earnings and artist-profile counts do not estimate DAW adoption.
 - Linked research: R-013.
+
+### S-012 — Google Search Essentials
+
+- Grade: A
+- Checked: 2026-09-13
+- Source: https://developers.google.com/search/docs/essentials
+- Owner: Google Search Central
+- Type: first-party search guidance
+- Supports:
+  - people-first, helpful and reliable content as a core Search practice;
+  - using the language people search for in prominent descriptive locations;
+  - crawlable links and technically accessible content;
+  - legitimate community promotion as part of discovery.
+- Does not support:
+  - guaranteed ranking;
+  - a fixed keyword density;
+  - publishing large volumes of pages as a growth strategy.
+- Linked research: R-019, R-020.
+
+### S-013 — Google: Creating helpful, reliable, people-first content
+
+- Grade: A
+- Checked: 2026-09-13
+- Source: https://developers.google.com/search/docs/fundamentals/creating-helpful-content
+- Owner: Google Search Central
+- Type: first-party content-quality guidance
+- Supports:
+  - first-hand expertise, originality, satisfying user outcomes, clear authorship and substantive value;
+  - avoiding content created mainly to attract search traffic;
+  - disclosure/context around automation or AI where readers would reasonably benefit from knowing how content was made.
+- Linked research: R-019, R-021.
+
+### S-014 — Google Search AI optimization guidance
+
+- Grade: A
+- Checked: 2026-09-13
+- Source: https://developers.google.com/search/docs/fundamentals/ai-optimization-guide
+- Owner: Google Search Central
+- Type: first-party generative-search guidance
+- Supports:
+  - original, useful, non-commodity content and unique first-hand perspective as durable guidance for AI-search visibility;
+  - avoiding recycled summaries as the primary content strategy.
+- Linked research: R-021.
+
+### S-015 — YouTube: How Search works
+
+- Grade: A
+- Checked: 2026-09-13
+- Source: https://support.google.com/youtube/answer/16090438
+- Owner: YouTube
+- Type: first-party discovery guidance
+- Supports:
+  - YouTube Search considers relevance, engagement and quality;
+  - title, description, tags and video content can contribute to relevance;
+  - watch behavior for a query can inform relevance.
+- Linked research: R-022.
+
+### S-016 — YouTube: recommendation/content-performance guidance
+
+- Grade: A
+- Checked: 2026-09-13
+- Sources:
+  - https://support.google.com/youtube/answer/16533387
+  - https://support.google.com/youtube/answer/16559650
+- Owner: YouTube
+- Type: first-party recommendation/performance guidance
+- Supports:
+  - recommendations aim to help viewers find content they want and optimize long-term viewer satisfaction;
+  - audience fit matters more than “algorithm hacks”;
+  - titles/thumbnails materially package the value proposition;
+  - early hooks should deliver on the title/thumbnail promise;
+  - tags can help but are not essential for discovery and are especially useful for spelling variations.
+- Linked research: R-022.
+
+### S-017 — GitHub: Customizing your repository
+
+- Grade: A
+- Checked: 2026-09-13
+- Source: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository
+- Owner: GitHub
+- Type: first-party repository guidance
+- Supports:
+  - README, licensing, sponsor button, social preview and repository topics as supported repository presentation/discovery surfaces.
+- Linked research: R-023.
+
+### S-018 — GitHub: Discovering projects
+
+- Grade: A
+- Checked: 2026-09-13
+- Source: https://docs.github.com/en/get-started/exploring-projects-on-github/discovering-projects-on-github
+- Owner: GitHub
+- Type: first-party discovery guidance
+- Supports:
+  - GitHub search, Explore, topics, stars/following and contribution pathways as project-discovery behaviors.
+- Linked research: R-023.
+
+### S-019 — Reddit spam policy
+
+- Grade: A
+- Checked: 2026-09-13
+- Source: https://support.reddithelp.com/hc/en-us/articles/360043504051-Spam
+- Owner: Reddit
+- Type: first-party platform policy
+- Supports:
+  - repeated/unsolicited mass promotion is spam;
+  - authentic participation in communities of genuine interest is preferred;
+  - community-specific rules govern what promotion is acceptable.
+- Linked research: R-024.
+
+### S-020 — Reddit community promotion/spam guidance
+
+- Grade: A
+- Checked: 2026-09-13
+- Sources:
+  - https://support.reddithelp.com/hc/en-us/articles/28012014962580-How-do-I-keep-spam-out-of-my-community
+  - https://support.reddithelp.com/hc/en-us/articles/15484256976148-Growing-your-community
+- Owner: Reddit
+- Type: first-party community guidance
+- Supports:
+  - promotional content is not inherently spam but individual communities may prohibit it;
+  - some communities use a roughly 10% self-promotional convention;
+  - relevant, thoughtful participation and moderator permission are safer than repetitive cross-posting.
+- Caveat: subreddit-specific rules always override a generic operating assumption.
+- Linked research: R-024.
 
 ## Adding a source
 
