@@ -105,23 +105,37 @@ jobs:
               pull_number,
               per_page: 100,
             });
-            const changed = files.filter((file) => file.status !== 'removed').map((file) => file.filename);
+            const changed = files.map((file) => file.filename);
             const labels = new Set(pr.labels.map((label) => label.name));
 
             const trustRootPatterns = [
               /^\.github\/workflows\//,
               /^scripts\/(?:ci-merge-gate|sdd-policy-check|security-policy-check)\.mjs$/,
+              /^tests\/evidence-merge-policy\.test\.mjs$/,
+              /^docs\/operations\/merge-automation-recovery\.md$/,
               /^\.specify\/memory\/constitution\.md$/,
               /^AGENTS\.md$/,
             ];
-            const trustRootTouched = changed.some((name) =>
+            const packageTrustTouched = files.some((file) =>
+              file.filename === 'package.json' &&
+              /\"(?:sdd:check|security:policy|merge:gate|test:graph-sdd)\"\s*:/.test(file.patch || ''),
+            );
+            const trustRootTouched = packageTrustTouched || changed.some((name) =>
               trustRootPatterns.some((pattern) => pattern.test(name)),
+            );
+            const architectureTouched = changed.some((name) =>
+              /^(?:android|electron)\//.test(name) ||
+              /(?:persistence|storage|sqlite|database|bridge|native)/i.test(name),
+            );
+            const securityPathTouched = changed.some((name) =>
+              /(?:^|\/)(?:auth|security|crypto|permissions|rbac|secrets?)(?:\/|\.|-)/i.test(name),
             );
 
             const tiers = [];
             const riskTriggers = new Set();
             const declaredChecks = new Set();
             let schemaV2Count = 0;
+            let schemaV2Issue = null;
 
             for (const path of changed.filter((name) => /^specs\/[^/]+\/openband\.json$/.test(name))) {
               const { data } = await github.rest.repos.getContent({
@@ -146,6 +160,7 @@ jobs:
 
               if (metadata.schemaVersion === 2) {
                 schemaV2Count += 1;
+                schemaV2Issue = metadata.issue;
                 if (!Array.isArray(metadata.requiredChecks) || metadata.requiredChecks.length === 0) {
                   block(path + ' schemaVersion 2 requires non-empty requiredChecks');
                   return;
@@ -168,6 +183,11 @@ jobs:
               if (match) tiers.push(match[1].toUpperCase());
             }
 
+            if (architectureTouched) tiers.push('T3');
+            if (securityPathTouched) {
+              tiers.push('T4');
+              riskTriggers.add('security-sensitive-path');
+            }
             if (trustRootTouched) {
               tiers.push('T4');
               riskTriggers.add('security-sensitive-privileged-workflow');
@@ -208,6 +228,7 @@ jobs:
               const decision = scalar(body, 'DECISION');
               const baseline = scalar(body, 'BASELINE_SHA');
               const gateTier = scalar(body, 'TIER');
+              const gateIssue = Number(scalar(body, 'ISSUE'));
               const gateJobs = new Set(csv(body, 'REQUIRED_CI_JOBS'));
               const gateTriggers = new Set(csv(body, 'RISK_TRIGGERS'));
 
@@ -221,6 +242,10 @@ jobs:
               }
               if (!(gateTier in tierRank) || tierRank[gateTier] < tierRank[effectiveTier]) {
                 block('Design Gate tier is below effective tier ' + effectiveTier);
+                return;
+              }
+              if (tierRank[effectiveTier] >= tierRank.T2 && gateIssue !== schemaV2Issue) {
+                block('Design Gate ISSUE does not match schemaVersion 2 feature metadata');
                 return;
               }
 
@@ -340,10 +365,62 @@ jobs:
               }
             }
 
+            for (const forbidden of [
+              /pull_request_target\s*:/,
+              /(?:contents|pull-requests|checks|actions):\s*write/,
+              /continue-on-error:\s*true/,
+              /\|\|\s*(?:true|echo)\b/,
+            ]) {
+              if (forbidden.test(ci)) {
+                throw new Error('CI evidence producer contains fail-open pattern: ' + forbidden);
+              }
+            }
+            const ciLines = ci.split(/\r?\n/).map((line) => line.trim());
+            for (const command of [
+              'npm run sdd:check',
+              'npm run security:policy',
+              'npx tsc --noEmit',
+              'npx vitest run',
+              'npm run test:legacy',
+              'npm run build',
+              'npx playwright test e2e/launch-first-run.spec.ts',
+              'npm run merge:gate',
+            ]) {
+              if (!ciLines.includes('- run: ' + command)) {
+                throw new Error('CI evidence producer missing exact run command: ' + command);
+              }
+            }
+
             const policy = await read('scripts/sdd-policy-check.mjs');
-            for (const anchor of ['requiredChecks', 'schemaVersion', 'T2_PLUS']) {
+            for (const anchor of ['requiredChecks', 'schemaVersion', 'T2_PLUS', 'STALE_MERGE_PHRASES']) {
               if (!policy.includes(anchor)) {
                 throw new Error('SDD policy missing evidence-contract anchor: ' + anchor);
+              }
+            }
+
+            const securityPolicy = await read('scripts/security-policy-check.mjs');
+            for (const anchor of ['secretPatterns', 'nativeFrontendPatterns', 'process.exitCode = 1']) {
+              if (!securityPolicy.includes(anchor)) {
+                throw new Error('security policy missing fail-closed anchor: ' + anchor);
+              }
+            }
+
+            const mergeGatePolicy = await read('scripts/ci-merge-gate.mjs');
+            for (const anchor of ['OPENBAND_CI_EVIDENCE', 'result !== "success"', 'process.exitCode = 1']) {
+              if (!mergeGatePolicy.includes(anchor)) {
+                throw new Error('merge-gate policy missing fail-closed anchor: ' + anchor);
+              }
+            }
+
+            const packageJson = JSON.parse(await read('package.json'));
+            const expectedScripts = {
+              'sdd:check': 'node scripts/sdd-policy-check.mjs',
+              'security:policy': 'node scripts/security-policy-check.mjs',
+              'merge:gate': 'node scripts/ci-merge-gate.mjs',
+            };
+            for (const [name, expected] of Object.entries(expectedScripts)) {
+              if (packageJson.scripts?.[name] !== expected) {
+                throw new Error('package script ' + name + ' no longer points to trusted producer');
               }
             }
 
