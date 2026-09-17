@@ -1,6 +1,6 @@
 ---
 name: verified-context-handoff
-description: Audit canonical project state, verification evidence, and completion before producing a safe token-efficient new-chat handoff at task or context boundaries.
+description: Audit canonical project state, verification evidence, and completion before producing one safe token-efficient continuation handoff.
 source: project-skill
 created_at: '2026-09-17'
 ---
@@ -9,71 +9,187 @@ created_at: '2026-09-17'
 
 ## Purpose
 
-Use this skill to end a material OpenBand task/session without transferring stale assumptions into the next chat.
+End a material OpenBand task/session without transferring stale assumptions into the next step or chat.
 
-The skill does two jobs in order:
+The skill always performs two internal stages in order:
 
-1. **Closeout audit** — prove what is actually complete on the current canonical state.
-2. **Continuation handoff** — automatically generate a paste-ready continuation prompt that forces the next chat to reconstruct and verify state before acting.
+1. **Closeout audit** — prove the actual state from canonical sources.
+2. **Caveman handoff** — emit one compact continuation artifact containing only the state needed to resume safely.
 
-This skill is orchestration only. It never overrides Git, Spec Kit, Constitution, `AGENTS.md`, architecture/contracts/ADRs, tests, Architecture Graph, CI, or human gates.
+This skill is orchestration only. It never overrides Git, Spec Kit, Constitution, `AGENTS.md`, architecture/contracts/ADRs, tests, Architecture Graph, CI, reviews, or human gates.
 
-## Caveman Mode — mandatory default
+## Non-negotiable contract
 
-**Caveman Mode is the default output mode for every handoff produced by this skill.** It is not opt-in and agents MUST NOT ask whether to enable it.
+```text
+implement -> verify -> classify -> caveman handoff
+```
 
-The objective is maximum operational continuity per token: preserve the state required to continue correctly, remove narrative repetition, and rely on canonical repository artifacts for durable detail.
+Caveman Mode is mandatory by default. Do not ask the user whether to enable it and do not require a separate “generate continuation prompt” request.
 
-### Core rule
+Caveman Mode is **semantic compression, not verification reduction**:
 
-At every material task boundary, verification boundary, PR freeze, context handoff, or explicit continuation request:
+```text
+full audit + full verification -> compressed durable handoff
+```
 
-1. perform the full verification/audit phases in this skill;
-2. keep the audit rigorous internally;
-3. emit the continuation prompt automatically in Caveman format;
-4. do not duplicate background that the next chat can reconstruct from canonical files;
-5. expand beyond Caveman format only when compression would hide a blocker, ambiguity, safety boundary, human gate, or process drift.
+Never substitute:
 
-The user does not need to ask for a continuation prompt separately.
+```text
+compressed audit -> compressed confidence
+```
 
-### Compression contract
+Save tokens by removing repeated prose and reconstructable history. Never save tokens by skipping tool checks, tests, CI, Graph evidence, review inspection, freshness checks, or required human gates.
 
-Caveman Mode is **semantic compression, not verification reduction**.
+## Mandatory triggers
 
-Always preserve:
+Run this skill when any of the following is true:
 
-- repository + base branch + exact base SHA;
-- working branch + exact HEAD;
-- issue/PR identifiers and current state when applicable;
-- active Spec Kit feature/tier/lifecycle when applicable;
-- closeout classification;
-- delta actually completed in the current cycle;
-- required verification evidence and freshness on the exact HEAD;
-- unresolved blockers/human gates;
-- invariants / authority boundaries that the next chat must not violate;
-- one exact next action;
-- explicit instruction to revalidate canonical state before acting.
+- a material task, issue slice, Spec Kit feature, verification cycle, or PR freeze is ending;
+- implementation has reached a stable continuation boundary;
+- work is moving to another task/workstream;
+- context health reaches YELLOW or RED under `docs/ai/context-handoff.md`;
+- a PR was merged or unexpectedly changed while the session was active;
+- the user asks for a handoff, continuity prompt, context transfer, or new-chat prompt.
 
-Prefer references over repetition:
+Do not trigger merely because of message count, token count, or number of tool calls.
 
-- exact SHA instead of prose such as “latest version”;
-- `#77`, `SPEC-017`, `ADR-0025`, file paths and run IDs instead of restating their full content;
-- `PASS@<sha>`, `STALE@<sha>`, `PENDING`, `BLOCKED` instead of long verification explanations when the meaning is unambiguous;
-- delta-only file/scope notes instead of inventories of unchanged project history.
+The only output exception is an explicit user instruction in the current turn not to emit a handoff/prompt.
 
-Do not repeat:
+## Phase A — Reconstruct canonical state
 
-- long architecture background already canonical in docs/ADRs;
-- entire specs/plans/tasks;
-- old completed milestones that do not constrain the next action;
-- verbose explanations of standard workflow rules already referenced by path;
-- conversation history that is not needed to reconstruct the current canonical state.
+Refresh authoritative state instead of trusting chat history.
 
-### Caveman handoff format
+Minimum reconstruction when applicable:
 
-Normal handoffs SHOULD fit roughly within 250–700 tokens. Correctness overrides the target: exceed it only when necessary to preserve operational information.
+1. repository and target base;
+2. exact base SHA;
+3. active branch/worktree and exact HEAD;
+4. issue and umbrella/parent issue;
+5. PR state, base, head, draft/mergeability;
+6. active Spec Kit feature/tasks/lifecycle;
+7. tier/risk triggers and gate state;
+8. relevant ADRs/contracts/architecture;
+9. reviews and unresolved threads;
+10. CI/workflows tied to the exact HEAD;
+11. Architecture Graph evidence required by tier/impact.
 
-Use this compact structure:
+If canonical state differs from the chat summary, canonical state wins. Record the mismatch only if it matters to closeout or `NEXT`.
+
+## Phase B — Audit completion
+
+### Scope
+
+Compare implementation against the applicable:
+
+- issue acceptance criteria;
+- `spec.md`;
+- `plan.md`;
+- `tasks.md`;
+- verification/checklist artifacts;
+- durable contracts and ADRs.
+
+Classify expected scope internally as:
+
+```text
+DONE | MISSING | PARTIAL | SUPERSEDED | NOT_REQUIRED
+```
+
+Do not silently treat unchecked canonical work as complete because code exists.
+
+### Code / change quality
+
+Inspect changed production/test/process files for relevant failure modes, including:
+
+- TODO/FIXME or temporary scaffolding;
+- dead/unreachable code;
+- fragile or weakened tests;
+- arbitrary sleeps / force-clicks / masked failures;
+- stale state consumed as current;
+- duplicated or bypassed canonical boundaries;
+- swallowed errors / false success;
+- temporary workflows/scripts left behind;
+- changes outside the approved risk envelope.
+
+For documentation/process-only changes, audit for:
+
+- conflicting instructions across canonical surfaces;
+- duplicated normative rules likely to drift;
+- ambiguous MUST/SHOULD semantics;
+- obsolete examples/templates contradicting the new behavior;
+- token-saving rules that accidentally weaken verification or gate requirements.
+
+### Verification
+
+Evidence must be tied to the **same exact relevant HEAD**.
+
+Check only what the feature/risk requires, which can include:
+
+- focused acceptance/regression tests;
+- typecheck;
+- unit/integration/legacy suites;
+- production build;
+- E2E/native smoke;
+- `sdd:check`;
+- Graph/SDD tests / `graph:ci`;
+- post-implementation Graph impact;
+- specialist/adversarial review;
+- human browser/device/hardware evidence.
+
+Allowed evidence states:
+
+```text
+PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED | STALE
+```
+
+Rules:
+
+- evidence from an older relevant HEAD is `STALE`;
+- a running/queued workflow is not PASS;
+- a skipped job is acceptable only when explicitly not applicable;
+- masked failures do not count as proof;
+- fix real product/process defects instead of bypassing checks.
+
+### PR / repository hygiene
+
+Confirm when applicable:
+
+- expected base still matches;
+- base movement does not invalidate evidence;
+- PR remains mergeable;
+- no blocking review/thread remains;
+- no temporary verification scaffolding remains;
+- branch scope is coherent;
+- no human gate is inferred or fabricated.
+
+## Phase C — Classify closeout
+
+Use exactly one outcome:
+
+### VERIFIED_COMPLETE
+
+All required scope is complete, required evidence is PASS on the exact relevant HEAD, repository hygiene is clean, and only an explicitly human action may remain.
+
+### IMPLEMENTED_NOT_VERIFIED
+
+Implementation appears complete but required evidence is running, stale, flaky, blocked, or absent.
+
+### INCOMPLETE
+
+Required behavior, scope, or canonical tasks remain missing/partial.
+
+### PROCESS_DRIFT
+
+Repository/process state moved unexpectedly or contradicts the intended lifecycle. Record facts; never invent retroactive approval.
+
+Continue fixing safe technical/process gaps autonomously. Stop only for a genuine human gate or external blocker.
+
+## Phase D — Emit one Caveman artifact
+
+Emit **one** complete handoff artifact. Do not emit a separate closeout summary containing the same facts.
+
+A short preamble is allowed only when needed to explain a blocker, material process drift, or why a clean chat is recommended.
+
+Use:
 
 ```text
 CAVEMAN HANDOFF v1
@@ -105,255 +221,95 @@ Reconstruct GitHub/Git/Spec Kit/tests/CI/Graph from canonical state before actin
 PR: <direct URL when applicable>
 ```
 
-Omit empty optional lines rather than filling them with prose. Keep `DONE`, `PROOF`, `BLOCK`, `KEEP`, and `NEXT` factual and terse.
-
-### Automatic emission rule
-
-A Caveman handoff MUST be emitted automatically at the end of every material task/cycle even when:
-
-- context is still GREEN;
-- the user did not explicitly ask for a prompt;
-- work is expected to continue immediately;
-- the next task remains in the same repository;
-- the current PR is merely waiting for a human merge/gate.
-
-Do not ask permission to generate it. The only exception is an explicit user instruction in the current turn not to produce a handoff/prompt.
-
-### Performance preservation
-
-Caveman Mode MUST save tokens by removing repeated prose, not by skipping reasoning, verification, tool checks, or required evidence.
-
-The execution model is:
-
-```text
-full audit + full verification -> compressed durable handoff
-```
-
-Never use:
-
-```text
-compressed audit -> compressed confidence
-```
-
-If the next action requires a fact that is absent from the compact handoff, the next session retrieves it from the referenced canonical artifact instead of carrying that artifact's full contents forward.
-
-### Default behavior after implementation work
-
-When an implementation cycle finishes, Caveman Mode is part of the definition of done for the agent response:
-
-```text
-implement -> verify -> classify -> caveman handoff
-```
-
-Do not make “generate continuity prompt” a separate user task. The handoff is emitted as the final compact continuation artifact of the cycle.
-
-## Mandatory triggers
-
-Run this skill when any of the following is true:
-
-- a material task, issue slice, Spec Kit feature, verification cycle, or PR freeze is ending;
-- the conversation is moving to another task/workstream;
-- context health reaches YELLOW or RED under `docs/ai/context-handoff.md`;
-- the chat is near a semantic/context limit and continuation will happen elsewhere;
-- a PR was merged or unexpectedly changed while the session was active;
-- the user asks for a handoff, continuation prompt, context transfer, or "new chat" prompt.
-
-Do not trigger only because of message count or raw token count.
-
-## Phase A — Reconstruct canonical state
-
-Before writing the handoff, refresh authoritative state instead of trusting conversation history.
-
-Minimum reconstruction:
-
-1. repository and target base (`master` unless explicitly different);
-2. active branch/worktree and exact HEAD;
-3. issue state and umbrella/parent issue when applicable;
-4. PR state, base SHA, head SHA, mergeability and draft state;
-5. active Spec Kit feature, tasks and lifecycle step;
-6. tier/risk triggers and gate state;
-7. relevant ADRs/contracts/architecture;
-8. review submissions and unresolved review threads;
-9. current CI/workflow runs tied to the exact HEAD;
-10. Architecture Graph evidence when required by tier/impact.
-
-If repository state differs from the chat summary, repository state wins and the mismatch must be called out.
-
-## Phase B — Completion audit
-
-Do not ask only "did we implement it?". Audit the task against its own planned proof.
-
-### Scope audit
-
-Compare implementation against:
-
-- issue acceptance criteria;
-- `spec.md`;
-- `plan.md`;
-- `tasks.md`;
-- `verification.md` / checklist when present;
-- durable contracts and ADRs impacted by the feature.
-
-Classify each expected item as:
-
-```text
-DONE | MISSING | PARTIAL | SUPERSEDED | NOT_REQUIRED
-```
-
-Do not silently treat an unchecked task as done because code exists.
-
-### Code-quality audit
-
-Inspect changed production/test files for at least:
-
-- TODO/FIXME or temporary scaffolding;
-- dead code / unreachable paths;
-- fragile selectors or test-only product behavior;
-- race conditions / arbitrary sleeps hiding state problems;
-- stale route/query state consumed more than once;
-- duplicated boundaries or bypassed canonical services;
-- error paths that are masked, swallowed, or converted into false success;
-- temporary workflows/scripts accidentally left in the diff;
-- unexpected changes outside the approved risk envelope.
-
-### Verification audit
-
-Required evidence must be tied to the **same exact relevant HEAD**.
-
-Check, when applicable:
-
-- focused acceptance/regression tests;
-- frontend/backend typecheck;
-- full unit/integration suite;
-- legacy tests;
-- production build;
-- E2E / Playwright / native smoke required by the feature;
-- `sdd:check`;
-- Graph/SDD tests;
-- `graph:ci`;
-- post-implementation Graph impact;
-- specialist/adversarial review required by tier;
-- human hardware/browser/device smoke that automation cannot replace.
-
-Allowed evidence states:
-
-```text
-PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED | STALE
-```
-
-Rules:
-
-- A check from an older HEAD is `STALE` if relevant code/docs changed afterward.
-- A workflow that is still running is not PASS.
-- Skipped jobs are PASS only when the workflow condition makes them explicitly not applicable.
-- `|| true`, masked failures, force-clicks, or weakened assertions do not count as evidence.
-- If an E2E finds a real product defect, fix the product rather than bypassing the test.
-
-### PR/repository hygiene audit
-
-Confirm:
-
-- PR still targets the expected base;
-- base did not advance in a way that invalidates evidence;
-- PR remains mergeable;
-- no unresolved review threads/reviews block it;
-- no temporary verification workflows remain;
-- branch contains only the intended task scope;
-- human Design/Merge Gate state has not been inferred or fabricated.
-
-## Phase C — Decide closeout state
-
-Use one of these outcomes:
-
-### VERIFIED_COMPLETE
-
-All planned scope is implemented, required evidence is PASS on the exact HEAD, repository hygiene is clean, and only an explicitly human gate/action may remain.
-
-### IMPLEMENTED_NOT_VERIFIED
-
-Implementation appears complete but one or more required checks are running, stale, flaky, blocked, or absent.
-
-### INCOMPLETE
-
-Scope/tasks or required behavior are missing/partial.
-
-### PROCESS_DRIFT
-
-The repository moved unexpectedly (for example PR merged before gate, base changed, branch reused, task closed early). Record the factual state; never invent retroactive approval.
-
-Continue autonomously fixing technical gaps when safe. Stop only for a genuine human gate/blocker.
-
-## Phase D — Produce the handoff package
-
-Generate two artifacts in the response:
-
-1. **Closeout summary** — one compact factual paragraph or Caveman lines with exact HEAD, verification state, blocker/human gate and PR.
-2. **Caveman continuation prompt** — automatically emitted paste-ready prompt following the Caveman format above.
-
-Do not emit the legacy full session template by default. `docs/ai/session-handoff-template.md` is a reference/fallback for cases where the compact form cannot safely preserve required information.
-
-The prompt must explicitly instruct the next chat to **verify**, not trust, the handoff.
-
-When detail is necessary, add only the missing operational facts under the relevant Caveman field instead of expanding every section.
-
-Always include language equivalent to:
-
-> Reconstruct canonical state from GitHub/Git/Spec Kit/tests/CI/Graph before acting. Canonical state wins on conflict.
+Omit empty optional fields instead of filling them with prose.
+
+Normal target: **250–700 tokens**. Correctness overrides the budget.
+
+## Compression policy
+
+Always preserve when applicable:
+
+- repository/base + exact base SHA;
+- branch/worktree + exact HEAD;
+- issue/PR/Spec identity;
+- tier/lifecycle only when relevant to decisions;
+- closeout state;
+- current-cycle delta;
+- verification evidence + freshness;
+- blocker/human gate;
+- critical invariant / authority boundary;
+- one exact next action;
+- verify-first instruction.
+
+Prefer:
+
+- `#77`, `SPEC-017`, `ADR-0025`, exact paths and run IDs;
+- `PASS@<sha>`, `STALE@<sha>`, `PENDING`, `BLOCKED`;
+- delta-only facts;
+- canonical references instead of copied contents.
+
+Do not carry forward:
+
+- full conversation history;
+- long architecture background already canonical;
+- complete specs/plans/tasks;
+- old completed milestones that do not constrain `NEXT`;
+- routine unchanged files;
+- verbose explanations of standard workflow rules;
+- duplicate summaries of facts already encoded in the Caveman block.
+
+If `NEXT` depends on a fact that is neither in the handoff nor recoverable from a named canonical artifact, the handoff is under-specified and must be fixed before emission.
+
+## Caveman lint
+
+Before emitting, validate the artifact itself:
+
+- [ ] exact base and HEAD are present when Git work exists;
+- [ ] closeout classification matches current evidence;
+- [ ] no running/queued/stale check is labeled PASS;
+- [ ] `DONE` contains only current-cycle delta;
+- [ ] `PROOF` contains only decision-relevant evidence;
+- [ ] `BLOCK` names only active blockers/gates;
+- [ ] `KEEP` contains only invariants needed to prevent a wrong next action;
+- [ ] `NEXT` is one concrete executable action, not a roadmap;
+- [ ] verify-first contract is present;
+- [ ] no fact is needlessly repeated across sections;
+- [ ] no full canonical artifact is copied into the handoff;
+- [ ] no gate approval is inferred;
+- [ ] handoff remains sufficient if chat history disappears.
 
 ## Gate safety
 
 - A handoff cannot approve a Design Gate.
 - A handoff cannot approve a Merge Gate.
-- A prior user approval applies only to the clearly presented gate/baseline it approved.
+- A prior user approval applies only to the baseline/gate clearly presented at that time.
 - If Design Baseline SHA changes materially, Design Gate becomes invalid.
-- If verified HEAD changes, affected verification must be rerun.
-- Never describe a gate as approved retroactively because a PR was merged outside the expected process.
+- If verified HEAD changes, affected verification becomes stale and must be rerun.
+- A merged PR does not retroactively create a missing gate approval.
 
-## Task-boundary behavior
+## Task and context boundaries
 
-At the end of every material task, even if the chat remains GREEN:
+At the end of every material task, even when context is GREEN:
 
-1. run the closeout audit;
-2. report exact completion/verification status;
-3. automatically generate the Caveman continuation prompt;
-4. if the next workstream is distinct, require a new branch + new Spec Kit feature (when applicable) + new PR rather than reusing the previous PR.
+1. run full closeout audit;
+2. classify state;
+3. emit one Caveman handoff automatically;
+4. if the next workstream is distinct, require a new branch + new Spec Kit feature when applicable + new PR rather than reusing the previous PR.
 
-This makes the end of a task a verification boundary, not merely a conversational summary.
-
-## Context-boundary behavior
-
-When context is YELLOW:
+At YELLOW:
 
 - finish the current safe atomic action;
 - refresh canonical state;
-- run the closeout audit;
-- emit the Caveman handoff before starting materially different work.
+- close out;
+- emit Caveman before materially different work.
 
-When context is RED:
+At RED:
 
 - do not begin another material implementation step;
 - finish/stop the current atomic action safely;
-- run this skill;
-- recommend a new chat;
-- emit the Caveman paste-ready prompt.
-
-## Self-check before emitting a handoff
-
-- [ ] Canonical base/branch/HEAD refreshed.
-- [ ] Issue/PR state refreshed.
-- [ ] Spec Kit/tasks/gates refreshed.
-- [ ] Changed files audited.
-- [ ] Required tests identified from feature artifacts, not memory.
-- [ ] CI result checked on exact HEAD.
-- [ ] Graph evidence checked when applicable.
-- [ ] Reviews/threads checked.
-- [ ] Temporary workflows/scaffolding checked.
-- [ ] Missing human evidence called out.
-- [ ] No stale check described as PASS.
-- [ ] No merge/design approval inferred.
-- [ ] Caveman prompt contains exact next action and critical invariants.
-- [ ] Caveman prompt is delta-only and avoids redundant project history.
-- [ ] New-chat prompt instructs revalidation before action.
+- close out;
+- recommend a clean chat;
+- emit Caveman.
 
 ## Related canonical policy
 
