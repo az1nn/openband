@@ -30,6 +30,8 @@ export interface TrackRegion {
   id: string;
   start: number;
   duration: number;
+  offset?: number;
+  length?: number;
 }
 
 export interface TrackDef {
