@@ -18,12 +18,12 @@
 
 ## T4 review questions
 
-- [x] Can a malicious PR receive a production signing secret under the proposed design? **No.**
-- [x] Can missing production inputs silently produce a debug-signed release? **No.**
-- [x] Can repository compromise alone recover production secret values from the proposed source interface? **No.**
+- [x] Can a malicious PR receive a production signing secret under the implemented boundary? **No; ordinary PR jobs receive none.**
+- [x] Can missing production inputs silently produce a debug-signed release? **No; verification is unsigned and production fails closed.**
+- [x] Can repository compromise alone recover production secret values from the source interface? **No secret values are stored by the boundary.**
 - [x] Can release packaging still be verified while privileged signing is disabled? **Yes, via unsigned verification mode.**
 - [x] Is historical use of repository-exposed credential assumptions treated as proven-safe? **No; it requires inventory and conditional rotation/reset.**
-- [x] Does the design require a real production key to prove the implementation? **No; positive-path proof uses an ephemeral throwaway identity.**
+- [x] Does verification require a real production key? **No; positive-path proof uses an ephemeral throwaway identity.**
 
 ## Gate readiness
 
@@ -44,11 +44,14 @@
 - [x] Production signing is explicit via `openband.android.signingMode=production`.
 - [x] Production inputs are external and complete-or-fail.
 - [x] Release→debug fallback and repository credential defaults are removed.
+- [x] Keystore/password/alias/key are prevalidated before AGP can emit value-bearing signing diagnostics.
 - [x] Static regression tests lock the trust boundary and ordinary-CI secret policy.
-- [x] Adversarial native verification script covers unsigned proof, invalid/partial inputs, leakage canaries, ephemeral positive signing and recovery.
-- [ ] Exact implementation HEAD native adversarial job passes.
-- [ ] Exact implementation HEAD ordinary regression suite is reconciled.
-- [ ] Specialist post-implementation security review is reconciled.
+- [x] Adversarial native verification covers default/explicit unsigned proof, invalid mode, zero/missing/empty inputs, missing keystore, invalid alias, leakage canaries, ephemeral signed positive path and recovery.
+- [x] Specialist post-implementation security review is reconciled in `security-review.md`; runtime proof remains mandatory.
+- [ ] Exact final HEAD native adversarial job passes.
+- [ ] Exact final HEAD ordinary regression suite is reconciled.
+- [ ] #43 integration candidate demonstrates release verification without production signing credentials.
+- [ ] Exact verified HEAD/evidence is frozen in GitHub.
 - [ ] Human Merge Gate approves the verified exact PR HEAD.
 
 ## Scope lock
