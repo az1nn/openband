@@ -182,8 +182,8 @@ export function checkLiveGovernance(root) {
 
   const agents = readText(path.join(root, "AGENTS.md"));
   if (agents !== null) {
-    if (!/HUMAN DESIGN GATE/.test(agents)) {
-      errors.push("AGENTS.md: must preserve HUMAN DESIGN GATE for T2+");
+    if (!/AUTOMATED DESIGN VALIDATION/.test(agents)) {
+      errors.push("AGENTS.md: must define AUTOMATED DESIGN VALIDATION for T2+");
     }
     if (!/EVIDENCE-DRIVEN MERGE GATE/.test(agents)) {
       errors.push("AGENTS.md: must define EVIDENCE-DRIVEN MERGE GATE");

@@ -16,14 +16,22 @@ describe("privileged evidence merge trust boundary", () => {
       "merge:",
       "pr.head.repo.full_name",
       "heads/master",
-      "openband-design-gate",
-      "REQUIRED_CI_JOBS",
-      "RISK_TRIGGERS",
+      "derivedRiskTriggers",
+      "requiredChecks",
+      "openband.json missing derived risk trigger",
       "contents: write",
       "pull-requests: write",
     ]) {
       assert.equal(workflow.includes(required), true, `missing ${required}`);
     }
+  });
+
+  it("does not require a manual Design Gate comment", () => {
+    const workflow = read(".github/workflows/evidence-merge.yml");
+    assert.equal(workflow.includes("github.rest.issues.listComments"), false);
+    assert.equal(workflow.includes("const designGate"), false);
+    assert.equal(workflow.includes("Design Gate decision is"), false);
+    assert.equal(workflow.includes("requiredChecks differ from Design Gate contract"), false);
   });
 
   it("materializes the approved T4 evidence contract", () => {
@@ -49,9 +57,9 @@ describe("privileged evidence merge trust boundary", () => {
       "architecture-boundary-change",
       "product-runtime-change",
       "schemaV2Path",
-      "material design artifact changed after approved baseline",
-      "risk triggers differ from Design Gate contract",
-      "gateIssue !== schemaV2Issue",
+      "current Spec Kit artifact is missing",
+      "openband.json missing derived risk trigger",
+      "requiredChecks",
       "continue-on-error",
       "CI evidence producer contains fail-open pattern",
       "package script ' + name + ' no longer points to trusted producer",

@@ -77,6 +77,6 @@ Both delegated skills remain subordinate to:
 - Git / GitHub / Spec Kit
 - architecture/contracts/ADRs
 - tests / CI / Architecture Graph
-- required human Design Gates and evidence-driven Merge Gate state
+- genuine human/external authorization state and evidence-driven Merge Gate state
 
-A compatibility invocation cannot approve a Design Gate, mark an evidence-driven Merge Gate as satisfied, perform merge automation directly, relabel stale evidence as PASS, weaken verification, or start a distinct next task.
+A compatibility invocation cannot fabricate human/external authorization, mark an evidence-driven Merge Gate as satisfied, perform merge automation directly, relabel stale evidence as PASS, weaken verification, or start a distinct next task.

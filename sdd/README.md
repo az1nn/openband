@@ -13,4 +13,4 @@ SPECKIT_INTEGRATION_OPENCODE_EXTRA_ARGS="--agent build" \
 
 Use `-i run_clarify=true` or `-i run_checklist=true` only when needed. If convergence appends tasks, run the build pass again after completing them.
 
-T2+ product implementation starts only after the human Design Gate. The exact merge-candidate HEAD is integrated only after the evidence-driven Merge Gate is satisfied.
+T2+ product implementation starts after Spec Kit design/analyze completes and automated design/policy validation passes. The exact merge-candidate HEAD is integrated only after the evidence-driven Merge Gate is satisfied.

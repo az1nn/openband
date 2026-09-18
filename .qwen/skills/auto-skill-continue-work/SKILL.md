@@ -92,7 +92,7 @@ Do not stop merely because the work is lengthy or the user asked for a handoff.
 
 ### HUMAN_GATE
 
-A required human decision or approval is a valid stopping boundary only after all safe work before that gate is complete. Examples: a T2+ Design Gate or real hardware/browser judgment that cannot be automated.
+A required human decision or approval is a valid stopping boundary only after all safe work before that boundary is complete. Examples: unresolved product/architecture intent, destructive runtime authorization, or real hardware/browser judgment that cannot be automated.
 
 Do not fabricate approval and do not leave routine work pending before the gate.
 
@@ -169,7 +169,7 @@ If RED itself makes further work unsafe and canonical reconstruction cannot rest
 
 This skill cannot:
 
-- approve a Design Gate;
+- fabricate a genuine human decision or external authorization;
 - mark an evidence-driven Merge Gate as satisfied;
 - perform merge automation directly;
 - relabel running/queued/stale evidence as PASS;

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 2,
+  "tier": "T4",
+  "issue": 101,
+  "riskTriggers": [
+    "governance-policy",
+    "evidence-contract",
+    "security-sensitive-privileged-workflow"
+  ],
+  "dependsOn": [],
+  "requiredChecks": [
+    "graph-check",
+    "security-policy",
+    "frontend-typecheck",
+    "backend-typecheck",
+    "vitest",
+    "legacy-tests",
+    "web-build",
+    "web-launch-e2e",
+    "merge-gate"
+  ]
+}

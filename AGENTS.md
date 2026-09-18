@@ -18,7 +18,7 @@ OpenBand uses GitHub Spec Kit as its SDD lifecycle. This file defines operationa
 |---|---|---|
 | T0 | typo / isolated rename | focused check |
 | T1 | localized bug with known behavior | diagnosis + regression proof |
-| T2 | bounded new capability | Spec Kit + human Design Gate + evidence-driven Merge Gate |
+| T2 | bounded new capability | Spec Kit + automated design validation + evidence-driven Merge Gate |
 | T3 | architecture, persistence, cross-runtime contract | T2 + architecture assessment + specialist evidence |
 | T4 | security, corruption/loss, CRDT/concurrency, critical deterministic DSP | T3 + adversarial review + recovery + expanded verification |
 
@@ -77,7 +77,7 @@ Caveman Mode compresses transferred context only. It must preserve exact base/HE
 
 Prefer a marked PR/issue handoff comment for operational state because it survives chat loss without mutating a verified HEAD. Do not create a post-freeze Git commit merely to store a handoff when a non-HEAD-mutating durable sink is available. Model/account memory is optional bootstrap context and is never canonical project state.
 
-A handoff is derived bootstrap context only. It must never override Git, Spec Kit, architecture/contracts/ADRs, tests, Graph evidence, risk tier, Design Gate, verification state, or Merge Gate. A new chat reconstructs bounded L0 → L1 → L2 context and verifies branch/worktree/HEAD, feature state and gate freshness before acting.
+A handoff is derived bootstrap context only. It must never override Git, Spec Kit, architecture/contracts/ADRs, tests, Graph evidence, risk tier, automated design validation, verification state, or Merge Gate. A new chat reconstructs bounded L0 → L1 → L2 context and verifies branch/worktree/HEAD, feature state and evidence freshness before acting.
 
 ## T2+ lifecycle
 
@@ -89,7 +89,7 @@ preflight
 → checklist?
 → tasks
 → analyze
-→ HUMAN DESIGN GATE
+→ AUTOMATED DESIGN VALIDATION
 → implement
 → converge
 → verify
@@ -114,16 +114,17 @@ Before mutation, confirm:
 
 One active Spec Kit feature per worktree.
 
-### Design Gate
+### Automated design validation
 
-T2+ implementation starts only after human approval of a Design Baseline SHA covering:
+T2+ implementation may start when the current Spec Kit design is structurally complete and its pre-implementation policy checks pass. The current feature must cover:
 
 - `spec.md` — WHAT;
 - `plan.md` / applicable ADR — HOW;
 - `tasks.md` — WORK;
+- `openband.json` — tier, risk triggers, dependencies and required evidence;
 - verification strategy — PROOF.
 
-Material changes to scope, acceptance criteria, architecture/contract, tier, structural dependencies, or verification strategy invalidate the gate and require re-analysis + approval. Internal implementation details within the approved envelope do not.
+There is no generic Human Design Gate. Material changes to scope, acceptance criteria, architecture/contract, tier, structural dependencies, risk triggers, or verification strategy require re-analysis and refreshed automated validation. Genuine unresolved product/architecture decisions or external authorization still stop for a human decision.
 
 ### Implementation and convergence
 
@@ -187,7 +188,7 @@ Frontend code under `app/` and `src/` must not call Node filesystem, Electron, o
 
 ## Emergency and degraded operation
 
-Urgency can compress sequencing, never assurance. T2+ still requires material intent, Design Gate, regression proof, convergence, critical verification, normative knowledge reconciliation, and an evidence-satisfied Merge Gate.
+Urgency can compress sequencing, never assurance. T2+ still requires material intent, automated design validation, regression proof, convergence, critical verification, normative knowledge reconciliation, and an evidence-satisfied Merge Gate.
 
 If Spec Kit tooling fails, use degraded SDD only as a temporary tooling fallback: preserve tiers, artifacts, gates and evidence; record the tooling failure and fix it separately. Never reactivate OpenSpec.
 
