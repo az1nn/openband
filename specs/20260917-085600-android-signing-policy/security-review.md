@@ -91,7 +91,7 @@ Observed properties:
 
 ## Runtime proof still required for final convergence
 
-The post-implementation code review is **PASS**, subject to exact-HEAD runtime evidence. Human Merge Gate remains blocked until the final candidate demonstrates:
+The post-implementation code review is **PASS**, subject to exact-HEAD runtime evidence. Evidence-driven Merge Gate remains blocked until the final candidate demonstrates:
 
 - unsigned verification APK production and signature-state proof;
 - complete negative input matrix with sanitized output;
@@ -102,4 +102,4 @@ The post-implementation code review is **PASS**, subject to exact-HEAD runtime e
 
 ## Conclusion
 
-The implemented trust boundary remains inside the approved T4 design and materially improves least privilege and failure isolation. No review finding requires a new trust model or Design Gate. Runtime evidence, not this review alone, decides readiness for the Human Merge Gate.
+The implemented trust boundary remains inside the approved T4 design and materially improves least privilege and failure isolation. No review finding requires a new trust model or Design Gate. Runtime evidence, not this review alone, decides exact-HEAD merge eligibility.
