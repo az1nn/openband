@@ -36,9 +36,9 @@
 - [x] Graph/Spec tests pass on exact design HEAD.
 - [x] Engineering Graph CI passes on exact design HEAD.
 - [x] Historical pre-#82 Design Baseline SHA: `2a50d83e6e0a059948a0d1bc1cf8b7578583ddeb` (superseded by governance reconciliation).
-- [x] Human Design Gate approved that historical SHA on 2026-09-17; approval is now **STALE** for the post-#82 verification contract.
+- [x] Historical manual Design Gate was approved on 2026-09-17; after #102 it is retained only as history, not as lifecycle authority.
 
-- [ ] Fresh Human Design Gate approves the reconciled exact baseline, schemaVersion 2 required checks, and risk-trigger contract.
+- [ ] Automated design validation passes for the reconciled Spec Kit, schemaVersion 2 required checks, and risk-trigger contract.
 
 ## Implementation status
 
