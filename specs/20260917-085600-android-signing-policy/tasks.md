@@ -42,7 +42,9 @@
 - [ ] T73-303 Re-run SDD policy, Engineering Graph, typechecks and regression tests on exact final HEAD.
 - [ ] T73-304 Reconcile #43 against the resulting #73 integration candidate and demonstrate Android release verification can pass without production signing credentials.
 - [ ] T73-305 Freeze exact verified HEAD and evidence links.
-- [ ] T73-306 Obtain Human Merge Gate; human performs merge.
+- [ ] T73-306 Satisfy the evidence-driven Merge Gate on the exact merge-candidate HEAD.
+- [x] T73-307 Reconcile #73 onto post-#82 governance: schemaVersion 2 required checks, current fail-closed CI semantics, and no change to the approved signing trust model.
+- [ ] T73-308 Resolve the inherited Electron lockfile/native-build blocker outside #73, then rerun feature-specific native evidence without weakening either job.
 
 ## Recovery tasks if exposure is suspected
 
