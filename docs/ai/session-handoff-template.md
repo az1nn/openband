@@ -78,10 +78,10 @@ Allowed evidence states:
 PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED | STALE
 ```
 
-When gate state is decision-relevant, preserve it explicitly:
+When merge or genuine authorization state is decision-relevant, preserve it explicitly:
 
 ```text
-Design Gate: `NOT_REQUIRED | PENDING | APPROVED | INVALIDATED`
+Human/external authorization: `NOT_REQUIRED | PENDING | SATISFIED | BLOCKED`
 Merge Gate: `NOT_REQUIRED | PENDING | SATISFIED | BLOCKED | INVALIDATED`
 ```
 
@@ -127,4 +127,4 @@ L1  active feature + impacted architecture/contracts/ADRs + Graph
 L2  relevant code + tests + specialists
 ```
 
-If previous PASS evidence is bound to a stale HEAD/base, rerun it before treating the task as verified. Continue from `NEXT` only after canonical state, evidence freshness, the human Design Gate when applicable, and the current evidence-driven Merge Gate state are confirmed.
+If previous PASS evidence is bound to a stale HEAD/base, rerun it before treating the task as verified. Continue from `NEXT` only after canonical state, automated design/policy state, evidence freshness, any genuine human/external authorization, and the current evidence-driven Merge Gate state are confirmed.

@@ -217,7 +217,7 @@ Before persistence/emission confirm:
 
 ## Gate safety
 
-A handoff cannot approve a Design Gate, mark an evidence-driven Merge Gate as satisfied, perform merge automation directly, lower risk tier, override Spec Kit/Git/tests/Graph, or retroactively authorize a process step.
+A handoff cannot fabricate a genuine human/external authorization, mark an evidence-driven Merge Gate as satisfied, perform merge automation directly, lower risk tier, override Spec Kit/Git/tests/Graph, or retroactively authorize a process step.
 
 ## Related policy
 

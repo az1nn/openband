@@ -16,4 +16,4 @@ Three durable cross-feature contracts were distilled rather than copied: audio t
 
 ## New work
 
-Use `openband-ask` for the canonical risk-proportional path or direct `/speckit.*` commands for advanced control. Direct commands remain subject to `AGENTS.md`, OpenCode permissions, policy checks, human gates and CI.
+Use `openband-ask` for the canonical risk-proportional path or direct `/speckit.*` commands for advanced control. Direct commands remain subject to `AGENTS.md`, OpenCode permissions, automated design/policy checks, genuine human/external authorization boundaries, and CI.
