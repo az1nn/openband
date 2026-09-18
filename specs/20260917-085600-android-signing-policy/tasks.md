@@ -44,7 +44,7 @@
 - [ ] T73-305 Freeze exact verified HEAD and evidence links.
 - [ ] T73-306 Satisfy the evidence-driven Merge Gate on the exact merge-candidate HEAD.
 - [x] T73-307 Reconcile #73 onto post-#82 governance: schemaVersion 2 required checks, current fail-closed CI semantics, and no change to the approved signing trust model.
-- [ ] T73-308 Resolve the inherited Electron lockfile/native-build blocker outside #73, then rerun feature-specific native evidence without weakening either job.
+- [ ] T73-308 Resolve inherited Electron lockfile/native-build blocker #104 outside #73, then rerun feature-specific native evidence without weakening either job.
 
 ## Recovery tasks if exposure is suspected
 
