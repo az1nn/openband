@@ -2,6 +2,8 @@
 
 ## Strategy
 
+**ADR: NOT REQUIRED** — this changes repository governance/evidence policy without introducing a new product/runtime architecture boundary.
+
 1. Amend the Constitution and live agent policy so Spec Kit + risk-derived evidence, not a generic manual Design Gate, is the engineering approval boundary.
 2. Update session/ask/handoff guidance so agents stop only for real human decisions or external authorization.
 3. Remove functional `openband-design-gate` parsing and validation from the privileged evaluator.
@@ -12,6 +14,12 @@
 ## Risk
 
 This is T4 because it changes privileged merge policy and repository governance. The migration must pass the pre-change T4 evaluator and the candidate's own CI/security tests.
+
+## Adversarial verification
+
+The T4 review must actively try to prove a fail-open path exists: missing/undeclared derived risk triggers, absent Spec Kit artifacts, stale or foreign HEADs, missing required jobs, blocking reviews, candidate-controlled privileged execution, or a hidden dependency on manual PR comments must all remain blocked.
+
+Rollback/recovery: disable the privileged evidence-merge workflow or revert this governance PR using `docs/operations/merge-automation-recovery.md` if the new policy admits an unverified merge or blocks valid evidence-driven work.
 
 ## Verification
 
