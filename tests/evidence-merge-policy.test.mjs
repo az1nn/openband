@@ -17,8 +17,8 @@ describe("privileged evidence merge trust boundary", () => {
       "pr.head.repo.full_name",
       "heads/master",
       "derivedRiskTriggers",
-      "REQUIRED_CI_JOBS",
-      "RISK_TRIGGERS",
+      "requiredChecks",
+      "openband.json missing derived risk trigger",
       "contents: write",
       "pull-requests: write",
     ]) {
