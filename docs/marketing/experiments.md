@@ -125,6 +125,97 @@ Do not run message or channel tests that cannot change a decision.
 **Guardrail:** distinguish correlation from causation.  
 **Decision:** Confirm or revise the activation model and north-star candidate.
 
+### EXP-009 — Proof-rich workflow page vs generic explainer
+
+**Status:** BACKLOG  
+**Research:** R-019, R-021, R-025  
+**Hypothesis:** A workflow page containing real screenshots/video, exact steps, limitations and a direct product path produces higher creator activation than a generic text-only category explainer for comparable qualified intent.  
+**Audience:** Search/owned visitors with a concrete workflow job.  
+**Single variable:** Evidence depth / first-hand proof in the content experience.  
+**Primary metric:** page visit → first sound.  
+**Guardrail:** bounce/return-to-search signals where measurable; successful creator rate.  
+**Minimum evidence:** Comparable qualified traffic and clear query/landing attribution; do not overclaim from a few organic visits.  
+**Decision:** Set the minimum evidence standard for organic workflow pages.
+
+### EXP-010 — YouTube transformation packaging
+
+**Status:** BACKLOG  
+**Research:** R-022, R-025  
+**Hypothesis:** Packaging videos around a concrete creator transformation produces more qualified product use than packaging around release/features.  
+**Audience:** Musicians/producers on YouTube.  
+**Single variable:** Title/thumbnail narrative.  
+**Variant A:** creator transformation (`one riff → finished sketch`).  
+**Variant B:** feature/release framing (`OpenBand vX guitar features`).  
+**Primary metric:** viewer → Studio open → first sound.  
+**Guardrail:** audience retention and D7 return of acquired creators.  
+**Decision:** Set the default YouTube packaging doctrine.
+
+### EXP-011 — Organic-query cohort quality
+
+**Status:** BACKLOG  
+**Research:** R-020  
+**Hypothesis:** Workflow/problem queries that closely match a launch-grade path produce fewer visits but higher successful-creator and return rates than broad category queries.  
+**Audience:** Organic search visitors.  
+**Single variable:** Observational segmentation by query-intent cluster; not an A/B manipulation.  
+**Primary metric:** successful creator rate by query cluster.  
+**Guardrail:** D7 return and product-support burden.  
+**Decision:** Decide which demand clusters earn more content/technical SEO investment.
+
+### EXP-012 — GitHub discovery surface quality
+
+**Status:** BACKLOG  
+**Research:** R-007, R-023  
+**Hypothesis:** A repository surface optimized around product value, launch truth, topics, social preview and clear contribution paths increases meaningful creator/contributor actions more than a feature-heavy engineering-only presentation.  
+**Audience:** GitHub visitors.  
+**Single variable:** Repository presentation baseline over a defined before/after period.  
+**Primary metric:** meaningful action rate: demo open, reproducible issue, discussion or first PR.  
+**Guardrail:** maintainer support cost and issue quality.  
+**Decision:** Determine which repository-discovery investments deserve ongoing maintenance.
+
+### EXP-013 — Post-export referral invitation
+
+**Status:** BACKLOG  
+**Research:** R-027  
+**Hypothesis:** A single optional referral/share invitation shown after successful export produces higher-quality referred creators without harming completion trust.  
+**Audience:** Creators who have successfully exported.  
+**Single variable:** Optional post-export invitation vs no referral prompt.  
+**Primary metric:** referred visitor → Successful Creator.  
+**Guardrail:** export completion satisfaction, dismissal rate, D7 return of referrer.  
+**Decision:** Determine whether referral belongs in the default post-success experience.
+
+### EXP-014 — Release-note reactivation
+
+**Status:** BACKLOG  
+**Research:** R-028  
+**Hypothesis:** Concrete creator-job release notes generate more return-to-successful-creation than generic “new version” announcements among users who have opted into a reachable channel.  
+**Audience:** Eligible opt-in/community/release subscribers.  
+**Single variable:** Job/problem framing vs generic release framing.  
+**Primary metric:** message exposure → return → Successful Creator.  
+**Guardrail:** unsubscribe/dismissal, support burden, no forced identity capture.  
+**Decision:** Set the reactivation role of release communications.
+
+### EXP-015 — Community asset activation test
+
+**Status:** BACKLOG  
+**Research:** R-029  
+**Hypothesis:** A high-quality workflow template/preset reduces time to first meaningful output and improves D7 return for the matching creator job.  
+**Audience:** New creators entering one validated workflow wedge.  
+**Single variable:** Start from proven community asset vs blank project.  
+**Primary metric:** time to first sound / successful creator rate.  
+**Guardrail:** D7 return, creator understanding of the workflow, asset rights/compatibility.  
+**Decision:** Decide whether community assets deserve a maintained growth program.
+
+### EXP-016 — Async community sufficiency
+
+**Status:** BACKLOG  
+**Research:** R-030, R-031  
+**Hypothesis:** Issues/docs/Discussions can handle early creator and contributor needs through the first growth milestones without a separate synchronous chat surface.  
+**Audience:** Early creator/contributor community.  
+**Single variable:** Observational service-quality analysis; do not open a chat merely to run the test.  
+**Primary metric:** actionable questions resolved + median useful-response time.  
+**Guardrail:** unanswered recurring needs, maintainer load, evidence of users seeking synchronous help elsewhere.  
+**Decision:** Keep asynchronous surfaces or justify opening a moderated synchronous community.
+
 ## Results discipline
 
 When an experiment closes:
@@ -133,7 +224,7 @@ When an experiment closes:
 2. record the actual result even if it contradicts strategy;
 3. update affected `R-*` entries in [`research-register.md`](./research-register.md);
 4. update [`decision-log.md`](./decision-log.md) if the evidence changes a durable choice;
-5. reconcile positioning/messaging/GTM only after the knowledge layer is updated;
+5. reconcile positioning/messaging/GTM/growth/community only after the knowledge layer is updated;
 6. preserve inconclusive and negative tests to prevent repetition.
 
 ## Decision quality
@@ -148,6 +239,7 @@ qualified discovery
 → save/reopen
 → export
 → return
+→ optional advocacy/contribution
 ```
 
-The farther a result travels through this chain without damaging trust or retention, the more strategically useful it is.
+The farther a result travels through this chain without damaging trust, support health or retention, the more strategically useful it is.

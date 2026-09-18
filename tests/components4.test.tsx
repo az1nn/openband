@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { RightSidebar } from "../src/components/RightSidebar";
 import { OutputSelector } from "../src/components/OutputSelector";
 import { VoiceCommandButton } from "../src/components/VoiceCommandButton";
-import { MiniPlayer, setMiniPlayerState } from "../src/components/MiniPlayer";
+import { MiniPlayer, calculateMiniPlayerSeekTime, setMiniPlayerState } from "../src/components/MiniPlayer";
 import { QuickActions } from "../src/components/QuickActions";
 import { QuickTools } from "../src/components/QuickTools";
 import { ProjectMenu } from "../src/components/ProjectMenu";
@@ -115,6 +115,21 @@ describe("VoiceCommandButton", () => {
 describe("MiniPlayer", () => {
   beforeEach(() => {
     setMiniPlayerState({ visible: false, title: "", subtitle: "", url: null, projectId: null });
+  });
+
+  it("calculates seek time from the rendered progress-bar width", () => {
+    expect(calculateMiniPlayerSeekTime(75, 300, 120)).toBe(30);
+    expect(calculateMiniPlayerSeekTime(150, 300, 120)).toBe(60);
+  });
+
+  it("clamps seek positions to the media duration", () => {
+    expect(calculateMiniPlayerSeekTime(-20, 200, 90)).toBe(0);
+    expect(calculateMiniPlayerSeekTime(240, 200, 90)).toBe(90);
+  });
+
+  it("ignores seek calculations without usable layout or duration", () => {
+    expect(calculateMiniPlayerSeekTime(20, 0, 90)).toBeNull();
+    expect(calculateMiniPlayerSeekTime(20, 200, 0)).toBeNull();
   });
 
   it("does not render when not visible", () => {

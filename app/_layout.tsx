@@ -9,6 +9,7 @@ import { View, Platform } from "react-native";
 import { Loading } from "../src/components/Loading";
 import { ToastProvider } from "../src/components/Toast";
 import { audioSystem, disposeAllAudio } from "../src/lib/universalAudio";
+import { setOnProjectSaved } from "../src/lib/projectStore";
 import { isDesktop } from "../src/bridge";
 
 import "../global.css";
@@ -59,6 +60,21 @@ function RootLayoutProtected() {
 export default function RootLayout() {
   useEffect(() => {
     import("../src/lib/i18n");
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") return;
+
+    return setOnProjectSaved((id, project) => {
+      const path = window.location.pathname.split("/").filter(Boolean);
+      const studioIndex = path.indexOf("studio");
+      if (studioIndex < 0 || path[studioIndex + 1] !== id) return;
+
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("title") === project.title) return;
+      url.searchParams.set("title", project.title);
+      window.history.replaceState(window.history.state, "", url.toString());
+    });
   }, []);
 
   useEffect(() => {

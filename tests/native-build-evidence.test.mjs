@@ -173,7 +173,7 @@ describe("native CI workflow policy", () => {
   it("does not swallow native build failures", () => {
     expect(workflow).not.toMatch(/assembleRelease[^\n]*\|\|/);
     expect(workflow).not.toMatch(/build:linux[^\n]*\|\|/);
-    expect(workflow).toContain("continue-on-error: true");
+    expect(workflow).not.toContain("continue-on-error: true");
     expect(workflow).toContain("native-build-evidence.mjs enforce");
   });
 
@@ -181,6 +181,12 @@ describe("native CI workflow policy", () => {
     expect(workflow).toContain("workflow_dispatch:");
     expect(workflow).toContain(
       "contains(github.event.pull_request.labels.*.name, 'native-build')",
+    );
+    expect(workflow).toContain(
+      "contains(github.event.pull_request.labels.*.name, 'native-build-android')",
+    );
+    expect(workflow).toContain(
+      "contains(github.event.pull_request.labels.*.name, 'native-build-electron')",
     );
   });
 

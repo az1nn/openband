@@ -10,7 +10,11 @@ Documentation MUST be concise, precise, useful to a human reader, and free of du
 
 ## III. PR-First Governance
 
-Production changes MUST flow through branches and pull requests. Agents MUST NOT push directly to `master`. T2+ changes require a human Design Gate before implementation and a human Merge Gate over the verified PR head.
+Production changes MUST flow through branches and pull requests. Agents MUST NOT push directly to `master`.
+
+T2+ changes require Spec Kit design artifacts, explicit risk/evidence metadata, and automated design validation before implementation. Merge authorization is evidence-driven for every tier: the exact candidate HEAD may merge automatically only when its complete risk-derived verification contract is current and satisfied. A separate human design or merge approval is not required when the repository can prove the required contract.
+
+Changed HEAD, materially stale base, missing required evidence, or any required `FAIL`, `BLOCKED`, or `FLAKY` state invalidates merge eligibility until the affected evidence is refreshed.
 
 ## IV. Architecture Boundaries
 
@@ -18,14 +22,20 @@ Frontend code in `app/` and `src/` MUST NOT directly depend on Node filesystem, 
 
 ## V. Evidence Over Claims
 
-A change is complete only when material behavior is backed by relevant tests, checks, reviews, and documentation reconciliation. Required failures MUST NOT be masked, ignored, or reclassified as success. Security, data integrity, concurrency, and deterministic DSP changes require stronger verification proportional to risk.
+A change is complete only when material behavior is backed by relevant tests, checks, reviews, and documentation reconciliation. Required failures MUST NOT be masked, ignored, skipped into success, or reclassified as success. Security, data integrity, concurrency, and deterministic DSP changes require stronger verification proportional to risk.
+
+If a regression class matters to correctness, safety, compatibility, or creator-visible behavior, the repository MUST encode evidence capable of detecting it before automatic merge is trusted for that class. Missing required proof is `BLOCKED`, not implicit `PASS`.
 
 ## VI. Least Privilege
 
-Agents and automation receive only the permissions needed for their phase. Design agents cannot edit product source. Implementation agents cannot bypass gates, CI, or `master` protections. Secrets MUST NOT appear in specs, logs, commits, handoffs, or generated documentation.
+Agents and automation receive only the permissions needed for their phase. Implementation starts only after the Spec Kit design is structurally valid and required pre-implementation policy checks pass. Implementation and merge automation cannot bypass required evidence, CI, policy checks, or `master` protections. Secrets MUST NOT appear in specs, logs, commits, handoffs, or generated documentation.
+
+Merge authorization does not authorize destructive runtime actions. Rollback, redeploy, credential rotation, access-control changes, data repair/deletion, or comparable production mutations follow their own explicit authorization policy.
+
+Privileged post-CI merge automation MUST execute trusted default-branch policy only, MUST NOT execute candidate PR code or candidate artifacts, and MUST fail closed for untrusted head repositories, stale HEAD/base identity, or missing approved evidence.
 
 ## Governance
 
-`AGENTS.md` defines operational agent policy; this Constitution defines durable invariants. A conflict is resolved in favor of this Constitution. Material amendments require a dedicated governance PR with rationale, impact analysis, verification, and human approval.
+`AGENTS.md` defines operational agent policy; this Constitution defines durable invariants. A conflict is resolved in favor of this Constitution. Material amendments require a dedicated governance PR with rationale, Spec Kit design, impact analysis, and T4 risk-derived verification.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-10 | **Last Amended**: 2026-09-10
+**Version**: 1.2.0 | **Ratified**: 2026-09-10 | **Last Amended**: 2026-09-17

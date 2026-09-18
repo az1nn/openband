@@ -2,9 +2,9 @@ schema_version: "1.0"
 workflow:
   id: "openband-design"
   name: "OpenBand Design"
-  version: "1.0.0"
+  version: "1.1.0"
   author: "OpenBand"
-  description: "T2+ design through analysis and human Design Gate"
+  description: "T2+ design through Spec Kit analysis and automated validation"
 
 requires:
   speckit_version: ">=1.0.4"
@@ -60,8 +60,3 @@ steps:
     command: speckit.analyze
     integration: opencode
 
-  - id: design-gate
-    type: gate
-    message: "Approve the current spec, plan, tasks, verification strategy and Design Baseline SHA before implementation."
-    options: [approve, reject]
-    on_reject: abort

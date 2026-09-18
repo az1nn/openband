@@ -2,105 +2,51 @@
 
 ## Scope
 
-This contract defines trustworthy CI evidence for OpenBand Android and Electron build verification. It does not define store signing, credential management, release promotion, notarization, Play Store/App Store submission, or production distribution policy.
+This contract defines fail-closed CI evidence for OpenBand Android and Electron build verification. It does not authorize production signing, credential management, notarization, publication, release promotion, or runtime/bridge changes.
 
 ## Evidence states
 
-Every requested native verification target emits exactly one terminal state:
-
-- `PASS` — required toolchain was available, the build command exited successfully, required output artifacts exist, and artifact validation completed.
-- `FAIL` — the supported verification environment was available but dependency installation, compilation, packaging, or artifact validation failed.
-- `BLOCKED` — verification could not legitimately run because a declared prerequisite or supported environment capability was unavailable.
-
-`SKIPPED` remains a workflow scheduling state only. It means the target was not requested; it is not evidence that a build passes.
+- PASS: declared toolchain is available, the build exits successfully, required outputs exist, and artifact validation completes.
+- FAIL: a supported verification environment exists but dependency installation, compilation, packaging, or artifact validation fails.
+- BLOCKED: verification cannot legitimately run because a declared prerequisite or supported environment capability is unavailable.
+- SKIPPED is scheduling-only and is never build proof.
 
 ## Trust rules
 
-1. A build command failure MUST NOT be converted to success with `|| echo`, unconditional `true`, ignored exit codes, or equivalent masking.
-2. Evidence collection MAY use a non-fatal intermediate step only when a final enforcement step reads the generated evidence and fails the job for `FAIL` or `BLOCKED`.
-3. A zero exit code without the expected build artifact is `FAIL`.
-4. A target may be `BLOCKED` only for a documented prerequisite condition; product/build errors are `FAIL`, not `BLOCKED`.
-5. CI logs and evidence manifests MUST identify the exact source commit SHA and the checkout commit SHA used by the runner.
-6. Produced proof artifacts MUST be hashed with SHA-256 and retained alongside the manifest when available.
-7. Dependency preparation MUST remain deterministic. Native verification MUST NOT replace a frozen install with an unconstrained `npm install` merely to make CI green.
-
-## Stable reason codes
-
-Terminal evidence uses stable reason codes. Current codes include:
-
-- PASS: `build-and-artifact-validation-passed`.
-- FAIL: `build-command-failed`, `expected-artifact-missing`, `artifact-validation-failed`, `evidence-harness-error`.
-- BLOCKED: `verification-not-completed`, `build-not-run`, `build-not-executed`, `source-sha-missing`, `npm-unavailable`, `missing-gradle-wrapper`, `gradle-wrapper-not-executable`, `missing-android-build-config`, `java-unavailable`, `java-17-required`, `missing-root-package-lock`, `missing-electron-package`, `missing-electron-package-lock`.
-
-Additional stable reason codes may be introduced only when they preserve the PASS/FAIL/BLOCKED semantics above.
-
-## Android verification target
-
-The CI verification target is an Android packaging/build proof, not a store-ready signed release.
-
-Declared environment baseline:
-
-- Linux GitHub-hosted runner;
-- JDK 17;
-- Node.js 22.x;
-- repository dependency installation completed as part of the build command;
-- Gradle wrapper available and executable.
-
-Expected command family: repository dependency installation followed by Gradle wrapper release assembly using the repository-owned Android project.
-
-Expected proof artifact: at least one APK under `android/app/build/outputs/apk/release`. The evidence manifest records exact path, byte size and SHA-256.
-
-Production keystore injection, credential changes and signing-policy redesign are explicitly outside this contract.
-
-## Electron verification target
-
-Declared environment baseline:
-
-- Linux GitHub-hosted runner;
-- Node.js 22.x;
-- repository and Electron lockfiles available;
-- repository dependency installation and Web export/build completed;
-- `electron/npm ci` completed before packaging.
-
-The Electron lock currently contains the known npm optional-peer stub for `@electron/windows-sign -> postject`. CI may normalize only that exact known stub to the pinned `postject@1.0.0-alpha.6` and nested `commander@9.5.0` metadata before the frozen `npm ci`. The normalizer is fail-closed: if the upstream package version, dependency contract or already-versioned metadata changes, verification fails rather than guessing or running a mutable install.
-
-Expected command family: deterministic lock normalization, repository Web build, frozen Electron dependency install, then the repository-owned Electron Linux packaging command.
-
-Expected proof artifacts: both an AppImage and a Debian package under `electron/out`.
-
-The evidence manifest records discovered distributables, byte sizes and SHA-256 hashes.
-
-## Evidence manifest
-
-Each requested target produces a machine-readable manifest containing at minimum:
-
-```json
-{
-  "schemaVersion": 1,
-  "target": "android|electron",
-  "state": "PASS|FAIL|BLOCKED",
-  "commit": "<source git sha>",
-  "checkoutCommit": "<runner checkout git sha>",
-  "reason": "<stable reason code>",
-  "toolchain": {},
-  "artifacts": [
-    { "kind": "apk|appimage|deb", "path": "...", "size": 0, "sha256": "..." }
-  ],
-  "details": {
-    "preflight": "PASS|BLOCKED|PENDING",
-    "buildOutcome": "success|failure|skipped"
-  }
-}
-```
-
-Human-readable logs may add detail, but the manifest is the durable CI evidence boundary.
+1. Native failures are never masked or converted to success.
+2. Evidence collection and uploads may run with if: always(), but the producer job remains failed when preflight/build/enforcement fails.
+3. A zero exit code without the required artifact is FAIL.
+4. PASS evidence binds source SHA, checkout SHA, toolchain metadata, artifact path, byte size and SHA-256.
+5. Frozen dependency installation remains mandatory; mutable installs are not a remediation strategy.
+6. The privileged merge evaluator must require only the native target selected by the risk-derived contract, changed runtime path, or explicit scheduling label.
 
 ## Scheduling
 
-Native verification remains opt-in until repository maintainers explicitly promote it to a mandatory branch gate. The existing `native-build` pull-request label and manual `workflow_dispatch` are valid scheduling mechanisms.
+- native-build requests both Android and Electron and is reserved for changes whose verification contract requires both targets.
+- native-build-android requests Android only.
+- native-build-electron requests Electron only.
+- workflow_dispatch remains a full native verification path and runs both targets.
+- Changes under android/ require android-build evidence; changes under electron/ require electron-build evidence.
+- A target-specific request must not make the unrelated native target a required merge check.
 
-An unrequested target is `SKIPPED`, never `PASS`.
+This target split is a coordination boundary, not a weaker gate. If a feature openband.json declares both jobs, both remain required.
 
-## Security boundary
+## Android verification
 
-This contract MUST NOT introduce, rotate, expose, validate, or depend on production signing secrets. Discovery that trustworthy verification requires signing-secret changes escalates the work out of this T3 contract into a separately reviewed security-sensitive change tracked independently from #43.
+Baseline: Linux runner, JDK 17, Node 22, executable Gradle wrapper, deterministic repository install, then ./gradlew assembleRelease. Expected proof is at least one APK under android/app/build/outputs/apk/release.
+
+Production keystore injection and signing-policy changes are outside this contract. Android release verification may consume the repository's approved unprivileged signing boundary once #73 lands.
+
+## Electron verification
+
+Baseline: Linux runner, Node 22, deterministic root install and Web build, deterministic electron/npm ci, then npm run build:linux. Expected proof is both an AppImage and a Debian package under electron/out.
+
+The committed Electron lockfile is authoritative. #104 owns lockfile reproducibility; #43 must not normalize or mutate dependency metadata during CI.
+
+## Evidence manifest
+
+Each requested target writes .artifacts/native-build/<target>.json with schemaVersion, target, PASS|FAIL|BLOCKED state, source/checkout SHAs, reason code, toolchain metadata, artifacts and build/preflight details. Enforcement accepts only PASS.
+
+## T4 boundary and recovery
+
+Native scheduling and privileged merge-evidence policy are trust-root changes and therefore T4. Adversarial verification must prove that one target cannot cause the other to become implicitly required or implicitly PASS. Recovery is to revert the scheduler/evaluator commit, disable affected automation if necessary, audit emitted evidence, and re-enable only after exact-head policy tests pass.

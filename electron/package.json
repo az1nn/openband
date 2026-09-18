@@ -3,10 +3,6 @@
   "version": "1.0.0",
   "description": "OpenBand - Desktop music production app",
   "homepage": "https://github.com/az1nn/openband",
-  "author": {
-    "name": "az1nn",
-    "email": "80423834+az1nn@users.noreply.github.com"
-  },
   "main": "main.js",
   "private": true,
   "scripts": {
@@ -34,7 +30,8 @@
         "deb"
       ],
       "icon": "assets",
-      "category": "AudioVideo"
+      "category": "AudioVideo",
+      "maintainer": "az1nn <80423834+az1nn@users.noreply.github.com>"
     },
     "mac": {
       "target": [

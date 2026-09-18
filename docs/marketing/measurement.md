@@ -36,6 +36,17 @@ Why:
 
 This can evolve once retention patterns are understood.
 
+## Successful Creator operating unit
+
+For growth operations, use a **Successful Creator** as a unique creator/session identity that, within the measurement window and without inspecting creative content:
+
+1. starts or opens a project;
+2. produces sound;
+3. makes a meaningful edit/creation action;
+4. saves/reopens or exports successfully.
+
+This is an operating definition, not a permanent identity model. Prefer privacy-safe anonymous/coarse identifiers and revise the definition if beta evidence shows a better predictor of repeated creator value.
+
 ## Funnel metrics
 
 | Stage | Metric | Question |
@@ -48,9 +59,9 @@ This can evolve once retention patterns are understood.
 | Trust | reopen success | Can the creator recover the project? |
 | Completion | export success | Can the creator leave with a song? |
 | Completion | blank→export time | Is the core loop actually fast? |
-| Retention | creator returns to same/new project | Was the tool useful enough to reuse? |
-| Advocacy | voluntary share/star/feedback | Did value create a public action? |
-| Community | meaningful contributor conversion | Does openness compound? |
+| Retention | creator returns to meaningful creation | Was the tool useful enough to reuse? |
+| Advocacy | voluntary share/referral/feedback | Did value create a voluntary public action? |
+| Community | meaningful creator/contributor participation | Does openness compound creator value? |
 
 ## Secondary metrics
 
@@ -65,31 +76,55 @@ This can evolve once retention patterns are understood.
 ### Marketing
 - landing → Studio CTR;
 - demo play/completion rate;
-- channel → activated-creator rate;
+- channel → activated/successful-creator rate;
 - README → live app CTR;
 - GitHub star rate per qualified repository visitor;
-- launch post → activated creator, not only clicks.
+- launch post → successful creator, not only clicks.
+
+### Retention / growth
+- D1 creator return;
+- D7 creator return;
+- D30 creator return when sample size supports it;
+- repeated Successful Creator sessions;
+- same-project continuation vs new-project creation when measurable without inspecting project content;
+- cohort retention by acquisition wedge/channel;
+- creator return after a meaningful release/fix;
+- support burden per active creator cohort.
+
+### Referral / advocacy
+- voluntary referral/share initiation after successful output;
+- referred visitor → Studio open;
+- referred visitor → Successful Creator;
+- D7 return of referred creators;
+- creator-created tutorials/assets that produce downstream successful creators;
+- actionable feedback reporters who return.
 
 ### Community
 - unique issue reporters who provide reproducible evidence;
 - contributor first-PR completion rate;
 - repeat contributors;
-- discussion questions answered;
-- community-created reusable assets after that system exists.
+- actionable questions answered;
+- median time to first useful response;
+- unresolved recurring questions;
+- community-created reusable assets that are actually used;
+- maintainer review/support load;
+- moderation/private-data incidents.
 
 ## Avoid vanity metrics
 
 Do not use these as primary success evidence:
 - raw impressions;
-- follower count;
+- follower/member count;
 - repository stars in isolation;
 - total registered users;
+- message count;
+- Discord/Discussion activity volume;
 - number of implemented features;
 - test count;
 - lines of code;
 - downloads without activation.
 
-They can provide context but should not drive product positioning.
+They can provide context but should not drive product positioning or community scaling.
 
 ## Event taxonomy
 
@@ -116,6 +151,14 @@ If analytics are implemented, prefer coarse product-outcome events.
 - `feedback_open`
 - `github_source_click`
 
+Optional future growth events, only if justified and privacy-safe:
+- `referral_prompt_shown`
+- `referral_action`
+- `release_note_open`
+- `community_link_open`
+
+Do not add events merely because they are easy to instrument.
+
 ### Safe properties
 
 Use only what is necessary for product-quality segmentation:
@@ -126,7 +169,8 @@ Use only what is necessary for product-quality segmentation:
 - feature path (`record`, `import`, `instrument`);
 - elapsed milliseconds for activation stages;
 - normalized error category;
-- release version.
+- release version;
+- coarse acquisition/referral source when justified.
 
 ### Never collect in marketing analytics
 
@@ -154,6 +198,88 @@ Recommended hierarchy:
 3. Make analytics disclosure easy to find.
 4. Give users a reasonable opt-out if telemetry is not strictly necessary.
 5. Do not let marketing analytics become a hidden cloud dependency for local projects.
+6. Do not create account/email identity solely to improve lifecycle attribution.
+7. Do not infer creative intent/content from local project material for growth segmentation.
+
+## Lifecycle measurement
+
+Lifecycle messaging must be evaluated by creator value, not message engagement alone.
+
+Primary chain:
+
+```text
+eligible / opted-in exposure
+→ product return
+→ first sound / meaningful edit
+→ save/export
+→ later return
+```
+
+Guardrails:
+- dismissal;
+- unsubscribe/opt-out;
+- support complaints;
+- no forced signup/identity capture;
+- no degradation in activation trust.
+
+Open/click rate can diagnose packaging, but cannot prove lifecycle value.
+
+## Community health model
+
+Community health combines utility, response quality, compounding knowledge, and stewardship cost.
+
+Track:
+
+```text
+creator question / evidence
+→ useful response
+→ durable answer / issue / research item
+→ product or knowledge improvement
+→ creator value
+```
+
+Useful community output should eventually become one or more of:
+- canonical documentation;
+- actionable issue;
+- sanitized research evidence;
+- reusable creator asset;
+- contribution;
+- release-note closure.
+
+If activity creates no durable value and consumes increasing maintainer time, treat it as a warning signal.
+
+## Milestone measurement gates
+
+### 0–100 Successful Creators
+Focus:
+- first-session reliability;
+- top activation failures;
+- qualitative creator language;
+- initial D7 baseline;
+- save/export trust.
+
+### 100–250
+Focus:
+- cohort comparison by wedge/channel;
+- D7 return;
+- support load;
+- reasons for return/abandonment.
+
+### 250–500
+Focus:
+- repeatable proof/content acquisition;
+- community asset impact;
+- referral quality;
+- reactivation via releases;
+- contributor/community service quality.
+
+### 500–1,000
+Focus:
+- stability of Successful Creator cohorts;
+- strongest repeatable growth loop;
+- support/moderation scalability;
+- D30 when meaningful;
+- observed demand for optional hosted/team/compute jobs.
 
 ## Qualitative research
 
@@ -201,18 +327,19 @@ Hypothesis: showing an uncut 40-second first-sound workflow increases qualified 
 Primary metric: demo viewers → Studio open.
 Guardrail: activation completion.
 
-## Weekly launch dashboard
+## Weekly launch/growth dashboard
 
-Keep the first dashboard compact:
+Keep the dashboard compact:
 
-1. qualified visits;
-2. Studio opens;
-3. first-sound success + median/P75 time;
-4. save/reopen success;
-5. export success + median/P75 blank→export time;
-6. 7-day creator return rate;
-7. top normalized failure categories;
-8. top acquisition channels by activated creators;
-9. qualitative themes from support/feedback.
+1. Successful Creators: new + returning.
+2. Studio opens and first-sound success + median/P75 time.
+3. Save/reopen success.
+4. Export success + median/P75 blank→export time.
+5. D7 creator return by major acquisition wedge/channel.
+6. Top normalized product failure categories.
+7. Referral/advocacy-generated Successful Creators.
+8. Community/support health: unresolved questions + response/review burden.
+9. Top qualitative creator themes.
+10. One decision for the next cycle.
 
-If a metric cannot change a product or marketing decision, it probably does not belong on the launch dashboard.
+If a metric cannot change a product, growth, or community decision, it probably does not belong on the weekly dashboard.

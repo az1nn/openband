@@ -109,6 +109,60 @@ When a decision changes, do not rewrite history silently. Add the replacement de
 **Authority:** [`measurement.md`](./measurement.md), [`go-to-market.md`](./go-to-market.md)  
 **Implication:** Revisit once cohort data is sufficient to correlate completion with repeat use.
 
+### MD-013 — Publish proof before volume
+
+**Status:** ACTIVE  
+**Decision:** OpenBand's content engine prioritizes real workflow proof, first-hand education and transparent technical evidence over publishing frequency or broad editorial volume.  
+**Rationale:** The product's differentiation must be demonstrated, and current search/video platform guidance favors useful, satisfying, original content rather than commodity output.  
+**Authority:** [`content-operating-system.md`](./content-operating-system.md), [`research-register.md`](./research-register.md)  
+**Evidence:** R-019, R-021, R-022, R-025; S-012–S-016.  
+**Implication:** Skip filler. One strong recorded workflow may feed multiple channels, but derivative assets must preserve real evidence.
+
+### MD-014 — Scale channels by successful creator value
+
+**Status:** ACTIVE  
+**Decision:** No acquisition channel is scaled primarily on impressions, views, ranking, stars, upvotes or clicks. Scale decisions require downstream creator activation and acceptable retention/support cost.  
+**Rationale:** Channel-level vanity metrics can reward audience mismatch while hiding weak product value.  
+**Authority:** [`channel-playbooks.md`](./channel-playbooks.md), [`measurement.md`](./measurement.md), [`go-to-market.md`](./go-to-market.md)  
+**Evidence:** R-020, R-022, R-023, R-024.  
+**Implication:** The common comparison unit is qualified traffic → Studio open → first sound → successful creator → return.
+
+### MD-015 — Organic search serves proven creator jobs, not keyword inventory
+
+**Status:** PROVISIONAL  
+**Decision:** Organic acquisition should start with a small set of creator jobs/workflows that OpenBand can prove, rather than mass-producing SEO pages across broad music-software terms.  
+**Rationale:** Search demand is strategically useful only when intent, product proof and downstream activation align.  
+**Authority:** [`demand-intelligence.md`](./demand-intelligence.md), [`research-register.md`](./research-register.md)  
+**Evidence:** R-019, R-020, R-021; S-012–S-014.  
+**Implication:** Search Console/product cohort data should decide which demand clusters expand after launch.
+
+### MD-016 — Retention means return to creative value
+
+**Status:** ACTIVE  
+**Decision:** Retention is defined around creators returning to continue or create meaningful work, not merely reopening the app or engaging with lifecycle messages.  
+**Rationale:** A local-first creative tool exists to help people make music; notification engagement is not a substitute for repeated product value.  
+**Authority:** [`growth-operating-system.md`](./growth-operating-system.md), [`measurement.md`](./measurement.md)  
+**Evidence:** R-026, R-027.  
+**Implication:** D1/D7/D30 analysis should distinguish passive reopen from successful creative return whenever measurement supports it.
+
+### MD-017 — Lifecycle messaging is permissioned and value-triggered
+
+**Status:** ACTIVE  
+**Decision:** OpenBand lifecycle communication must prefer in-product context and public release notes; email/push require explicit opt-in and may not become prerequisites for local creation.  
+**Rationale:** Mandatory identity capture would conflict with the local-first/no-signup product contract and could optimize CRM engagement at the expense of creator trust.  
+**Authority:** [`lifecycle-messaging.md`](./lifecycle-messaging.md), [`../product.md`](../product.md)  
+**Evidence:** R-028.  
+**Implication:** No “growth” feature should force account creation merely to enable reminders, reactivation, or referral.
+
+### MD-018 — Community scales only with creator utility and stewardship capacity
+
+**Status:** ACTIVE  
+**Decision:** Open new community surfaces or programs only when they solve a recurring creator/contributor job and the project can support moderation, triage, and knowledge maintenance.  
+**Rationale:** Empty/noisy channels create support debt and fragmented knowledge; durable docs/issues/discussions should remain preferred until synchronous community clearly adds value.  
+**Authority:** [`community-operations.md`](./community-operations.md), [`growth-operating-system.md`](./growth-operating-system.md)  
+**Evidence:** R-029, R-030, R-031.  
+**Implication:** Member/message counts do not justify adding Discord/Matrix or expanding programs without measurable creator value.
+
 ## Decision template
 
 ```md
@@ -125,4 +179,4 @@ When a decision changes, do not rewrite history silently. Add the replacement de
 
 ## Change rule
 
-Campaign copy may specialize a decision for a channel, but cannot silently override this log. Material changes to audience priority, core promise, monetization boundary, naming posture, or launch motion require an explicit decision update and reconciliation of downstream docs.
+Campaign copy may specialize a decision for a channel, but cannot silently override this log. Material changes to audience priority, core promise, monetization boundary, naming posture, launch motion, content doctrine, channel-scaling rules, lifecycle permission, retention definition, or community-surface strategy require an explicit decision update and reconciliation of downstream docs.

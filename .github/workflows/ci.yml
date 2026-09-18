@@ -18,8 +18,19 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run sdd:check
+      - run: npm run test:marketing-kb
+      - run: npm run marketing:kb:check
       - run: npm run test:graph-sdd
       - run: npm run graph:ci
+
+  security-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - run: npm run security:policy
 
   frontend-typecheck:
     runs-on: ubuntu-latest
@@ -94,13 +105,18 @@ jobs:
       - run: npx playwright test e2e/launch-first-run.spec.ts
 
   android-build:
-    needs: [graph-check, frontend-typecheck, backend-typecheck, vitest, legacy-tests, web-build]
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'native-build')
+    needs: [graph-check, frontend-typecheck, backend-typecheck, vitest, legacy-tests, web-build, security-policy]
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'native-build') || contains(github.event.pull_request.labels.*.name, 'native-build-android')
     runs-on: ubuntu-latest
     env:
       OPENBAND_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
       - uses: actions/setup-node@v4
         with:
           node-version: 22.x
@@ -108,20 +124,13 @@ jobs:
       - name: Initialize Android evidence
         if: always()
         run: node scripts/native-build-evidence.mjs init --target android --manifest .artifacts/native-build/android.json
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
       - name: Android preflight
         id: android-preflight
         if: always()
-        continue-on-error: true
         run: node scripts/native-build-evidence.mjs preflight --target android --manifest .artifacts/native-build/android.json
       - name: Build Android verification APK
         id: android-build-command
         if: always() && steps.android-preflight.outcome == 'success'
-        continue-on-error: true
         run: |
           npm ci
           cd android
@@ -150,8 +159,8 @@ jobs:
         run: node scripts/native-build-evidence.mjs enforce --manifest .artifacts/native-build/android.json
 
   electron-build:
-    needs: [graph-check, frontend-typecheck, backend-typecheck, vitest, legacy-tests, web-build]
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'native-build')
+    needs: [graph-check, frontend-typecheck, backend-typecheck, vitest, legacy-tests, web-build, security-policy]
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'native-build') || contains(github.event.pull_request.labels.*.name, 'native-build-electron')
     runs-on: ubuntu-latest
     env:
       OPENBAND_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -167,17 +176,11 @@ jobs:
       - name: Electron preflight
         id: electron-preflight
         if: always()
-        continue-on-error: true
         run: node scripts/native-build-evidence.mjs preflight --target electron --manifest .artifacts/native-build/electron.json
       - name: Build Electron Linux verification artifacts
         id: electron-build-command
         if: always() && steps.electron-preflight.outcome == 'success'
-        continue-on-error: true
         run: |
-          # npm can leave the optional @electron/windows-sign -> postject subtree
-          # as a lockfile stub. Repair only that pinned, known shape; fail closed
-          # if the upstream contract changes, then keep the install frozen with npm ci.
-          node scripts/normalize-electron-ci-lock.mjs electron/package-lock.json
           npm ci
           npm run build
           cd electron
@@ -207,3 +210,18 @@ jobs:
       - name: Enforce Electron evidence
         if: always()
         run: node scripts/native-build-evidence.mjs enforce --manifest .artifacts/native-build/electron.json
+  merge-gate:
+    needs: [graph-check, security-policy, frontend-typecheck, backend-typecheck, vitest, legacy-tests, web-build, web-launch-e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - name: Evaluate common exact-run evidence
+        env:
+          OPENBAND_CI_EVIDENCE: ${{ toJSON(needs) }}
+        run: npm run merge:gate
