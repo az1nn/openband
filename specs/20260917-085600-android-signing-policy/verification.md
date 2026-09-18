@@ -8,7 +8,7 @@ Allowed states follow repository policy:
 
 `PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED`
 
-Any required `FAIL`, `BLOCKED` or `FLAKY` result blocks Human Merge Gate.
+Any required `FAIL`, `BLOCKED` or `FLAKY` result blocks the evidence-driven Merge Gate.
 
 ## Design evidence
 
@@ -92,7 +92,7 @@ Review workflow conditions and effective permissions:
 
 ## Recovery verification
 
-Before Human Merge Gate, verify that the documented recovery path remains viable:
+Before exact merge-candidate eligibility, verify that the documented recovery path remains viable:
 
 1. production signing can be disabled without disabling unsigned release verification;
 2. removing external signing inputs makes production mode fail closed;
@@ -112,6 +112,7 @@ Before Human Merge Gate, verify that the documented recovery path remains viable
 | legacy tests | PASS |
 | Web build | PASS |
 | Android verification release | PASS, unsigned, exact HEAD |
+| Electron native build | NOT_REQUIRED for #73; owned by #43. Any inherited failure stays fail-closed and is repaired outside this feature. |
 | production input negative matrix | PASS |
 | ephemeral signed positive path | PASS |
 | canary leakage scan | PASS |
@@ -123,4 +124,4 @@ Before Human Merge Gate, verify that the documented recovery path remains viable
 
 #73 is not complete merely because its own tests pass. The final verified implementation must also demonstrate that the Android target required by #43 can run on the reconciled canonical base without production signing credentials and can emit trustworthy `PASS` evidence for the release-packaging artifact.
 
-This dependency proof does not authorize merging #43 automatically; #43 still requires its own exact-HEAD verification and Human Merge Gate.
+This dependency proof does not authorize merging #43 automatically; #43 still requires its own exact-HEAD risk-derived evidence contract and evidence-driven Merge Gate.
