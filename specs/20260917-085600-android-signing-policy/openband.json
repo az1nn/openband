@@ -1,11 +1,27 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "tier": "T4",
   "issue": 73,
   "riskTriggers": [
     "security-sensitive-credential",
     "release-signing-identity",
-    "privileged-release-path"
+    "privileged-release-path",
+    "architecture-boundary-change",
+    "product-runtime-change",
+    "security-sensitive-privileged-workflow"
   ],
-  "dependsOn": []
+  "dependsOn": [],
+  "requiredChecks": [
+    "graph-check",
+    "security-policy",
+    "frontend-typecheck",
+    "backend-typecheck",
+    "vitest",
+    "legacy-tests",
+    "web-build",
+    "web-launch-e2e",
+    "android-signing-boundary",
+    "android-build",
+    "merge-gate"
+  ]
 }
