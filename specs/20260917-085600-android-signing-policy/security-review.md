@@ -102,4 +102,4 @@ The post-implementation code review is **PASS**, subject to exact-HEAD runtime e
 
 ## Conclusion
 
-The implemented trust boundary remains inside the approved T4 design and materially improves least privilege and failure isolation. No review finding requires a new trust model or Design Gate. Runtime evidence, not this review alone, decides exact-HEAD merge eligibility.
+The implemented trust boundary remains inside the originally approved T4 trust model and materially improves least privilege and failure isolation. No security-review finding requires a different trust model. Independently, the post-#82 schemaVersion 2 evidence/governance reconciliation materially changes the verification contract, so the historical Design Gate is stale and a fresh Human Design Gate is required before further implementation mutation. Runtime evidence, not this review alone, decides exact-HEAD merge eligibility.
