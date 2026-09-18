@@ -7,8 +7,8 @@
 - [x] T73-003 Define verification vs production signing boundary in ADR.
 - [x] T73-004 Define adversarial verification, recovery and gate-invalidation conditions.
 - [x] T73-005 Run SDD/Graph design checks and freeze exact Design Baseline SHA.
-- [x] T73-006 Obtain Human Design Gate approval for the original exact SHA (historical; now stale after post-#82 verification-contract reconciliation).
-- [ ] T73-007 Obtain a fresh Human Design Gate for the reconciled schemaVersion 2 evidence/risk contract before further implementation mutation.
+- [x] T73-006 Historical manual Design Gate was recorded for the original SHA before #102; it is no longer an active lifecycle authority.
+- [ ] T73-007 Pass automated design validation for the reconciled schemaVersion 2 evidence/risk contract before further implementation mutation.
 
 ## Phase 1 — implementation after Design Gate
 
