@@ -76,7 +76,7 @@ if (evidenceMerge !== null) {
     "t4-evidence:",
     "pr.head.repo.full_name",
     "heads/master",
-    "openband-design-gate",
+    "derivedRiskTriggers",
     "REQUIRED_CI_JOBS",
     "RISK_TRIGGERS",
     "contents: write",
