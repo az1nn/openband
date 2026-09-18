@@ -103,6 +103,14 @@ If implementation causes signing instability:
 | CI privilege | workflow review proving PR jobs do not enable production mode |
 | Recovery | documented disable/rotate/reverify procedure |
 
+## Post-#82 evidence reconciliation
+
+Canonical `master` now uses schemaVersion 2 evidence contracts and an evidence-driven exact-HEAD Merge Gate. #73 therefore declares the common mandatory checks plus the feature-specific `android-signing-boundary` and `android-build` jobs in `openband.json`.
+
+The shared `native-build` scheduling surface can also execute Electron verification. Electron remains owned by #43 and is **NOT_REQUIRED** evidence for #73. If that shared scheduling exposes an inherited Electron baseline defect, #73 must not mask or tolerate the failure: isolate/fix the baseline defect in its own workstream, then rerun #73 on the corrected canonical base.
+
+This governance reconciliation does not change the signing trust model, but it changes the material verification contract. The previously approved Design Baseline is therefore stale and a fresh Human Design Gate is required before further implementation mutation.
+
 ## Gate invalidation
 
 Human Design Gate approval is invalidated if implementation requires any of the following:
