@@ -14,7 +14,7 @@ Recover safely if **OpenBand Evidence Merge** is suspected of merging candidates
 
 1. Identify the default-branch revision of `.github/workflows/evidence-merge.yml` that executed the suspect merge.
 2. **Audit** every merge performed while that workflow revision was active.
-3. For each affected PR record the triggering CI run, exact PR HEAD, current `master` SHA, effective tier, Design Gate baseline, required evidence set, reviews, and merge result.
+3. For each affected PR record the triggering CI run, exact PR HEAD, current `master` SHA, effective tier, Spec Kit feature metadata, required evidence set, reviews, and merge result.
 4. Treat uncertain or missing evidence as `BLOCKED` or `STALE`, never as PASS.
 
 ## Recovery
@@ -29,7 +29,7 @@ Recover safely if **OpenBand Evidence Merge** is suspected of merging candidates
 Re-enable OpenBand Evidence Merge only after:
 
 - a fresh T4 analysis identifies the defect and corrected trust model;
-- a Human Design Gate approves the exact corrective baseline;
+- the corrective Spec Kit design and T4 automated policy/evidence validation are green;
 - `openband-security` and `t4-evidence` adversarial checks pass;
 - the privileged workflow still executes no candidate code or candidate artifacts;
 - same-repository/fork blocking, exact HEAD/current-master freshness, required-evidence enforcement, and review blocking are verified.
