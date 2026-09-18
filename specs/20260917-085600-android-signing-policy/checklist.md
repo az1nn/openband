@@ -35,8 +35,10 @@
 - [x] SDD policy check passes on exact design HEAD.
 - [x] Graph/Spec tests pass on exact design HEAD.
 - [x] Engineering Graph CI passes on exact design HEAD.
-- [x] Exact Design Baseline SHA frozen in PR: `2a50d83e6e0a059948a0d1bc1cf8b7578583ddeb`.
-- [x] Human Design Gate approved that exact SHA on 2026-09-17.
+- [x] Historical pre-#82 Design Baseline SHA: `2a50d83e6e0a059948a0d1bc1cf8b7578583ddeb` (superseded by governance reconciliation).
+- [x] Human Design Gate approved that historical SHA on 2026-09-17; approval is now **STALE** for the post-#82 verification contract.
+
+- [ ] Fresh Human Design Gate approves the reconciled exact baseline, schemaVersion 2 required checks, and risk-trigger contract.
 
 ## Implementation status
 
