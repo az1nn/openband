@@ -52,7 +52,7 @@
 - [ ] Exact final HEAD ordinary regression suite is reconciled.
 - [ ] #43 integration candidate demonstrates release verification without production signing credentials.
 - [ ] Exact verified HEAD/evidence is frozen in GitHub.
-- [ ] Human Merge Gate approves the verified exact PR HEAD.
+- [ ] Evidence-driven Merge Gate is SATISFIED for the verified exact merge-candidate HEAD.
 
 ## Scope lock
 
