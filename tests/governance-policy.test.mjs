@@ -23,14 +23,14 @@ afterEach(() => {
 describe("OpenBand live merge governance", () => {
   it("rejects stale mandatory human merge semantics", () => {
     const root = tmpRoot();
-    write(root, "AGENTS.md", "HUMAN DESIGN GATE\nHUMAN MERGE GATE\n");
+    write(root, "AGENTS.md", "AUTOMATED DESIGN VALIDATION\nHUMAN MERGE GATE\n");
     const errors = checkRepository(root);
     assert.equal(errors.some((error) => error.includes("stale merge semantics")), true);
   });
 
   it("accepts evidence-driven exact-HEAD merge semantics", () => {
     const root = tmpRoot();
-    write(root, "AGENTS.md", "HUMAN DESIGN GATE\nEVIDENCE-DRIVEN MERGE GATE\nThe gate evaluates the exact merge-candidate HEAD.\n");
+    write(root, "AGENTS.md", "AUTOMATED DESIGN VALIDATION\nEVIDENCE-DRIVEN MERGE GATE\nThe gate evaluates the exact merge-candidate HEAD.\n");
     write(root, ".specify/memory/constitution.md", "Merge authorization is evidence-driven for the exact candidate HEAD.\n");
     write(root, "docs/ai/session-handoff-template.md", "Merge Gate: `NOT_REQUIRED | PENDING | SATISFIED | BLOCKED | INVALIDATED`\n");
     assert.deepEqual(checkRepository(root), []);
