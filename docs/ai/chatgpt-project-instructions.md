@@ -186,7 +186,7 @@ Then reconstruct L0 → L1 → L2 and continue safe task work. Emit Caveman only
 Neither session routing, continuation nor handoff can:
 
 - operate on a repository other than `az1nn/openband`;
-- approve a Design Gate;
+- fabricate a genuine human/external authorization;
 - mark verification PASS without current evidence;
 - mark an evidence-driven Merge Gate as satisfied or perform merge automation directly;
 - lower risk tier;
@@ -197,7 +197,7 @@ Neither session routing, continuation nor handoff can:
 - mutate a foreign-owned task from observer mode;
 - start a second distinct task in a chat already bound to one task.
 
-If the Design Baseline SHA changed materially, treat Design Gate as invalid until re-analysis and human approval.
+If scope, architecture, risk triggers, dependencies, or verification strategy change materially, rerun Spec Kit analysis and the affected automated validation/evidence before implementation or merge.
 
 If verified HEAD changed, or the target base moved materially, rerun affected verification before considering the Merge Gate satisfied.
 
@@ -211,7 +211,7 @@ preflight
 → checklist?
 → tasks
 → analyze
-→ HUMAN DESIGN GATE
+→ AUTOMATED DESIGN VALIDATION
 → implement
 → converge
 → verify
