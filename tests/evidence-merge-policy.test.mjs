@@ -26,6 +26,14 @@ describe("privileged evidence merge trust boundary", () => {
     }
   });
 
+  it("does not require a manual Design Gate comment", () => {
+    const workflow = read(".github/workflows/evidence-merge.yml");
+    assert.equal(workflow.includes("github.rest.issues.listComments"), false);
+    assert.equal(workflow.includes("const designGate"), false);
+    assert.equal(workflow.includes("Design Gate decision is"), false);
+    assert.equal(workflow.includes("requiredChecks differ from Design Gate contract"), false);
+  });
+
   it("materializes the approved T4 evidence contract", () => {
     const metadata = JSON.parse(read("specs/20260917-142100-evidence-driven-merge/openband.json"));
     assert.equal(metadata.schemaVersion, 2);
