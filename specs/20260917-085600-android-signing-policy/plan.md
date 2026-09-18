@@ -109,11 +109,11 @@ Canonical `master` now uses schemaVersion 2 evidence contracts and an evidence-d
 
 The shared `native-build` scheduling surface can also execute Electron verification. Electron remains owned by #43 and is **NOT_REQUIRED** evidence for #73. If that shared scheduling exposes an inherited Electron baseline defect, #73 must not mask or tolerate the failure: isolate/fix the baseline defect in its own workstream, then rerun #73 on the corrected canonical base. The currently observed lockfile reproducibility defect is tracked as #104.
 
-This governance reconciliation does not change the signing trust model, but it changes the material verification contract. The previously approved Design Baseline is therefore stale and a fresh Human Design Gate is required before further implementation mutation.
+This governance reconciliation does not change the signing trust model. After #102, design approval is evidence-driven: the reconciled Spec Kit artifacts and schemaVersion 2 evidence contract must pass automated design validation before further implementation mutation. The historical manual approval remains non-authoritative project history.
 
 ## Gate invalidation
 
-Human Design Gate approval is invalidated if implementation requires any of the following:
+Automated design validation must be refreshed if implementation requires any of the following:
 
 - real production secret provisioning or mutation;
 - changing package/application identity;
