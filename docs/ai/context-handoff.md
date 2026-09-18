@@ -2,160 +2,185 @@
 
 ## Purpose
 
-This policy defines when an AI-assisted OpenBand work session should remain in the current chat and when it should hand off to a clean chat.
+This policy defines how an AI-assisted OpenBand session handles conversation health without confusing a chat boundary with a task boundary.
 
-It does **not** create a new workflow engine, project state machine, or source of truth. OpenBand's Spec Kit lifecycle, Git state, Architecture Graph, ADRs, contracts, code, tests, and human gates remain authoritative.
+It does **not** create a workflow engine or source of truth. Spec Kit, Git, Architecture Graph, ADRs, contracts, code, tests, CI, the human Design Gate, and the evidence-driven Merge Gate remain authoritative.
 
-Operational persistence for short-lived chats is defined by `docs/ai/durable-context.md`.
+Operational persistence is defined by `docs/ai/durable-context.md`.
 
 ## Core rule
 
-Do not change chats because a conversation is merely long. Change chats when the current conversation stops being a reliable bounded implementation context.
+**Context health and task lifecycle are separate.**
 
-A session continuously classifies its context health as:
+A long or noisy conversation may justify reconstructing state, but it does not justify abandoning safe work. A Caveman handoff is generated only at a genuine task closeout boundary.
+
+```text
+context problem != task finished
+user asks for handoff != permission to stop task
+```
+
+The canonical skills are:
+
+- `.qwen/skills/auto-skill-continue-work/SKILL.md` — finish all safe work in the active task;
+- `.qwen/skills/auto-skill-caveman-handoff/SKILL.md` — closeout audit, persistence and compact handoff after the task reaches a closeout boundary;
+- `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md` — compatibility router only.
+
+## Task closeout boundary
+
+Caveman is eligible only when the active task is one of:
+
+```text
+TASK_COMPLETE
+BLOCKED_NO_SAFE_WORK
+HUMAN_GATE_NO_SAFE_WORK
+```
+
+Caveman is not eligible when:
+
+```text
+SAFE_WORK_REMAINS
+ONLY_CONTEXT_IS_LONG
+ONLY_USER_SAID_GENERATE_HANDOFF
+NEXT_ROUTINE_STEP_IS_KNOWN
+CI_FAILED_AND_FIX_IS_ACTIONABLE
+BASE_MOVED_AND_RECONCILIATION_IS_ACTIONABLE
+```
+
+When safe work remains, run `continue-work` until the task reaches an eligible boundary.
+
+## User-requested handoff
+
+When the user says `gere handoff`, `generate handoff`, `handoff`, asks for a continuity prompt, or asks to move to a new chat:
+
+1. reconstruct current canonical task state;
+2. determine whether safe current-task work remains;
+3. if yes, run `continue-work` and complete/verify that work;
+4. do not start a distinct next task;
+5. once the current task is complete or genuinely blocked with no safe progress remaining, tell the user concisely what was completed or what blocker remains;
+6. run `caveman-handoff` and emit the compact artifact.
+
+The requested output is eventual handoff, not early termination.
+
+## Context health
+
+A session continuously classifies context health as:
 
 ```text
 GREEN  coherent and trustworthy enough to continue
-YELLOW approaching a semantic boundary; finish the current atomic step
-RED    continuing materially increases stale/conflicting-context risk
+YELLOW approaching a semantic/context boundary; refresh state soon
+RED    chat history is no longer a trustworthy implementation snapshot
 ```
 
-The state is normally internal. Only YELLOW or RED needs to be surfaced when useful.
+Length, message count and tool-call count alone do not change health.
 
-## Verified task closeout
+### GREEN
 
-Context health and task completion are separate concerns. A chat may still be GREEN while a material task is ending.
+Continue normally. If the active task reaches genuine closeout, run `caveman-handoff`.
 
-At the end of every material task, feature slice, verification cycle, PR freeze, or before moving to a distinct workstream, run `.qwen/skills/auto-skill-verified-context-handoff/SKILL.md`.
+### YELLOW
 
-The skill must:
+Finish the current safe work and drive the active task toward closeout. Refresh canonical state rather than carrying more chat assumptions.
+
+YELLOW alone does not trigger Caveman.
+
+### RED
+
+Explicitly surface when useful:
+
+> ⚠️ **Context boundary detected — canonical state will be reconstructed before continuing.**
+
+Then:
+
+1. stop relying on chat history for decision-relevant facts;
+2. reconstruct bounded L0 → L1 → L2 context from canonical state;
+3. use `continue-work` for any safe remaining current-task work;
+4. emit Caveman only after task completion or a genuine no-safe-work blocker/human gate.
+
+If canonical reconstruction itself cannot restore enough confidence for any safe progress, that condition may be classified as `BLOCKED_NO_SAFE_WORK`; record the reason precisely.
+
+## Continue-work contract
+
+`continue-work` owns the live task. It must:
+
+1. refresh repository/base/branch/PR/issue/Spec Kit state;
+2. inspect applicable tasks, acceptance criteria, reviews and verification;
+3. classify remaining work as safe autonomous, human gate, external blocker, done, or distinct next task;
+4. perform every safe autonomous current-task action now;
+5. fix real defects rather than weaken checks;
+6. clean temporary scaffolding;
+7. refresh stale evidence when possible;
+8. stop only at task completion or when no safe autonomous progress remains.
+
+It never emits a handoff itself. It delegates closeout to `caveman-handoff`.
+
+## Caveman closeout contract
+
+At an eligible task boundary, `caveman-handoff` must:
 
 1. refresh canonical repository/branch/PR/issue state;
 2. compare implementation against issue + Spec Kit scope;
-3. audit changed production/test/process files for partial, temporary, conflicting, or weakened behavior;
-4. verify required tests, CI and Graph evidence on the exact relevant HEAD;
-5. check review/thread state, base freshness and temporary workflows/scaffolding;
-6. classify the closeout as `VERIFIED_COMPLETE`, `IMPLEMENTED_NOT_VERIFIED`, `INCOMPLETE`, or `PROCESS_DRIFT`;
-7. promote any long-lived decisions discovered during the cycle to their owning canonical artifacts;
-8. persist short-lived operational continuation state using `docs/ai/durable-context.md` without silently invalidating the verified HEAD;
-9. automatically emit the same compact Caveman handoff containing the verified final state and exact next action.
+3. audit changed production/test/process files for partial, temporary, conflicting or weakened behavior;
+4. verify required tests, CI and Graph evidence on the exact relevant HEAD/base;
+5. inspect reviews, mergeability, base freshness and temporary scaffolding;
+6. classify closeout as `VERIFIED_COMPLETE`, `IMPLEMENTED_NOT_VERIFIED`, `INCOMPLETE`, or `PROCESS_DRIFT`;
+7. if safe correctable work is discovered, return to `continue-work` instead of emitting early;
+8. promote long-lived decisions to their canonical artifacts;
+9. persist short-lived operational state using `docs/ai/durable-context.md`;
+10. emit one compact Caveman artifact with the exact next action.
 
-The Caveman handoff is automatic even when context is GREEN and the user did not separately request a continuation prompt. It compresses transferred text only; it must not reduce verification, reasoning, tool checks, or evidence requirements.
+Compression applies to transferred text only, never verification depth.
 
-The handoff must instruct the next chat to reconstruct canonical state and prove freshness rather than trusting the summary.
+## Handoff shape
 
-Model/account memory is optional and non-canonical. Continuity must remain correct if chat history and model memory disappear completely.
+Use `docs/ai/session-handoff-template.md`.
 
-## GREEN
+The artifact preserves only decision-relevant resume state:
 
-Continue in the current chat when:
-
-- one coherent issue / Spec Kit feature / engineering objective still dominates the session;
-- active branch, worktree, PR, feature, tier and gate state are unambiguous;
-- current decisions are distinguishable from superseded exploration;
-- required repository facts can be refreshed cheaply from Git/Graph rather than replayed from chat history;
-- the conversation is helping rather than competing with canonical project artifacts.
-
-Length alone never turns GREEN into YELLOW or RED.
-
-A GREEN task closeout still promotes durable knowledge, persists operational state, and emits the compact Caveman handoff; it does not require changing chats.
-
-## YELLOW
-
-YELLOW means a natural handoff boundary is approaching but the current atomic action should usually finish first.
-
-Typical signals:
-
-- a Design Gate, implementation slice, convergence cycle, verification cycle, or PR freeze is near completion;
-- the session is about to move to a materially different workstream or Spec Kit feature;
-- accumulated logs, failed approaches, diffs, screenshots, or tool output are becoming larger than the context needed for the next step;
-- several branches, stacked PRs, ADR revisions, or task states are now being discussed together;
-- repository state has moved substantially since the session began.
-
-At YELLOW:
-
-1. do not interrupt a safe atomic action;
-2. finish or explicitly stop the current lifecycle step;
-3. refresh canonical state;
-4. run the verified task closeout skill;
-5. persist the resulting operational handoff;
-6. prefer a semantic milestone over an arbitrary token/message threshold.
-
-## RED
-
-Use RED when continuing the current chat materially increases the risk of acting on stale, contradictory, superseded, or ambiguous context.
-
-Strong RED signals include:
-
-- branch / PR / Spec Kit feature / gate state is being confused or repeatedly re-established;
-- superseded architecture or requirements are being treated as current;
-- settled questions are being asked again because the session can no longer recover their authoritative answer reliably;
-- a completed workstream is giving way to a new materially different workstream;
-- the repository has advanced enough that chat history is no longer a trustworthy implementation snapshot;
-- the next action would require replaying substantial conversation history instead of reconstructing bounded context from canonical artifacts;
-- stale generated context packages, graph output, plans, or prior verification evidence risk being reused after HEAD changed.
-
-When RED, explicitly say:
-
-> ⚠️ **Context boundary recommended — good moment to start a new chat.**
-
-Complete any safe atomic action already in progress first. Then run the verified task closeout skill, persist the operational handoff, and emit the Caveman artifact defined by `docs/ai/session-handoff-template.md`.
-
-## Caveman handoff contract
-
-A handoff represents **verified final state**, not conversation history.
-
-It must preserve only what is needed to resume safely:
-
-- repository / base / branch / worktree identity and exact SHAs;
-- issue / PR / active Spec Kit identity when applicable;
-- current lifecycle/risk state when decision-relevant;
+- repository / exact base SHA;
+- branch/worktree / exact HEAD;
+- issue / PR / Spec identity;
 - closeout classification;
 - current-cycle delta;
-- verification evidence and freshness boundary;
+- exact-HEAD verification evidence and freshness;
 - blockers / human gates;
 - critical invariants / authority boundaries;
 - one exact next action;
 - verify-first instruction.
 
-Prefer compact IDs, SHAs, run IDs and canonical paths over repeated explanations. Do not paste full transcripts, long logs, full specs/plans/tasks, or architecture background already available canonically.
+Normal target: roughly 250–700 tokens. Correctness overrides the budget.
 
-The normal target is roughly 250–700 tokens. Correctness overrides the budget. Expansion is allowed only when compression would hide a blocker, ambiguity, human gate, process drift, or authority boundary.
-
-Do not duplicate the same closeout facts in a prose summary and again in the Caveman block. One complete compact artifact is the default.
+Do not duplicate full specs, plans, ADRs, architecture, logs, chat transcripts, or old completed milestones.
 
 ## Durable continuity
 
-Before persistence, separate durable knowledge from transient operational state.
+Before persistence, separate durable knowledge from operational state.
 
 - Long-lived project decisions belong in canonical ADR/spec/contract/architecture/policy/code/test artifacts.
 - Short-lived resume state belongs in the Caveman handoff.
-- Prefer one idempotent marked PR comment for operational state, otherwise an issue comment.
-- A repository handoff file is fallback-only and must be written before final verification; otherwise it changes HEAD and makes prior evidence stale.
+- Prefer one idempotent marked PR comment, otherwise an issue comment.
+- A repository handoff file is fallback-only and must be written before final verification or the resulting HEAD must be reverified.
 - Never rely on chat/model memory as the only copy of a project fact required for future work.
-
-See `docs/ai/durable-context.md` for the sink order and freeze-safety rules.
 
 ## Freshness rules
 
-A handoff is derived context. It never overrides canonical state.
+A handoff is derived context and never overrides canonical state.
 
-A new chat must verify, at minimum:
+A new chat verifies, at minimum:
 
-1. repository and current `master` / target base;
-2. active branch/worktree and expected HEAD;
-3. issue and PR state;
-4. active Spec Kit feature and tasks;
-5. relevant ADRs/contracts/architecture when needed by the next action;
+1. repository + current target base;
+2. active branch/worktree + expected HEAD;
+3. issue + PR state;
+4. active Spec Kit feature/tasks when applicable;
+5. relevant architecture/contracts/ADRs;
 6. Architecture Graph evidence when required;
-7. required tests/CI on the exact relevant HEAD;
-8. whether the approved Design Baseline SHA or verification HEAD still matches the state being acted on.
+7. required tests/CI on the exact relevant state;
+8. Design Baseline / verification HEAD freshness.
 
-If the handoff conflicts with Git, Spec Kit, ADRs, contracts, tests, CI, or current PR state, canonical repository state wins and the mismatch must be called out.
+Any mismatch means the handoff is stale on that fact and canonical state wins. Material target-base movement also stales affected merge evidence.
 
-## Relationship to OpenBand context levels
+## Progressive reconstruction
 
-The handoff is not an extra context level. It is a bootstrap hint for reconstructing the existing progressive model:
+A fresh or RED session reconstructs only the smallest sufficient context:
 
 ```text
 L0  Constitution + AGENTS + feature/tier
@@ -163,28 +188,17 @@ L1  feature spec + impacted architecture/contracts/ADRs + Graph
 L2  relevant code + tests + specialists
 ```
 
-A fresh chat should reconstruct the smallest sufficient L0 → L1 → L2 context instead of importing the previous chat wholesale.
+Do not import the previous conversation wholesale.
 
 ## Gate safety
 
-A new chat does not reset or bypass lifecycle gates.
+Neither `continue-work` nor Caveman can:
 
-- A handoff cannot grant a Design Gate.
-- A handoff cannot mark verification PASS without current evidence.
-- A handoff cannot authorize a T2+ merge.
-- A merged PR must not be treated as retroactive human gate approval.
-- If a Design Baseline SHA changed, the existing Design Gate is invalid until re-analysis and human approval.
-- If verified HEAD changed, affected checks must be rerun before Merge Gate.
+- grant a Design Gate;
+- mark verification PASS without current evidence;
+- mark the evidence-driven Merge Gate as satisfied;
+- lower risk tier;
+- override Spec Kit/Git/tests/Graph;
+- retroactively infer a missing Design Gate or missing merge evidence from a completed merge.
 
-## Recommended semantic boundaries
-
-Good clean-chat handoff points include:
-
-- Design Gate approved and implementation is about to start in a fresh execution session;
-- an implementation slice converged and the next slice has a different objective;
-- PR verification/freeze completed and a new PR/workstream is next;
-- a feature is merged and the next roadmap item starts;
-- a stacked dependency landed and dependent work must be rebased/revalidated;
-- a major architecture exploration concluded and the approved design has been materialized canonically.
-
-Do not change chats merely because many messages or tool calls occurred.
+Changing chats never resets, skips or satisfies lifecycle gates.

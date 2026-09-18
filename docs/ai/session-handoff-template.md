@@ -2,9 +2,25 @@
 
 > Derived bootstrap context only. Canonical Git-backed project state wins on conflict.
 
+## Eligibility
+
+A Caveman handoff is **closeout-only**.
+
+Before using this template, the active task must be at one of:
+
+```text
+TASK_COMPLETE
+BLOCKED_NO_SAFE_WORK
+HUMAN_GATE_NO_SAFE_WORK
+```
+
+If `SAFE_WORK_REMAINS`, do not fill or emit this template. Run `.qwen/skills/auto-skill-continue-work/SKILL.md` first.
+
+A user request such as `gere handoff` or `generate handoff` requests the eventual artifact; it does not bypass unfinished safe work.
+
 ## Default handoff — Caveman Mode
 
-The verified-context-handoff skill performs the full closeout audit, promotes durable project knowledge, persists short-lived continuation state, then emits this compact artifact by default. Compression applies to the transferred text, never to verification depth.
+`.qwen/skills/auto-skill-caveman-handoff/SKILL.md` performs the final closeout audit, promotes durable project knowledge, persists short-lived continuation state, then emits this compact artifact. Compression applies to transferred text, never verification depth.
 
 ```text
 CAVEMAN HANDOFF v1
@@ -41,17 +57,17 @@ PR: <direct URL when applicable>
 
 ## Required semantics
 
-The compact handoff must preserve, when applicable:
+The compact handoff preserves, when applicable:
 
-- target base and exact base SHA;
-- working branch/worktree and exact HEAD;
+- target base + exact base SHA;
+- working branch/worktree + exact HEAD;
 - issue, PR and Spec Kit identity;
-- risk tier / lifecycle state;
+- risk tier / lifecycle state when decision-relevant;
 - closeout classification;
 - durable persistence sink;
 - current-cycle implementation delta;
-- verification evidence bound to the relevant HEAD;
-- blocking review, human gate, or freshness risk;
+- exact-state verification evidence;
+- blocker / human gate / freshness risk;
 - critical invariants / authority boundaries;
 - one exact next action;
 - verify-first contract.
@@ -62,24 +78,31 @@ Allowed evidence states:
 PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED | STALE
 ```
 
-A running workflow is not PASS. Evidence from an older relevant HEAD is STALE. A skipped job is acceptable only when explicitly not applicable.
+When gate state is decision-relevant, preserve it explicitly:
+
+```text
+Design Gate: `NOT_REQUIRED | PENDING | APPROVED | INVALIDATED`
+Merge Gate: `NOT_REQUIRED | PENDING | SATISFIED | BLOCKED | INVALIDATED`
+```
+
+A running or queued workflow is not PASS. Evidence from an older relevant HEAD/base is STALE. A skipped job is acceptable only when explicitly not applicable.
 
 ## Compression rules
 
-- Emit the Caveman handoff automatically at every material task, feature slice, verification cycle, PR freeze, or context boundary.
-- Do not require a separate user request for a continuation prompt.
-- Promote durable decisions to canonical docs before final verification; do not trap them in the handoff.
-- Persist the operational artifact using the sink order in `docs/ai/durable-context.md`.
+- Emit only at a genuine current-task closeout boundary.
+- Do not emit merely because context is YELLOW/RED or because the user asked for handoff while safe work remains.
+- Promote durable decisions to canonical docs before final verification.
+- Persist operational state using the sink order in `docs/ai/durable-context.md`.
 - Prefer SHAs, IDs, run IDs, paths and short state labels over prose.
-- Carry only the current delta plus facts required to execute `NEXT` safely.
-- Reference canonical specs/ADRs/docs instead of copying their contents.
+- Carry only current-cycle delta plus facts required to execute `NEXT` safely.
+- Reference canonical specs/ADRs/docs instead of copying contents.
 - Omit empty optional fields.
 - Normal target: roughly 250–700 tokens; correctness overrides the budget.
-- Expand only when compression would hide a blocker, ambiguity, human gate, process drift, or authority boundary.
+- Expand only when compression would hide a blocker, ambiguity, human gate, process drift or authority boundary.
 
 ## Fallback expansion
 
-If Caveman format cannot safely encode the handoff, add only the missing operational fields rather than restoring a project-history dump. Useful optional fields:
+If the base format cannot safely encode closeout state, add only missing operational fields:
 
 ```text
 GATES: design=<...> merge=<...> human=<...>
@@ -104,4 +127,4 @@ L1  active feature + impacted architecture/contracts/ADRs + Graph
 L2  relevant code + tests + specialists
 ```
 
-If previous PASS evidence is bound to a stale HEAD, rerun it before treating the task as verified. Continue from `NEXT` only after canonical state, evidence freshness and applicable human gates are confirmed.
+If previous PASS evidence is bound to a stale HEAD/base, rerun it before treating the task as verified. Continue from `NEXT` only after canonical state, evidence freshness, the human Design Gate when applicable, and the current evidence-driven Merge Gate state are confirmed.
