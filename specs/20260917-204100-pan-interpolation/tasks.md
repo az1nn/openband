@@ -8,16 +8,16 @@
 - [x] T004 Identify the signed-domain defect in the legacy "just enable showCurveToggle" direction.
 - [x] T005 Classify the feature as T3 conservatively because visualization/render agreement reaches a historically HIGH-impact shared renderer surface.
 - [x] T006 Materialize spec, plan, tasks and schemaVersion 2 evidence metadata.
-- [ ] T007 Obtain exact-design-HEAD required CI/SDD/Graph/security evidence on the current master base and confirm no tier escalation.
-- [ ] T008 Confirm automated design/policy validation is green on the exact Design Baseline HEAD; implementation remains blocked by failed/stale evidence or a genuine unresolved decision.
+- [x] T007 Obtain exact-design-HEAD required CI/SDD/Graph/security evidence on the current master base and confirm no tier escalation.
+- [x] T008 Confirm automated design/policy validation is green on the exact Design Baseline HEAD; implementation remains blocked by failed/stale evidence or a genuine unresolved decision.
 
 ## Implementation — blocked until T008
 
-- [ ] T009 Add the pure signed pan interpolation helper without changing generic volume interpolation.
-- [ ] T010 Add a deterministic signed-safe pan AudioParam scheduler that does not use exponentialRampToValueAtTime.
-- [ ] T011 Route renderTrackStem pan automation through the pan-specific scheduler; leave volume on the current generic scheduler.
-- [ ] T012 Enable the existing curve toggle and pan-specific curve rendering only for the Studio pan AutomationLane.
-- [ ] T013 Add focused pure, component and audio scheduling regression tests.
+- [x] T009 Add the pure signed pan interpolation helper without changing generic volume interpolation.
+- [x] T010 Add a deterministic signed-safe pan AudioParam scheduler that does not use exponentialRampToValueAtTime.
+- [x] T011 Route renderTrackStem pan automation through the pan-specific scheduler; leave volume on the current generic scheduler.
+- [x] T012 Enable the existing curve toggle and pan-specific curve rendering only for the Studio pan AutomationLane.
+- [x] T013 Add focused pure, component and audio scheduling regression tests.
 
 ## Convergence / verification
 
