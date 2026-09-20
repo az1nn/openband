@@ -41,7 +41,7 @@ Make pan automation interpolation selectable and truthful across the full signed
 
 This work starts as a bounded product capability but is conservatively **T3** because it crosses the Studio visualization/audio-render agreement and touches `src/lib/midiSynth.ts`, a historically HIGH-impact shared renderer surface (recent graph evidence recorded 6 direct / 71 transitive dependents, later 9 / 76 during #49 verification).
 
-The current connector-only tool host cannot execute the repository-local `graph:impact` CLI. Exact design-HEAD SDD/Graph CI is mandatory before Design Gate approval, and implementation must rerun impact analysis in a capable checkout. Any evidence of persistence/cross-runtime contract changes, export-path expansion, deterministic DSP redesign beyond the bounded pan interpolation rule, or broader blast radius invalidates this baseline and requires re-analysis.
+The current connector-only tool host cannot execute the repository-local `graph:impact` CLI. Exact design-HEAD SDD/Graph/security policy evidence is mandatory before automated design validation is considered green, and implementation must rerun impact analysis in a capable checkout. Any evidence of persistence/cross-runtime contract changes, export-path expansion, deterministic DSP redesign beyond the bounded pan interpolation rule, or broader blast radius invalidates this baseline and requires re-analysis.
 
 ## Non-goals
 
