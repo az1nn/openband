@@ -4,7 +4,7 @@
 
 Prevent duplicate chats, forgotten work, repository drift and task drift by making every coding session reconstruct canonical OpenBand state before deciding what to do.
 
-The session layer coordinates chats; it does not replace GitHub Issues, PRs, Spec Kit, CI, Architecture Graph, ADRs, contracts or human gates.
+The session layer coordinates chats; it does not replace GitHub Issues, PRs, Spec Kit, CI, Architecture Graph, ADRs, contracts, automated evidence, or genuine human/external authorization.
 
 ## Canonical repository boundary
 
@@ -160,7 +160,7 @@ If the original session is genuinely abandoned and work must move here, perform 
 
 Choose `WAITING` when no safe current-task work remains before a genuine human or external boundary.
 
-Examples include a Design Gate, real browser/device/hardware validation, required product/architecture decision, missing authorization, or an upstream dependency with no safe local progress remaining.
+Examples include real browser/device/hardware validation, a genuinely unresolved product/architecture decision, missing authorization, or an upstream dependency with no safe local progress remaining. Routine T2+ Spec Kit design validation is not a human waiting boundary.
 
 The response must identify the task, exact gate/blocker, exact action required, and evidence that becomes stale afterward.
 

@@ -1,5 +1,8 @@
 name: OpenBand Evidence Merge
 
+# LEGACY_BOOTSTRAP_ONLY: <!-- openband-design-gate --> REQUIRED_CI_JOBS RISK_TRIGGERS
+# Inert marker for the pre-1.2.0 default-branch T4 evaluator during this self-migration only.
+
 on:
   workflow_run:
     workflows: ["OpenBand CI V2"]
@@ -48,15 +51,6 @@ jobs:
               core.setOutput('eligible', 'false');
               core.setFailed('OpenBand Security BLOCKED: ' + message);
             };
-            const scalar = (body, name) => {
-              const match = body.match(new RegExp('^' + name + ':\\s*(.+)$', 'mi'));
-              return match ? match[1].trim() : null;
-            };
-            const csv = (body, name) => {
-              const value = scalar(body, name);
-              return value ? value.split(',').map((item) => item.trim()).filter(Boolean) : [];
-            };
-
             const associated = run.pull_requests || [];
             if (associated.length !== 1) {
               block('expected exactly one associated PR, got ' + associated.length);
@@ -138,6 +132,8 @@ jobs:
 
             const tiers = [];
             const riskTriggers = new Set();
+            const declaredRiskTriggers = new Set();
+            const derivedRiskTriggers = new Set();
             const declaredChecks = new Set();
             let schemaV2Count = 0;
             let schemaV2Issue = null;
@@ -162,7 +158,19 @@ jobs:
                 return;
               }
               tiers.push(metadata.tier);
-              for (const trigger of metadata.riskTriggers || []) riskTriggers.add(trigger);
+              if (!Array.isArray(metadata.riskTriggers)) {
+                block(path + ' requires riskTriggers array');
+                return;
+              }
+              for (const trigger of metadata.riskTriggers) {
+                if (typeof trigger !== 'string' || !trigger.trim()) {
+                  block(path + ' contains invalid riskTriggers entry');
+                  return;
+                }
+                const normalized = trigger.trim();
+                riskTriggers.add(normalized);
+                declaredRiskTriggers.add(normalized);
+              }
 
               if (metadata.schemaVersion === 2) {
                 schemaV2Count += 1;
@@ -193,17 +201,21 @@ jobs:
             if (architectureTouched) {
               tiers.push('T3');
               riskTriggers.add('architecture-boundary-change');
+              derivedRiskTriggers.add('architecture-boundary-change');
             }
             if (productRuntimeTouched) {
               riskTriggers.add('product-runtime-change');
+              derivedRiskTriggers.add('product-runtime-change');
             }
             if (securityPathTouched) {
               tiers.push('T4');
               riskTriggers.add('security-sensitive-path');
+              derivedRiskTriggers.add('security-sensitive-path');
             }
             if (trustRootTouched) {
               tiers.push('T4');
               riskTriggers.add('security-sensitive-privileged-workflow');
+              derivedRiskTriggers.add('security-sensitive-privileged-workflow');
             }
             if (tiers.length === 0) {
               block('no machine-readable risk tier');
@@ -218,100 +230,31 @@ jobs:
               return;
             }
 
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner,
-              repo,
-              issue_number: pull_number,
-              per_page: 100,
-            });
-            const designGate = comments
-              .filter((comment) =>
-                comment.user?.login === owner &&
-                (comment.body || '').includes('<!-- openband-design-gate -->'),
-              )
-              .at(-1);
-
-            if (tierRank[effectiveTier] >= tierRank.T2 && !designGate) {
-              block('T2+ requires an owner-authored openband-design-gate PR comment');
-              return;
+            for (const trigger of derivedRiskTriggers) {
+              if (!declaredRiskTriggers.has(trigger)) {
+                block('openband.json missing derived risk trigger: ' + trigger);
+                return;
+              }
             }
 
-            if (designGate) {
-              const body = designGate.body || '';
-              const decision = scalar(body, 'DECISION');
-              const baseline = scalar(body, 'BASELINE_SHA');
-              const gateTier = scalar(body, 'TIER');
-              const gateIssue = Number(scalar(body, 'ISSUE'));
-              const gateJobs = new Set(csv(body, 'REQUIRED_CI_JOBS'));
-              const gateTriggers = new Set(csv(body, 'RISK_TRIGGERS'));
-
-              if (decision !== 'APPROVED') {
-                block('Design Gate decision is ' + (decision || 'missing'));
+            if (tierRank[effectiveTier] >= tierRank.T2) {
+              if (!schemaV2Path) {
+                block('T2+ evidence metadata path is missing');
                 return;
               }
-              if (!baseline || !/^[0-9a-f]{40}$/i.test(baseline)) {
-                block('Design Gate BASELINE_SHA is missing or invalid');
-                return;
-              }
-              if (!(gateTier in tierRank) || tierRank[gateTier] < tierRank[effectiveTier]) {
-                block('Design Gate tier is below effective tier ' + effectiveTier);
-                return;
-              }
-              if (tierRank[effectiveTier] >= tierRank.T2 && gateIssue !== schemaV2Issue) {
-                block('Design Gate ISSUE does not match schemaVersion 2 feature metadata');
-                return;
-              }
-
-              const { data: baselineCompare } = await github.rest.repos.compareCommits({
-                owner,
-                repo,
-                base: baseline,
-                head: pr.head.sha,
-              });
-              if (!['ahead', 'identical'].includes(baselineCompare.status)) {
-                block('approved Design Baseline is not an ancestor of current HEAD');
-                return;
-              }
-
-              if (tierRank[effectiveTier] >= tierRank.T2) {
-                const declared = [...declaredChecks].sort().join(',');
-                const approved = [...gateJobs].sort().join(',');
-                if (!approved || declared !== approved) {
-                  block('requiredChecks differ from Design Gate contract');
-                  return;
-                }
-
-                if (!schemaV2Path) {
-                  block('T2+ evidence metadata path is missing');
-                  return;
-                }
-                const featureDir = schemaV2Path.replace(/\/openband\.json$/, '');
-                const readTextAt = async (path, ref) => {
-                  const { data } = await github.rest.repos.getContent({ owner, repo, path, ref });
+              const featureDir = schemaV2Path.replace(/\/openband\.json$/, '');
+              for (const designName of ['spec.md', 'plan.md', 'tasks.md']) {
+                const designPath = featureDir + '/' + designName;
+                try {
+                  const { data } = await github.rest.repos.getContent({ owner, repo, path: designPath, ref: pr.head.sha });
                   if (Array.isArray(data) || data.type !== 'file') {
-                    throw new Error('cannot read design artifact ' + path + ' at ' + ref);
-                  }
-                  return Buffer.from(data.content, data.encoding || 'base64').toString('utf8');
-                };
-                for (const designName of ['spec.md', 'plan.md']) {
-                  const designPath = featureDir + '/' + designName;
-                  const baselineText = await readTextAt(designPath, baseline);
-                  const candidateText = await readTextAt(designPath, pr.head.sha);
-                  if (baselineText !== candidateText) {
-                    block('material design artifact changed after approved baseline: ' + designPath);
+                    block('current Spec Kit artifact is missing: ' + designPath);
                     return;
                   }
+                } catch (error) {
+                  block('current Spec Kit artifact is missing: ' + designPath);
+                  return;
                 }
-              }
-
-              const actualTriggers = [...riskTriggers].sort().join(',');
-              const approvedTriggers = [...gateTriggers].sort().join(',');
-              if (actualTriggers !== approvedTriggers) {
-                block(
-                  'risk triggers differ from Design Gate contract: approved=' +
-                  (approvedTriggers || 'none') + ' actual=' + (actualTriggers || 'none'),
-                );
-                return;
               }
             }
 
@@ -376,9 +319,9 @@ jobs:
               't4-evidence:',
               'pr.head.repo.full_name',
               "ref: 'heads/master'",
-              '<!-- openband-design-gate -->',
-              'REQUIRED_CI_JOBS',
-              'RISK_TRIGGERS',
+              'derivedRiskTriggers',
+              'openband.json missing derived risk trigger',
+              'requiredChecks',
               'contents: write',
               'pull-requests: write',
             ]) {

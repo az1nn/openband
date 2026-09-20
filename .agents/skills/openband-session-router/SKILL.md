@@ -239,7 +239,7 @@ session-router
 -> caveman closeout at the genuine task boundary
 ```
 
-The router never replaces `/speckit.*`, `openband-ask`, the Constitution, Design Gate, convergence, verification or Merge Gate semantics.
+The router never replaces `/speckit.*`, `openband-ask`, the Constitution, automated design validation, convergence, verification or Merge Gate semantics.
 
 ## Required session-start output
 
@@ -279,7 +279,7 @@ This skill cannot:
 
 - operate on any repository other than `az1nn/openband`;
 - infer repository identity from memory;
-- approve a human gate;
+- infer or fabricate a genuine human authorization;
 - relabel stale/failing/running evidence as PASS;
 - lower risk tier;
 - infer ownership without matching current-chat `SESSION_KEY` proof;

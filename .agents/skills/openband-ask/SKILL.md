@@ -15,7 +15,7 @@ description: Classify OpenBand work, gather bounded context, and start or resume
 4. Build progressive context: governance → impacted architecture/contracts/ADRs → relevant code/tests.
 5. For T0/T1, use the lightweight path defined in `AGENTS.md`.
 6. For T2+, verify branch/worktree/feature identity, materialize schemaVersion 2 `requiredChecks` as part of the verification strategy, then start or resume `sdd/openband-design.yml` with OpenCode `speckit`.
-7. Stop at the human Design Gate. After approval, start/resume `sdd/openband-build.yml` with OpenCode `build`.
+7. After `sdd/openband-design.yml` completes and automated design/policy validation is green, start/resume `sdd/openband-build.yml` with OpenCode `build`; stop only for a genuine unresolved human decision or external authorization.
 8. Load domain specialists only when impact requires them.
 9. After clean convergence, evaluate the exact-HEAD risk-derived evidence contract. Missing/stale/failed/flaky evidence blocks; complete satisfied evidence makes the PR eligible for automatic merge.
 10. Never substitute a final human merge ceremony for missing evidence. Add or repair the evidence producer instead.

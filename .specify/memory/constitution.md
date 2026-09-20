@@ -12,7 +12,7 @@ Documentation MUST be concise, precise, useful to a human reader, and free of du
 
 Production changes MUST flow through branches and pull requests. Agents MUST NOT push directly to `master`.
 
-T2+ changes require a human Design Gate over an exact Design Baseline SHA before implementation. Merge authorization is evidence-driven for every tier: the exact candidate HEAD may merge automatically only when its complete risk-derived verification contract is current and satisfied. A separate human merge approval is not required.
+T2+ changes require Spec Kit design artifacts, explicit risk/evidence metadata, and automated design validation before implementation. Merge authorization is evidence-driven for every tier: the exact candidate HEAD may merge automatically only when its complete risk-derived verification contract is current and satisfied. A separate human design or merge approval is not required when the repository can prove the required contract.
 
 Changed HEAD, materially stale base, missing required evidence, or any required `FAIL`, `BLOCKED`, or `FLAKY` state invalidates merge eligibility until the affected evidence is refreshed.
 
@@ -28,7 +28,7 @@ If a regression class matters to correctness, safety, compatibility, or creator-
 
 ## VI. Least Privilege
 
-Agents and automation receive only the permissions needed for their phase. Design agents cannot edit product source before the Design Gate. Implementation and merge automation cannot bypass required evidence, CI, policy checks, or `master` protections. Secrets MUST NOT appear in specs, logs, commits, handoffs, or generated documentation.
+Agents and automation receive only the permissions needed for their phase. Implementation starts only after the Spec Kit design is structurally valid and required pre-implementation policy checks pass. Implementation and merge automation cannot bypass required evidence, CI, policy checks, or `master` protections. Secrets MUST NOT appear in specs, logs, commits, handoffs, or generated documentation.
 
 Merge authorization does not authorize destructive runtime actions. Rollback, redeploy, credential rotation, access-control changes, data repair/deletion, or comparable production mutations follow their own explicit authorization policy.
 
@@ -36,6 +36,6 @@ Privileged post-CI merge automation MUST execute trusted default-branch policy o
 
 ## Governance
 
-`AGENTS.md` defines operational agent policy; this Constitution defines durable invariants. A conflict is resolved in favor of this Constitution. Material amendments require a dedicated governance PR with rationale, impact analysis, verification, and human Design Gate approval.
+`AGENTS.md` defines operational agent policy; this Constitution defines durable invariants. A conflict is resolved in favor of this Constitution. Material amendments require a dedicated governance PR with rationale, Spec Kit design, impact analysis, and T4 risk-derived verification.
 
-**Version**: 1.1.0 | **Ratified**: 2026-09-10 | **Last Amended**: 2026-09-17
+**Version**: 1.2.0 | **Ratified**: 2026-09-10 | **Last Amended**: 2026-09-17
