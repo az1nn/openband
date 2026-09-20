@@ -9,7 +9,7 @@
 - [x] T005 Classify the feature as T3 conservatively because visualization/render agreement reaches a historically HIGH-impact shared renderer surface.
 - [x] T006 Materialize spec, plan, tasks and schemaVersion 2 evidence metadata.
 - [ ] T007 Obtain exact-design-HEAD required CI/SDD/Graph/security evidence on the current master base and confirm no tier escalation.
-- [ ] T008 Human Design Gate approval of the exact Design Baseline SHA and required-evidence contract.
+- [ ] T008 Confirm automated design/policy validation is green on the exact Design Baseline HEAD; implementation remains blocked by failed/stale evidence or a genuine unresolved decision.
 
 ## Implementation — blocked until T008
 
