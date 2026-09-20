@@ -67,7 +67,7 @@ The schemaVersion 2 evidence contract requires:
 - `web-launch-e2e`;
 - `merge-gate`.
 
-Before Design Gate, those producers must be healthy on the exact design HEAD. The privileged evidence-merge workflow is not a substitute for the Human Design Gate and must not merge a draft/unapproved T2+ candidate.
+Before implementation, those producers must be healthy on the exact design HEAD and automated design/policy validation must be green. The privileged evidence-merge workflow is not a substitute for missing design evidence and must fail closed on stale or incomplete evidence.
 
 After implementation:
 - pure helper tests for linear and signed exponential semantics;
@@ -81,7 +81,7 @@ After implementation:
 
 ## Merge model
 
-After an approved Human Design Gate and implementation/convergence, the exact merge-candidate HEAD is evaluated by the repository's evidence-driven Merge Gate. No separate human merge click is required when the complete current contract is satisfied.
+After automated design validation is green and implementation/convergence is complete, the exact merge-candidate HEAD is evaluated by the repository's evidence-driven Merge Gate. No separate human design or merge ceremony is required when the complete current contract is satisfied.
 
 ## Architecture decision
 
