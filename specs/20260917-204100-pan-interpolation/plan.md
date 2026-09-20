@@ -22,7 +22,7 @@ The curve type remains associated with the destination automation point, matchin
 
 1. Add a pure pan-specific interpolation helper that can evaluate a signed pan schedule at any time without changing the existing generic helper.
 2. Add a pan-specific AudioParam scheduler for `OfflineAudioContext`. It derives signed-safe intermediate values from the same helper and schedules bounded linear ramps/samples; it MUST NOT call `exponentialRampToValueAtTime` for pan.
-3. Keep scheduler sampling deterministic and outside UI animation loops. Verification must bound the maximum deviation from the pure helper at representative timestamps.
+3. Keep scheduler sampling deterministic and outside UI animation loops. For a full-range exponential pan segment, the piecewise-linear scheduler approximation must stay within 0.0016 normalized pan units of the pure helper at representative timestamps.
 4. Extend `AutomationLane` with an opt-in pan interpolation mode/strategy. Default callers continue using the existing volume-compatible visualization path.
 5. In `app/studio/[id].tsx`, enable `showCurveToggle` and the pan-specific interpolation mode only for the pan lane.
 6. In `renderTrackStem()`, keep volume on `applyAutomationToParam()`; route only `key === "pan"` through the new signed-safe scheduler.
