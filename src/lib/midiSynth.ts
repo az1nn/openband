@@ -5,7 +5,7 @@ import { MOODS } from "./projectTemplates";
 import { audioBufferToWavBlob } from "./audio";
 import { getSharedAudioContext, createTrackedBlob } from "./universalAudio";
 import { applyPluginChain } from "./pluginChain";
-import { applyAutomationToParam, buildAutomationSchedule } from "./automationEngine";
+import { applyAutomationToParam, applyPanAutomationToParam, buildAutomationSchedule } from "./automationEngine";
 import { crossfadeGain, resolveRegionSourceWindow } from "./regionEdit";
 import { timeStretch } from "./timeStretch";
 import type Soundfont from "soundfont-player";
@@ -1189,7 +1189,7 @@ export async function renderTrackStem(
           points.map((p) => ({ ...p, value: (p.value ?? 0) / 100 })),
           bpm,
         );
-        applyAutomationToParam(panNode.pan, schedule, 0);
+        applyPanAutomationToParam(panNode.pan, schedule, 0);
       }
     }
 
