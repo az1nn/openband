@@ -71,6 +71,10 @@ export interface TrackRegion {
   id: string;
   start: number;
   duration: number;
+  /** Seconds into the decoded source where this region begins. Defaults to 0. */
+  offset?: number;
+  /** Selected source-window length in seconds. Defaults to timeline duration. */
+  length?: number;
   url?: string;
 }
 
