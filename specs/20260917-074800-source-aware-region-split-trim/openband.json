@@ -5,7 +5,8 @@
   "riskTriggers": [
     "persistent-project-shape",
     "shared-audio-renderer-semantics",
-    "cross-runtime-audio-window"
+    "cross-runtime-audio-window",
+    "product-runtime-change"
   ],
   "dependsOn": [
     "20260911-111000-creative-loop",
