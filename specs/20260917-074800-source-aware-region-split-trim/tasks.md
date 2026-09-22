@@ -8,18 +8,19 @@
 - [x] Trace current `TrackRegion`, `regionEdit`, `projectStore`, `midiSynth`, `universalAudio` and #49 export contract.
 - [x] Record the durable source-window contract.
 - [x] Define additive compatibility defaults: missing `offset` → `0`; missing `length` → `duration`.
-- [x] Architecture Graph evidence captured against exact Design Baseline `2514843ec7870ddab06c0309da19a16908333d86` — captured after Design Gate; sequencing deviation recorded transparently in `verification.md`.
+- [x] Historical Architecture Graph evidence captured against exact baseline `2514843ec7870ddab06c0309da19a16908333d86`; sequencing deviation remains recorded transparently in `verification.md`.
 - [x] Spec Kit consistency/analyze: 15/15 requirements mapped; no material inconsistency or Constitution conflict found.
 - [x] Freeze exact Design Baseline SHA `2514843ec7870ddab06c0309da19a16908333d86`.
-- [x] HUMAN DESIGN GATE — owner approved the exact baseline before product-code mutation; approval recorded in PR #71.
+- [x] Historical owner approval recorded on the old baseline; it is non-authoritative under the current automated design/evidence policy.
+- [x] Migrate `openband.json` to schemaVersion 2 and materialize the current T3 required-check contract.
 
 ## Base reconciliation
 
-- [x] Owner explicitly authorized #53 to proceed independently while #51 / PR #69 remains blocked only on deferred human release validation.
-- [x] Reconcile feature branch with canonical `master` `cd996d807615d56ffebf6073f28e0161fcc54b88` via merge commit `be1906d3d8f5c9ef2cc39385d4437e1107058d55`.
-- [x] Analyze reconciliation delta: PR #70 added marketing documentation only; no region/persistence/audio contract changed.
-- [x] Re-run impact/Graph after implementation; no T4 escalation trigger found.
-- [x] Design Gate remains valid because reconciliation did not materially alter scope, architecture, dependencies, tier or proof strategy.
+- [x] Reconcile current `master@ac46b4df2775a8d8b2d480459e43a3c3093d5b47` into the feature branch via merge commit `9bdc438aadf572352c63fb8f75a2a625115c06e7`.
+- [x] Confirm freshness after reconciliation: `behind_by=0`; feature remains limited to the 14 intended #53 files.
+- [x] Resolve the only overlapping product file, `src/lib/midiSynth.ts`, by preserving both source-window scheduling and master pan-automation scheduling.
+- [x] Classify the 62-commit base movement as material to governance/evidence but not as a product-scope or T4 escalation.
+- [ ] Refresh automated design/policy validation, Graph/semantic impact, and affected specialist evidence on the current branch state.
 
 ## Implementation
 
@@ -71,5 +72,5 @@
 - [ ] Spec Kit SDD policy check PASS on exact clean HEAD.
 - [ ] Confirm no blocking PR review threads/reviews and PR mergeability.
 - [ ] Freeze exact verification HEAD and evidence in PR conversation.
-- [ ] HUMAN MERGE GATE — human merges exact verified T3 PR HEAD.
+- [ ] Evidence-driven Merge Gate SATISFIED on the exact merge-candidate HEAD/base relationship; repository automation may merge when the full required contract is current.
 - [ ] Cleanup branch/worktree only after merged state is confirmed.

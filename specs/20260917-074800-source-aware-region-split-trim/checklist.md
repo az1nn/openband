@@ -28,12 +28,12 @@
 
 ## Gate history
 
-- [x] Exact Design Baseline: `2514843ec7870ddab06c0309da19a16908333d86`.
-- [x] Human Design Gate approved on that exact baseline and recorded in PR #71.
-- [x] Graph preflight evidence was collected later against that exact baseline; this sequencing deviation is explicitly documented and did not change T3 classification.
-- [x] Owner explicitly authorized #53 to proceed independently while #51 human release validation remains deferred.
-- [x] Canonical `master` reconciliation completed with `cd996d807615d56ffebf6073f28e0161fcc54b88`; merge commit `be1906d3d8f5c9ef2cc39385d4437e1107058d55`.
-- [x] Master reconciliation was non-material to #53 contracts and did not invalidate Design Gate.
+- [x] Historical design baseline: `2514843ec7870ddab06c0309da19a16908333d86`.
+- [x] Historical owner approval remains recorded in PR #71 but is non-authoritative under current policy.
+- [x] Current `master@ac46b4df2775a8d8b2d480459e43a3c3093d5b47` reconciled via `9bdc438aadf572352c63fb8f75a2a625115c06e7`.
+- [x] Master/product overlap audit found only `src/lib/midiSynth.ts`; both #53 source-window and #100 pan-automation contracts are preserved.
+- [x] Governance/base movement marks prior merge evidence STALE.
+- [ ] Current automated design/policy validation and exact-HEAD evidence contract pass.
 
 ## Verification readiness
 
@@ -44,4 +44,4 @@
 - [ ] Exact clean HEAD passes SDD/Graph, typechecks, full Vitest, legacy, Web build and launch/export regressions required by CI.
 - [ ] PR review state and mergeability checked on the exact clean HEAD.
 - [ ] Exact verification HEAD frozen in PR evidence.
-- [ ] Human Merge Gate approved by project owner.
+- [ ] Evidence-driven Merge Gate is satisfied on the exact candidate HEAD and current base.

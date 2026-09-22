@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "tier": "T3",
   "issue": 53,
   "riskTriggers": [
@@ -11,5 +11,16 @@
     "20260911-111000-creative-loop",
     "20260911-143500-persistence-trust",
     "20260912-175400-export-trust"
+  ],
+  "requiredChecks": [
+    "graph-check",
+    "security-policy",
+    "frontend-typecheck",
+    "backend-typecheck",
+    "vitest",
+    "legacy-tests",
+    "web-build",
+    "web-launch-e2e",
+    "merge-gate"
   ]
 }

@@ -4,7 +4,7 @@
 
 **Tier:** T3  
 **Issue:** #53  
-**Integration base:** current canonical `master` (`cd996d807615d56ffebf6073f28e0161fcc54b88`) reconciled into the feature branch  
+**Integration base:** current canonical `master` (`ac46b4df2775a8d8b2d480459e43a3c3093d5b47`) reconciled by merge commit `9bdc438aadf572352c63fb8f75a2a625115c06e7`  
 **Durable contract:** `docs/contracts/region-source-semantics.md`  
 **ADR:** NOT REQUIRED — this feature makes an additive, backward-compatible project-shape extension inside existing persistence/audio boundaries; the durable cross-feature semantics are owned by the contract above.
 
@@ -112,19 +112,17 @@ Architecture Graph evidence on exact Design Baseline `2514843ec7870ddab06c0309da
 - `src/lib/universalAudio.ts`: HIGH — 27 / 146;
 - `src/lib/projectStore.ts`: HIGH — 25 / 120.
 
-The evidence was collected after Design Gate rather than before it; this sequencing deviation is recorded explicitly in `verification.md`. It was executed against the exact frozen baseline and confirmed the already-selected T3 classification without discovering a new boundary or T4 trigger.
+Historical Graph evidence was collected after the former manual design-approval step; `verification.md` records that sequencing honestly. Under the current repository policy, that approval is historical context only: automated design/policy validation and exact-HEAD evidence must be refreshed after the material governance/base reconciliation.
 
 Post-implementation Graph remained HIGH on the same shared surfaces and passed validation/CI. Added dependents are primarily the new resolver and regression tests rather than a new architectural owner.
 
 ## Base reconciliation
 
-The feature branch was initially prepared from `2aa887e3bd2ab4643407ae96532966ec1fed9767`. Before implementation was frozen:
+The branch was 62 commits behind current `master@ac46b4df2775a8d8b2d480459e43a3c3093d5b47`. It was reconciled without force-push by merge commit `9bdc438aadf572352c63fb8f75a2a625115c06e7`.
 
-1. the project owner explicitly directed #53 to proceed independently while #51 / PR #69 remains blocked only on deferred human release validation;
-2. current `master` advanced to `cd996d807615d56ffebf6073f28e0161fcc54b88` through PR #70;
-3. the master delta was marketing documentation only and did not touch region, persistence or renderer contracts;
-4. the branch was reconciled with current `master` by merge commit `be1906d3d8f5c9ef2cc39385d4437e1107058d55`;
-5. no material scope, architecture, tier or verification change resulted, so the approved Design Gate remained valid.
+The master delta materially changed repository governance and verification policy, so prior gate/evidence state is STALE even though #53 product scope remains T3. Of the 14 #53 files, only `src/lib/midiSynth.ts` overlapped with master product code; reconciliation preserved both contracts: source-window scheduling from #53 and `applyPanAutomationToParam()` from merged PR #100.
+
+Current lifecycle authority is `AGENTS.md` + Constitution + schemaVersion 2 evidence metadata. The feature therefore requires refreshed automated design/policy validation, Graph/semantic impact review, specialist re-check where affected, and exact-HEAD CI before merge eligibility.
 
 ## Specialist review
 
@@ -133,7 +131,7 @@ The feature branch was initially prepared from `2aa887e3bd2ab4643407ae96532966ec
 
 ## Verification strategy
 
-Required before Human Merge Gate on one exact clean HEAD:
+Required before the evidence-driven Merge Gate can be satisfied on one exact candidate HEAD:
 
 - Spec Kit consistency/analyze PASS (15/15 requirements mapped);
 - Architecture Graph sync/validation PASS with no unreviewed tier escalation;

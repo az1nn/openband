@@ -5,10 +5,10 @@
 Required checks use repository evidence states only:
 
 ```text
-PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED
+PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED | STALE
 ```
 
-Any required FAIL/BLOCKED/FLAKY result blocks the Human Merge Gate.
+Any required FAIL/BLOCKED/FLAKY/STALE or missing result blocks the evidence-driven Merge Gate.
 
 ## Feature identity
 
@@ -18,26 +18,24 @@ Any required FAIL/BLOCKED/FLAKY result blocks the Human Merge Gate.
 - PR: #71.
 - Design Baseline: `2514843ec7870ddab06c0309da19a16908333d86`.
 - Initial branch base: `2aa887e3bd2ab4643407ae96532966ec1fed9767`.
-- Canonical reconciled master: `cd996d807615d56ffebf6073f28e0161fcc54b88`.
-- Master reconciliation merge commit: `be1906d3d8f5c9ef2cc39385d4437e1107058d55`.
+- Canonical reconciled master: `ac46b4df2775a8d8b2d480459e43a3c3093d5b47`.
+- Current reconciliation merge commit: `9bdc438aadf572352c63fb8f75a2a625115c06e7`.
 
-## Human Design Gate
+## Historical design evidence
 
-The project owner explicitly instructed #53 to proceed after the T3 design baseline was prepared. The approval was recorded in PR #71 against exact Design Baseline `2514843ec7870ddab06c0309da19a16908333d86` before product-code mutation.
+The original T3 design baseline and owner approval remain part of the audit trail, but they are not current merge authorization. Repository governance has since moved to automated design validation plus an evidence-driven Merge Gate.
 
-The owner also explicitly directed work to continue independently while #51 / PR #69 remains open only for deferred real-browser/microphone release evidence. #53 does not depend on #51 landing, deployment or microphone behavior.
+The earlier Architecture Graph run `35226545143` remains useful historical evidence that the planned shared surfaces were HIGH impact and did not expose a T4 trigger. Because the base and governance policy moved materially, this evidence is STALE for current merge eligibility until the affected validation is refreshed.
 
-## Governance sequencing note
+## Current governance reconciliation
 
-Architecture Graph preflight evidence was intended to precede the Human Design Gate but was captured later. This is recorded as a sequencing deviation rather than rewritten as historical preflight.
-
-Run `35226545143` subsequently checked the exact frozen Design Baseline SHA and confirmed the planned shared surfaces were already HIGH impact and consistent with the selected T3 tier. No T4 trigger or new architecture boundary was discovered. The implementation was not re-scoped based on this late evidence.
+The feature now uses schemaVersion 2 metadata with explicit required checks. Current authority is the Constitution, `AGENTS.md`, Spec Kit artifacts, Graph/semantic impact, exact-HEAD CI and the trusted evidence-driven Merge Gate.
 
 ## Base reconciliation
 
-After Design Gate, `master` advanced via PR #70 to `cd996d807615d56ffebf6073f28e0161fcc54b88`. The delta was marketing documentation only and did not change `TrackRegion`, `regionEdit`, persistence ownership, audio renderers or export semantics.
+The branch was 62 commits behind current `master@ac46b4df2775a8d8b2d480459e43a3c3093d5b47` and was reconciled through merge commit `9bdc438aadf572352c63fb8f75a2a625115c06e7`.
 
-The feature branch was reconciled with canonical master through merge commit `be1906d3d8f5c9ef2cc39385d4437e1107058d55`. The reconciliation was non-material to #53 and did not invalidate the Design Gate.
+The reconciliation is material to governance/evidence freshness. Product overlap was bounded: among the 14 #53 files, only `src/lib/midiSynth.ts` also changed on master. The merged result preserves #53 source-window scheduling and master PR #100's `applyPanAutomationToParam()` behavior. No new persistence owner, bridge boundary, security boundary or T4 trigger is introduced by the reconciliation.
 
 ## Implemented source-window contract
 
@@ -192,7 +190,8 @@ Final `npm run sdd:check` remains required on the exact clean HEAD after tempora
 
 | Evidence | State before clean-HEAD CI |
 |---|---|
-| Human Design Gate on exact Design Baseline | PASS |
+| Historical owner approval | RECORDED — non-authoritative under current policy |
+| Current automated design/policy validation | PENDING exact-HEAD refresh |
 | Spec Kit requirement mapping | PASS — 15/15 |
 | Architecture Graph baseline + implementation evidence | PASS |
 | Architecture specialist review | PASS |
@@ -205,12 +204,12 @@ Final `npm run sdd:check` remains required on the exact clean HEAD after tempora
 | Web build | PENDING clean-HEAD CI |
 | SDD/Graph CI | PENDING clean-HEAD CI |
 | Launch-critical Playwright/export regression | PENDING current CI policy |
-| Temporary scaffolding removed | PENDING |
+| Temporary scaffolding removed | PASS |
 | PR review state / mergeability | PENDING exact clean HEAD |
-| Human Merge Gate | PENDING |
+| Evidence-driven Merge Gate | PENDING current exact-HEAD contract |
 
 ## Gate freshness
 
-The Human Merge Gate binds to one exact verified implementation HEAD. After temporary scaffolding is removed, all required final CI evidence must pass on that same clean HEAD. Any subsequent code or normative-document change invalidates the freeze and requires affected evidence to run again.
+The evidence-driven Merge Gate binds to the exact merge-candidate HEAD and its current target-base relationship. All required checks must be current on that state; any subsequent product, normative-document, HEAD, or materially relevant base change makes affected evidence STALE and requires refresh.
 
 No real-microphone smoke is required by #53; that remains owned by #51 release readiness.
