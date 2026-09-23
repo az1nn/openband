@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 2,
+  "tier": "T3",
+  "issue": 110,
+  "riskTriggers": [
+    "repository-architecture",
+    "destructive-file-removal",
+    "legacy-service-boundary-removal"
+  ],
+  "dependsOn": [],
+  "requiredChecks": [
+    "graph-check",
+    "security-policy",
+    "frontend-typecheck",
+    "backend-typecheck",
+    "vitest",
+    "legacy-tests",
+    "web-build",
+    "web-launch-e2e",
+    "merge-gate"
+  ]
+}
