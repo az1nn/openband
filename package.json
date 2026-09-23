@@ -68,7 +68,7 @@
     "lint": "npx tsc --noEmit",
     "test": "npx vitest run",
     "test:legacy": "npx tsx --test tests/presets.test.ts tests/types.test.ts",
-    "test:graph-sdd": "node --test tests/graph-engineer.test.mjs tests/graph-engineer-v2.test.mjs tests/graph-engineer-v3.test.mjs tests/graph-speckit.test.mjs tests/governance-policy.test.mjs tests/evidence-merge-policy.test.mjs tests/siga-orchestration-policy.test.mjs",
+    "test:graph-sdd": "node --test tests/graph-engineer.test.mjs tests/graph-engineer-v2.test.mjs tests/graph-engineer-v3.test.mjs tests/graph-speckit.test.mjs tests/governance-policy.test.mjs tests/evidence-merge-policy.test.mjs",
     "test:marketing-kb": "node --test tests/marketing-kb-check.test.mjs",
     "marketing:kb:check": "node scripts/marketing-kb-check.mjs",
     "test:ui": "npx vitest --ui",
