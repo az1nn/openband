@@ -26,16 +26,22 @@ OpenBand CI V2 run `35921405073` passed on implementation HEAD `a77298a5def5c451
 
 This evidence validates the implementation before the final Spec Kit reconciliation commit. The final candidate HEAD must be rerun after this documentation-only reconciliation and again as a non-draft candidate if repository merge automation requires that event state.
 
+## Trust-root minimization
+
+A post-implementation audit of the default-branch evidence merger showed that modifying `AGENTS.md`, `scripts/sdd-policy-check.mjs`, or the `test:graph-sdd` package-script wiring automatically derives the T4 trigger `security-sensitive-privileged-workflow`. Those changes were not necessary for SIGA's repository-local orchestration objective, so they were removed. Regression coverage was consolidated into the existing `tests/governance-policy.test.mjs` file, which the unchanged `test:graph-sdd` gate already executes.
+
+Earlier green runs that included the unnecessary trust-root edits are historical evidence only and are **STALE** for the minimized candidate. Final evidence must come from the minimized exact HEAD.
+
 ## Required final evidence
 
 | Evidence | State |
 |---|---|
-| SDD policy | PRE-FREEZE PASS @ `a77298a`; final refresh required |
-| SIGA policy regression tests | PRE-FREEZE PASS @ `a77298a`; final refresh required |
-| Architecture Graph | PRE-FREEZE PASS @ `a77298a`; final refresh required |
+| SDD policy | PENDING on minimized candidate |
+| SIGA policy regression tests | PENDING on minimized candidate |
+| Architecture Graph | PENDING on minimized candidate |
 | OpenBand CI V2 exact HEAD | PENDING |
 | Review/thread audit | PENDING |
-| Mergeability | PASS on draft PR #113 before final freeze; recheck required |
+| Mergeability | PENDING on minimized candidate |
 | Single canonical SIGA audit | PASS — canonical `.agents/skills/openband-session-router/SKILL.md`, `.qwen` remains delegation-only |
 | Central-runtime/Maestri absence audit | PASS — no central runtime path added; references are policy prohibitions/tests only |
 
