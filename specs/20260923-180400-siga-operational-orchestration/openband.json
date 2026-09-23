@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 2,
+  "tier": "T3",
+  "issue": 112,
+  "riskTriggers": [
+    "agent-orchestration-boundary",
+    "repository-governance",
+    "concurrency-coordination"
+  ],
+  "dependsOn": [],
+  "requiredChecks": [
+    "graph-check",
+    "security-policy",
+    "frontend-typecheck",
+    "backend-typecheck",
+    "vitest",
+    "legacy-tests",
+    "web-build",
+    "web-launch-e2e",
+    "merge-gate"
+  ]
+}

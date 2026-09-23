@@ -44,6 +44,7 @@ verify az1nn/openband
 -> reconstruct canonical state
 -> render OpenBand Agent Tree
 -> reconcile live session ownership
+-> classify RESUME | WATCH | ADVANCE
 -> route to ACTIVE/OWNED | ACTIVE/OBSERVER | WAITING | NEXT
 ```
 
@@ -109,17 +110,34 @@ SESSION_KEY: <stable generated key>
 CHAT_LABEL: <human-findable task label>
 TASK: issue=<id|-> pr=<id|-> spec=<id|->
 STATE: <ACTIVE|WAITING|CLOSED>
+CORE: <RESUME|WATCH|ADVANCE>
+TARGET: <issue|pr|spec|gate identity>
+REASON: <evidence-derived reason>
 HEAD: <sha|->
 WAITING_ON: <none|human:<gate>|external:<blocker>>
+RECHECK: <deterministic probe|none>
 NEXT: <one exact current-task or next-session action>
 UPDATED_AT: <ISO-8601 when available>
 ```
 
-The comment must be updated idempotently instead of creating a stream of lease comments.
+The comment must be updated idempotently instead of creating a stream of lease comments. Existing v1 comments without the additive CORE/TARGET/REASON/RECHECK fields remain readable; refresh them only when the owning session legitimately mutates its lease.
+
+Before any mutation, observe the real state, compare it with the desired state, no-op when already satisfied, mutate once when needed, then re-read and verify. Never replay a mutation just because an earlier execution was interrupted.
 
 Ownership is positive, not inferred: this chat owns a lease only when it already established the same `SESSION_KEY`. Matching task, branch, PR, repository or GitHub user does not prove ownership. Without matching current-chat `SESSION_KEY` proof, an ACTIVE lease is foreign-owned.
 
 A session lease never overrides canonical task state. Git/PR/issue/Spec Kit/CI evidence may prove it stale. Elapsed time alone does not prove abandonment.
+
+## Core classification mapping
+
+OpenBand keeps its route vocabulary for session ownership, while the portable SIGA classification remains:
+
+- `ACTIVE/OWNED` with safe unfinished work -> **RESUME**;
+- owned `WAITING` with a concrete re-probe and no safe local work -> **WATCH**;
+- `NEXT` after verified closeout or for an unbound independent task -> **ADVANCE**;
+- `ACTIVE/OBSERVER` -> read-only foreign-task inspection, not a mutation classification.
+
+WATCH reasons are `CI_PENDING`, `REVIEW_PENDING`, `DEPLOY_PENDING`, `HUMAN_APPROVAL`, `EXTERNAL_SERVICE`, or `DEPENDENCY_PENDING` when applicable. Operational errors are classified as `TRANSIENT`, `CONFLICT`, `BLOCKED`, `HUMAN_REQUIRED`, or `PERMANENT` according to `docs/ai/siga-orchestration.md`.
 
 ## Route A — ACTIVE/OWNED
 
@@ -215,6 +233,7 @@ Every standalone `siga` should begin with the tree followed by:
 
 ```text
 SESSION: ACTIVE/OWNED | ACTIVE/OBSERVER | WAITING | NEXT | REPO_MISMATCH
+CORE: RESUME | WATCH | ADVANCE | N/A
 TASK: <issue/PR/spec or selected task>
 WHY: <canonical-state reason>
 ACTION: <continue | observe | human action | start exactly one task | stop wrong repo>
