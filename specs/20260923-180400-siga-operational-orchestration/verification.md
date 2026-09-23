@@ -7,7 +7,7 @@
 - Canonical SIGA: `.agents/skills/openband-session-router/SKILL.md`
 - Existing concurrency mechanism: idempotent PR/issue session lease with positive `SESSION_KEY` ownership.
 - Existing exact-HEAD CI workflow observed: OpenBand CI V2.
-- Observed jobs: graph-check, legacy-tests, vitest, security-policy, backend-typecheck, frontend-typecheck, web-build, web-launch-e2e, merge-gate; native build jobs are conditional and were skipped in the inspected unrelated PR.
+- Observed jobs: graph-check, legacy-tests, vitest, security-policy, backend-typecheck, frontend-typecheck, web-build, web-launch-e2e, merge-gate; native build jobs are conditional and were skipped in the inspected unrelated PR.\n- Automated design/policy validation: OpenBand CI V2 run `35920623010`, design HEAD `599c6c9fc147a41625b60e4c99473e4ac94f71f8`, `graph-check` PASS before implementation.
 
 ## Required final evidence
 
