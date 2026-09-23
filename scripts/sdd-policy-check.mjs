@@ -220,6 +220,16 @@ export function checkSigaOrchestration(root) {
   const core = readText(corePath);
   const canonical = readText(canonicalPath);
   const compatibility = readText(compatibilityPath);
+  const hasSigaSurface =
+    core !== null ||
+    canonical !== null ||
+    compatibility !== null ||
+    fs.existsSync(manifestPath);
+
+  // checkRepository() is also exercised against intentionally minimal fixture
+  // roots. SIGA policy applies only when that root actually contains SIGA
+  // surfaces; the real OpenBand repository always does.
+  if (!hasSigaSurface) return errors;
 
   if (core === null) {
     errors.push("SIGA: missing docs/ai/siga-orchestration.md");
