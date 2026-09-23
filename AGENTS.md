@@ -32,6 +32,10 @@ A standalone `siga` is the preferred coding-session command. Its canonical proje
 
 Session routing reconstructs canonical repository/GitHub state and routes the session to `ACTIVE/OWNED`, `ACTIVE/OBSERVER`, `WAITING`, `NEXT`, or `REPO_MISMATCH`; it never means "continue from chat memory". Lease ownership requires positive matching current-chat `SESSION_KEY` proof. Without that proof, a live lease is foreign-owned and the task is occupied.
 
+The repository-local SIGA core is defined by `docs/ai/siga-orchestration.md` and bound to OpenBand through `docs/ai/siga-capabilities.json`. Its invariant loop is `RECONCILE -> DECIDE -> EXECUTE -> VERIFY -> PERSIST`, and every mutable continuation classifies as `RESUME | WATCH | ADVANCE`. OpenBand's session routes refine those states; they do not replace them. SIGA checkpoint data is derived and must never override real repository, Spec Kit, CI, deploy or Git state.
+
+All SIGA mutations are idempotent-by-default: inspect desired state first, no-op when satisfied, mutate once when needed, then re-read and verify. Operational errors use `TRANSIENT | CONFLICT | BLOCKED | HUMAN_REQUIRED | PERMANENT`; WATCH uses a concrete local reason and deterministic re-probe.
+
 Session routing follows `docs/ai/session-routing.md` and persists live task ownership through one idempotent marked PR/issue session lease. A new chat must not silently duplicate or take over a task with a live `ACTIVE` lease. Routine standalone `siga` does not default to that foreign task: it excludes occupied work and continues `NEXT` discovery for one independent already-planned task, or safe planning/specification when implementation candidates are occupied/blocked. `ACTIVE/OBSERVER` is reserved for explicit user-requested read-only inspection. `WAITING` stops only the chat that owns that waiting task.
 
 `openband-ask` remains the preferred task/lifecycle entrypoint after session ownership is resolved. It classifies risk, gathers bounded context, and starts or resumes the appropriate lifecycle. It does not own a parallel state machine.
