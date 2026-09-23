@@ -115,7 +115,7 @@ Each WATCH records a deterministic re-probe.
 
 ### 8. Policy regression test
 
-Add `tests/siga-orchestration-policy.test.mjs` and extend `test:graph-sdd` coverage through the existing node-test glob/list so CI proves:
+Extend the already-executed `tests/governance-policy.test.mjs` suite so the unchanged `test:graph-sdd` gate proves:
 
 - canonical skill remains unique;
 - authority ordering exists;
@@ -126,9 +126,9 @@ Add `tests/siga-orchestration-policy.test.mjs` and extend `test:graph-sdd` cover
 
 ## Architecture / dependency impact
 
-The change touches governance/docs/tests only. It does not modify product code, persistence, bridge APIs, deployment topology or merge authorization.
+The change touches repository-local SIGA skills/docs/tests only. It does not modify product code, persistence, bridge APIs, deployment topology, privileged merge policy, `AGENTS.md`, `scripts/sdd-policy-check.mjs`, or CI/package evidence-producer wiring.
 
-The Architecture Graph is still required because agent policy files and SDD checks are shared governance surfaces; Graph/SDD evidence must remain green.
+The Architecture Graph is still required because agent policy surfaces are shared governance context; Graph/SDD evidence must remain green.
 
 ## Rollback
 
@@ -139,7 +139,7 @@ Revert the #112 PR. Existing session routing remains usable because the implemen
 Exact candidate HEAD must pass:
 
 - `npm run sdd:check`;
-- `npm run test:graph-sdd`, including the new SIGA policy test;
+- `npm run test:graph-sdd`, including the SIGA assertions added to the existing governance-policy test;
 - `npm run graph:ci`;
 - the repository's standard exact-HEAD CI jobs listed in `openband.json`;
 - PR review/thread and mergeability checks;
