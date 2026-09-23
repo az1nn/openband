@@ -60,6 +60,8 @@ TASK AUTHORITY MAY NOT
 
 Persist live task ownership through the idempotent marked PR/issue session lease defined by `docs/ai/session-routing.md`. Ownership requires matching current-chat `SESSION_KEY` proof; task/branch/PR/user similarity is insufficient. A routine `siga` never silently takes over another `ACTIVE` lease and does not stop there: it continues discovery for independent work.
 
+For every SIGA continuation, also apply `docs/ai/siga-orchestration.md` and the repository-local `docs/ai/siga-capabilities.json`: `RECONCILE -> DECIDE -> EXECUTE -> VERIFY -> PERSIST`, with one core classification `RESUME | WATCH | ADVANCE`. Treat checkpoint fields as derived only. Before mutation, inspect the desired state and no-op when already satisfied; classify operational failures rather than retrying blindly.
+
 At the beginning of a material development session:
 
 1. Verify canonical repository identity is exactly `az1nn/openband`.
