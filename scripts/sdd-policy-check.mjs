@@ -34,6 +34,8 @@ const LIVE_GOVERNANCE_FILES = [
   "docs/ai/durable-context.md",
   "docs/ai/session-routing.md",
   "docs/ai/session-handoff-template.md",
+  "docs/ai/siga-orchestration.md",
+  "docs/ai/siga-capabilities.json",
 ];
 
 const STALE_MERGE_PHRASES = [
@@ -208,10 +210,88 @@ export function checkLiveGovernance(root) {
   return errors;
 }
 
+export function checkSigaOrchestration(root) {
+  const errors = [];
+  const corePath = path.join(root, "docs/ai/siga-orchestration.md");
+  const manifestPath = path.join(root, "docs/ai/siga-capabilities.json");
+  const canonicalPath = path.join(root, ".agents/skills/openband-session-router/SKILL.md");
+  const compatibilityPath = path.join(root, ".qwen/skills/auto-skill-session-router/SKILL.md");
+
+  const core = readText(corePath);
+  const canonical = readText(canonicalPath);
+  const compatibility = readText(compatibilityPath);
+
+  if (core === null) {
+    errors.push("SIGA: missing docs/ai/siga-orchestration.md");
+  } else {
+    if (!/REAL STATE > REPOSITORY HANDOFF > MEMORY > CHAT/.test(core)) {
+      errors.push("SIGA: core must preserve real-state authority ordering");
+    }
+    for (const token of ["RECONCILE", "DECIDE", "EXECUTE", "VERIFY", "PERSIST", "RESUME", "WATCH", "ADVANCE"]) {
+      if (!new RegExp(`\\b${token}\\b`).test(core)) errors.push(`SIGA: core missing '${token}'`);
+    }
+  }
+
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  } catch (error) {
+    errors.push(`SIGA: invalid/missing capability manifest (${error.message})`);
+  }
+
+  if (manifest) {
+    if (manifest?.siga?.protocol !== 1) errors.push("SIGA: capability manifest protocol must be 1");
+    if (manifest?.siga?.architecture !== "repository-local") errors.push("SIGA: architecture must be repository-local");
+    if (manifest?.siga?.stateScope !== "repository") errors.push("SIGA: state scope must be repository-local");
+    if (manifest?.siga?.authority !== "derived") errors.push("SIGA: checkpoint authority must be derived");
+    if (manifest?.siga?.canonicalSkill !== ".agents/skills/openband-session-router/SKILL.md") {
+      errors.push("SIGA: canonicalSkill must point to the OpenBand session router");
+    }
+    if (manifest?.checkpoint?.standalone_mutable_store !== false) {
+      errors.push("SIGA: standalone mutable checkpoint store is forbidden");
+    }
+
+    const capabilities = manifest?.capabilities;
+    const adapters = manifest?.adapters;
+    if (!capabilities || typeof capabilities !== "object" || Array.isArray(capabilities)) {
+      errors.push("SIGA: capabilities must be an object");
+    } else {
+      for (const [name, enabled] of Object.entries(capabilities)) {
+        if (typeof enabled !== "boolean") errors.push(`SIGA: capability '${name}' must be boolean`);
+        if (enabled === true && (!adapters || typeof adapters[name] !== "string" || adapters[name].trim() === "")) {
+          errors.push(`SIGA: enabled capability '${name}' requires a local adapter`);
+        }
+      }
+    }
+  }
+
+  if (canonical === null) {
+    errors.push("SIGA: canonical session-router skill is missing");
+  } else {
+    for (const token of ["RESUME", "WATCH", "ADVANCE", "docs/ai/siga-orchestration.md", "docs/ai/siga-capabilities.json"]) {
+      if (!canonical.includes(token)) errors.push(`SIGA: canonical skill missing '${token}'`);
+    }
+  }
+
+  if (compatibility === null || !compatibility.includes(".agents/skills/openband-session-router/SKILL.md")) {
+    errors.push("SIGA: compatibility router must delegate to the canonical skill");
+  }
+
+  for (const duplicate of [".siga/SKILL.md", "SIGA.md", "skills/siga/SKILL.md"]) {
+    if (fs.existsSync(path.join(root, duplicate))) errors.push(`SIGA: duplicate canonical implementation at ${duplicate}`);
+  }
+  for (const central of ["maestri", ".maestri"]) {
+    if (fs.existsSync(path.join(root, central))) errors.push(`SIGA: forbidden central runtime path '${central}'`);
+  }
+
+  return errors;
+}
+
 export function checkRepository(root = process.cwd()) {
   const errors = [];
   for (const dir of featureDirs(root)) errors.push(...checkFeature(root, dir));
   errors.push(...checkLiveGovernance(root));
+  errors.push(...checkSigaOrchestration(root));
   return errors;
 }
 
