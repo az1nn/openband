@@ -156,6 +156,16 @@ Prefer updating the existing marked record rather than adding duplicates.
 
 Persistence must not silently invalidate verification. Never create a post-freeze Git commit just to store the handoff when a PR/issue comment is available.
 
+## SIGA closeout mapping
+
+Caveman is closeout-only, so it never persists RESUME while safe work remains.
+
+- `VERIFIED_COMPLETE` -> SIGA **ADVANCE**;
+- no-safe-work external/human blocker -> SIGA **WATCH** with a concrete WATCH reason and re-probe;
+- `SAFE_WORK_REMAINS` -> return to continuation as SIGA **RESUME** and do not emit Caveman.
+
+The SIGA checkpoint is derived from the same canonical evidence as the handoff and does not become a new source of truth.
+
 ## Phase G — User-facing closeout
 
 The continuation skill should already have given a concise lifecycle notice of what was completed or what genuine blocker remains.
@@ -173,6 +183,7 @@ HEAD: <branch>@<sha>
 WORK: issue=<id|-> pr=<id/state|-> spec=<id|-> tier=<tier|->
 STATE: <VERIFIED_COMPLETE|IMPLEMENTED_NOT_VERIFIED|INCOMPLETE|PROCESS_DRIFT>
 PERSIST: <pr-comment|issue-comment|file:<path>|unavailable>
+SIGA: classification=<ADVANCE|WATCH> target=<task/change/gate> reason=<evidence-derived reason> next=<one deterministic action>
 
 DONE:
 - <delta-only completed facts>
@@ -205,6 +216,7 @@ Before persistence/emission confirm:
 - [ ] no safe autonomous task work remains;
 - [ ] exact base and HEAD are present when Git work exists;
 - [ ] closeout classification matches evidence;
+- [ ] SIGA classification maps correctly to ADVANCE or WATCH; RESUME was not closed out;
 - [ ] no running/queued/stale check is labeled PASS;
 - [ ] `DONE`, `PROOF`, `BLOCK`, `KEEP`, `NEXT` are delta-only and decision-relevant;
 - [ ] `NEXT` is one executable action, not a roadmap;
