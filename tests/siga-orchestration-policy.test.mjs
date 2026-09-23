@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
+import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (rel) => fs.readFileSync(path.join(root, rel), "utf8");
 
 describe("SIGA repository-local orchestration policy", () => {
