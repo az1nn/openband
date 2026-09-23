@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 2,
+  "tier": "T4",
+  "issue": 81,
+  "riskTriggers": [
+    "engineering-governance",
+    "merge-policy",
+    "security-sensitive-privileged-workflow",
+    "repository-write-automation"
+  ],
+  "dependsOn": [],
+  "requiredChecks": [
+    "graph-check",
+    "security-policy",
+    "frontend-typecheck",
+    "backend-typecheck",
+    "vitest",
+    "legacy-tests",
+    "web-build",
+    "web-launch-e2e",
+    "merge-gate"
+  ]
+}

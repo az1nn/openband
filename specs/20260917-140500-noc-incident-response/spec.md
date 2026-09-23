@@ -25,6 +25,6 @@ Add a focused operational specialist that can interpret production evidence, cla
 2. A simulated post-deploy HTTP 5xx/latency regression can be processed into a structured incident report and safe recommendation.
 3. The NOC specialist cannot autonomously rollback, redeploy or perform destructive production actions in this slice.
 4. Security indicators trigger escalation rather than being treated as ordinary availability incidents.
-5. Existing T0–T4, human Design Gate and verification semantics remain authoritative; merge behavior follows the canonical project Merge Gate rather than NOC-specific rules.
+5. Existing T0–T4 risk policy, automated design validation, exact-HEAD verification and the evidence-driven Merge Gate remain authoritative; the NOC layer defines no parallel gate or lifecycle.
 6. NOC remediation cannot suppress, skip or reinterpret required merge evidence.
 7. No product/runtime behavior changes in this first slice.

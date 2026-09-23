@@ -8,7 +8,7 @@ import { autoMix, autoMixWithAnalysis, AUTOMIX_GENRES } from "../src/lib/automix
 import { AudioNodeGraph, createAudioNodeGraph } from "../src/lib/audioNodeGraph";
 
 // ─── automationEngine.ts ───
-import { applyAutomationToParam, buildAutomationSchedule, interpolateAutomationValue } from "../src/lib/automationEngine";
+import { applyAutomationToParam, applyPanAutomationToParam, buildAutomationSchedule, interpolateAutomationValue, interpolatePanAutomationSegment, interpolatePanAutomationValue } from "../src/lib/automationEngine";
 
 // ─── busRouter.ts ───
 import { buildBusRouteGraph, createDefaultBuses, assignTrackToBus } from "../src/lib/busRouter";
@@ -366,6 +366,144 @@ describe("automationEngine", () => {
 
   it("interpolateAutomationValue returns 0 for empty points", () => {
     expect(interpolateAutomationValue([], 0)).toBe(0);
+  });
+
+  it("keeps existing positive-domain volume exponential interpolation unchanged", () => {
+    expect(interpolateAutomationValue([
+      { time: 0, value: 0.25, curve: "linear" },
+      { time: 1, value: 1, curve: "exponential" },
+    ], 0.5)).toBeCloseTo(0.5, 8);
+  });
+
+  it("interpolates exponential pan across the signed domain without linear fallback", () => {
+    const expected =
+      -100 + 200 * (Math.expm1(0.5) / Math.expm1(1));
+    const midpoint = interpolatePanAutomationSegment(
+      -100,
+      100,
+      0.5,
+      "exponential",
+    );
+    expect(midpoint).toBeCloseTo(expected, 8);
+    expect(midpoint).not.toBeCloseTo(0, 3);
+  });
+
+  it("interpolates negative-only pan automation non-linearly and preserves endpoints", () => {
+    const points = [
+      { time: 0, value: -100, curve: "linear" as const },
+      { time: 1, value: -20, curve: "exponential" as const },
+    ];
+    const midpoint = interpolatePanAutomationValue(points, 0.5);
+    expect(interpolatePanAutomationValue(points, 0)).toBe(-100);
+    expect(interpolatePanAutomationValue(points, 1)).toBe(-20);
+    expect(midpoint).toBeGreaterThan(-100);
+    expect(midpoint).toBeLessThan(-20);
+    expect(midpoint).not.toBeCloseTo(-60, 3);
+  });
+
+  it("schedules exponential pan using deterministic linear samples only", () => {
+    applyPanAutomationToParam(param, [
+      { time: 0, value: -1, curve: "linear" },
+      { time: 1, value: 1, curve: "exponential" },
+    ], 0);
+
+    expect(param.exponentialRampToValueAtTime).not.toHaveBeenCalled();
+    const ramps = (param.linearRampToValueAtTime as any).mock.calls as [number, number][];
+    expect(ramps.length).toBeGreaterThan(1);
+    expect(ramps[ramps.length - 1][0]).toBeCloseTo(1, 8);
+    expect(ramps[ramps.length - 1][1]).toBeCloseTo(1, 8);
+    expect(ramps.some(([value]) => value < 0)).toBe(true);
+    expect(ramps.some(([value]) => value > 0)).toBe(true);
+  });
+
+  it("covers linear, positive, zero-touching and center-crossing pan interpolation", () => {
+    expect(interpolatePanAutomationSegment(
+      -1,
+      1,
+      0.5,
+      "linear",
+      -1,
+      1,
+    )).toBe(0);
+
+    const positive = interpolatePanAutomationSegment(
+      0.1,
+      1,
+      0.5,
+      "exponential",
+      -1,
+      1,
+    );
+    expect(positive).toBeGreaterThan(0.1);
+    expect(positive).toBeLessThan(1);
+    expect(positive).not.toBeCloseTo(0.55, 3);
+
+    const zeroTouching = interpolatePanAutomationSegment(
+      -1,
+      0,
+      0.5,
+      "exponential",
+      -1,
+      1,
+    );
+    expect(zeroTouching).toBeGreaterThan(-1);
+    expect(zeroTouching).toBeLessThan(0);
+    expect(zeroTouching).not.toBeCloseTo(-0.5, 3);
+
+    const centerCrossing = Array.from({ length: 21 }, (_, index) =>
+      interpolatePanAutomationSegment(
+        -1,
+        1,
+        index / 20,
+        "exponential",
+        -1,
+        1,
+      ),
+    );
+    expect(centerCrossing[0]).toBe(-1);
+    expect(centerCrossing[centerCrossing.length - 1]).toBe(1);
+    for (let index = 1; index < centerCrossing.length; index++) {
+      expect(centerCrossing[index]).toBeGreaterThanOrEqual(
+        centerCrossing[index - 1],
+      );
+    }
+  });
+
+  it("keeps the sampled pan scheduler within 0.0016 normalized units of the visualization helper", () => {
+    const duration = 0.01;
+    applyPanAutomationToParam(param, [
+      { time: 0, value: -1, curve: "linear" },
+      { time: duration, value: 1, curve: "exponential" },
+    ], 0);
+
+    const ramps = (param.linearRampToValueAtTime as any).mock.calls as [number, number][];
+    const scheduled = [
+      { value: -1, time: 0 },
+      ...ramps.map(([value, time]) => ({ value, time })),
+    ];
+
+    let maxError = 0;
+    for (let index = 1; index < scheduled.length; index++) {
+      const previous = scheduled[index - 1];
+      const current = scheduled[index];
+      const midpointTime = (previous.time + current.time) / 2;
+      const scheduledMidpoint =
+        previous.value + (current.value - previous.value) * 0.5;
+      const exactMidpoint = interpolatePanAutomationSegment(
+        -1,
+        1,
+        midpointTime / duration,
+        "exponential",
+        -1,
+        1,
+      );
+      maxError = Math.max(
+        maxError,
+        Math.abs(scheduledMidpoint - exactMidpoint),
+      );
+    }
+
+    expect(maxError).toBeLessThan(0.0016);
   });
 });
 

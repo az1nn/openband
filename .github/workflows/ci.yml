@@ -18,8 +18,19 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run sdd:check
+      - run: npm run test:marketing-kb
+      - run: npm run marketing:kb:check
       - run: npm run test:graph-sdd
       - run: npm run graph:ci
+
+  security-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - run: npm run security:policy
 
   frontend-typecheck:
     runs-on: ubuntu-latest
@@ -94,7 +105,7 @@ jobs:
       - run: npx playwright test e2e/launch-first-run.spec.ts
 
   android-build:
-    needs: [graph-check, frontend-typecheck, backend-typecheck, vitest, legacy-tests, web-build]
+    needs: [graph-check, frontend-typecheck, backend-typecheck, vitest, legacy-tests, web-build, security-policy]
     if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'native-build')
     runs-on: ubuntu-latest
     steps:
@@ -109,13 +120,13 @@ jobs:
           node-version: 22.x
           cache: 'npm'
       - run: npm ci
-      - name: Build Android Release APK (conditional)
+      - name: Build Android Release APK
         run: |
           cd android
-          ./gradlew assembleRelease || echo "Android build skipped or env limited"
+          ./gradlew assembleRelease
 
   electron-build:
-    needs: [graph-check, frontend-typecheck, backend-typecheck, vitest, legacy-tests, web-build]
+    needs: [graph-check, frontend-typecheck, backend-typecheck, vitest, legacy-tests, web-build, security-policy]
     if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'native-build')
     runs-on: ubuntu-latest
     steps:
@@ -126,8 +137,24 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
-      - name: Build Electron Linux Distributable (conditional)
+      - name: Build Electron Linux Distributable
         run: |
           cd electron
           npm ci
-          npm run build:linux || echo "Electron build skipped or env limited"
+          npm run build:linux
+
+  merge-gate:
+    needs: [graph-check, security-policy, frontend-typecheck, backend-typecheck, vitest, legacy-tests, web-build, web-launch-e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - name: Evaluate common exact-run evidence
+        env:
+          OPENBAND_CI_EVIDENCE: ${{ toJSON(needs) }}
+        run: npm run merge:gate

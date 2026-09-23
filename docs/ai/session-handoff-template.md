@@ -2,96 +2,129 @@
 
 > Derived bootstrap context only. Canonical Git-backed project state wins on conflict.
 
-## Objective
+## Eligibility
 
-- Session objective:
-- Why this handoff exists:
+A Caveman handoff is **closeout-only**.
 
-## Repository State
+Before using this template, the active task must be at one of:
 
-- Repository: `az1nn/openband`
-- Base branch:
-- Working branch:
-- Worktree:
-- Current HEAD:
-- Issue:
-- PR:
-- PR state:
+```text
+TASK_COMPLETE
+BLOCKED_NO_SAFE_WORK
+HUMAN_GATE_NO_SAFE_WORK
+```
 
-## Spec Kit State
+If `SAFE_WORK_REMAINS`, do not fill or emit this template. Run `.qwen/skills/auto-skill-continue-work/SKILL.md` first.
 
-- Active feature:
-- Lifecycle step:
-- Risk tier:
-- Risk triggers:
-- Design Baseline SHA:
-- Design Gate: `NOT_REQUIRED | PENDING | APPROVED | INVALIDATED`
-- Merge Gate: `NOT_REQUIRED | PENDING | READY_FOR_HUMAN | INVALIDATED`
+A user request such as `gere handoff` or `generate handoff` requests the eventual artifact; it does not bypass unfinished safe work.
 
-## Final Decisions
+## Default handoff — Caveman Mode
 
-- 
+`.qwen/skills/auto-skill-caveman-handoff/SKILL.md` performs the final closeout audit, promotes durable project knowledge, persists short-lived continuation state, then emits this compact artifact. Compression applies to transferred text, never verification depth.
 
-## Superseded — Do Not Reuse
+```text
+CAVEMAN HANDOFF v1
 
-- 
+REPO: <url>
+BASE: <branch>@<sha>
+HEAD: <branch>@<sha>
+WORK: issue=<id|-> pr=<id/state|-> spec=<id|-> tier=<tier|->
+STATE: <VERIFIED_COMPLETE|IMPLEMENTED_NOT_VERIFIED|INCOMPLETE|PROCESS_DRIFT>
+PERSIST: <pr-comment|issue-comment|file:<path>|unavailable>
 
-## Completed
+DONE:
+- <delta-only completed facts>
 
-- 
+PROOF:
+- <check/run>: <PASS|FAIL|BLOCKED|FLAKY|NOT_REQUIRED|STALE>@<sha-or-reason>
 
-## Canonical Artifacts
+BLOCK:
+- <none | unresolved blocker/human gate>
 
-- Constitution:
-- `AGENTS.md`:
-- Feature spec:
-- Plan:
-- Tasks:
-- Architecture:
-- Contracts:
-- ADRs:
-- Relevant code/tests:
-- Architecture Graph queries/evidence to refresh:
+KEEP:
+- <critical invariant/authority boundary only>
 
-## Verification State
+NEXT:
+1. <single exact next action>
 
-| Evidence | State | Bound to SHA / notes |
-|---|---|---|
-| Acceptance / focused tests |  |  |
-| Typecheck |  |  |
-| Build |  |  |
-| Graph / SDD validation |  |  |
-| Specialist review |  |  |
-| Other required evidence |  |  |
+VERIFY-FIRST:
+Reconstruct GitHub/Git/Spec Kit/tests/CI/Graph from canonical state before acting. Canonical state wins on conflict; stale PASS must be rerun.
 
-Allowed states: `PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED`.
+PR: <direct URL when applicable>
+```
 
-Verification is stale if its relevant HEAD changed.
+`PERSIST` identifies where the same operational handoff was durably stored. Prefer an idempotent marked PR/issue comment because it does not mutate Git HEAD. See `docs/ai/durable-context.md`.
 
-## Open / Blocked
+## Required semantics
 
-- 
+The compact handoff preserves, when applicable:
 
-## Freshness Risks
+- target base + exact base SHA;
+- working branch/worktree + exact HEAD;
+- issue, PR and Spec Kit identity;
+- risk tier / lifecycle state when decision-relevant;
+- closeout classification;
+- durable persistence sink;
+- current-cycle implementation delta;
+- exact-state verification evidence;
+- blocker / human gate / freshness risk;
+- critical invariants / authority boundaries;
+- one exact next action;
+- verify-first contract.
 
-- 
+Allowed evidence states:
 
-## Next Action
+```text
+PASS | FAIL | BLOCKED | FLAKY | NOT_REQUIRED | STALE
+```
 
-1. 
+When merge or genuine authorization state is decision-relevant, preserve it explicitly:
 
-## New Chat Bootstrap
+```text
+Human/external authorization: `NOT_REQUIRED | PENDING | SATISFIED | BLOCKED`
+Merge Gate: `NOT_REQUIRED | PENDING | SATISFIED | BLOCKED | INVALIDATED`
+```
 
-Start by refreshing Git/PR state and reading `AGENTS.md` plus `docs/ai/context-handoff.md`.
+A running or queued workflow is not PASS. Evidence from an older relevant HEAD/base is STALE. A skipped job is acceptable only when explicitly not applicable.
 
-Reconstruct bounded context progressively:
+## Compression rules
+
+- Emit only at a genuine current-task closeout boundary.
+- Do not emit merely because context is YELLOW/RED or because the user asked for handoff while safe work remains.
+- Promote durable decisions to canonical docs before final verification.
+- Persist operational state using the sink order in `docs/ai/durable-context.md`.
+- Prefer SHAs, IDs, run IDs, paths and short state labels over prose.
+- Carry only current-cycle delta plus facts required to execute `NEXT` safely.
+- Reference canonical specs/ADRs/docs instead of copying contents.
+- Omit empty optional fields.
+- Normal target: roughly 250–700 tokens; correctness overrides the budget.
+- Expand only when compression would hide a blocker, ambiguity, human gate, process drift or authority boundary.
+
+## Fallback expansion
+
+If the base format cannot safely encode closeout state, add only missing operational fields:
+
+```text
+GATES: design=<...> merge=<...> human=<...>
+REVIEW: threads=<...> blocking=<...>
+FILES: <only unexpected or next-action-critical paths>
+GRAPH: <run/evidence/freshness>
+CI: <workflow/run + per-job exceptions>
+DRIFT: <canonical mismatch/process drift>
+```
+
+## New-chat verification contract
+
+Do **not** assume a task is complete because the previous chat says so.
+
+Before acting, reconstruct canonical state from GitHub/Git/Spec Kit/tests/CI/Architecture Graph. Treat any mismatch with the handoff as stale handoff data.
+
+Bootstrap progressively:
 
 ```text
 L0  Constitution + AGENTS + feature/tier
-L1  feature spec + impacted architecture/contracts/ADRs + Graph
+L1  active feature + impacted architecture/contracts/ADRs + Graph
 L2  relevant code + tests + specialists
 ```
 
-Then verify this handoff against current canonical state. Treat any mismatch as stale handoff data, not as authority.
-
-Continue from **Next Action** only after confirming branch/worktree/HEAD, Spec Kit lifecycle state, risk tier, and applicable human gates.
+If previous PASS evidence is bound to a stale HEAD/base, rerun it before treating the task as verified. Continue from `NEXT` only after canonical state, automated design/policy state, evidence freshness, any genuine human/external authorization, and the current evidence-driven Merge Gate state are confirmed.

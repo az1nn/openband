@@ -111,6 +111,30 @@ describe("Comprehensive Studio Tools Test Suite", () => {
     expect(container.firstChild).toBeTruthy();
   });
 
+  it("renders signed pan AutomationLane interpolation mode", () => {
+    const onChange = vi.fn();
+    const { container, getByText } = render(
+      <AutomationLane
+        points={[
+          { time: 0, value: -100, curve: "linear" },
+          { time: 0.5, value: 0, curve: "exponential" },
+          { time: 1, value: 100, curve: "linear" },
+        ]}
+        onChange={onChange}
+        duration={1}
+        color="#fff"
+        visible={true}
+        label="Pan"
+        minValue={-100}
+        maxValue={100}
+        interpolationMode="pan"
+        showCurveToggle
+      />
+    );
+    expect(container.firstChild).toBeTruthy();
+    expect(getByText("E")).toBeTruthy();
+  });
+
   it("renders BranchManager tool", () => {
     const onClose = vi.fn();
     const { getByText } = render(<BranchManager visible={true} onClose={onClose} />);

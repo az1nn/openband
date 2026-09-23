@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 2,
+  "tier": "T3",
+  "issue": 99,
+  "riskTriggers": [
+    "studio-audio",
+    "automation-semantics",
+    "shared-renderer",
+    "high-graph-impact",
+    "product-runtime-change"
+  ],
+  "dependsOn": [],
+  "requiredChecks": [
+    "graph-check",
+    "security-policy",
+    "frontend-typecheck",
+    "backend-typecheck",
+    "vitest",
+    "legacy-tests",
+    "web-build",
+    "web-launch-e2e",
+    "merge-gate"
+  ]
+}

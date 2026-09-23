@@ -2,7 +2,9 @@
 
 ## Approach
 
-Extend the existing specialist model with an operational/NOC reviewer. Keep orchestration, risk classification, Design Gate and merge eligibility owned by the canonical Spec Kit/OpenBand governance rather than creating NOC-specific lifecycle rules.
+Extend the existing specialist model with an operational/NOC reviewer. Keep orchestration, risk classification, automated design validation and merge eligibility owned by the canonical Spec Kit/OpenBand governance rather than creating NOC-specific lifecycle rules.
+
+The prior dependency on the evidence-driven merge feature is satisfied by merged #81 / PR #82. The dependency remains declared as feature provenance; this branch must still reconcile with current `master` and pass current automated design/policy validation before implementation.
 
 ## Changes
 
@@ -27,20 +29,33 @@ The NOC specialist may not, without explicit human approval:
 
 The NOC specialist may never:
 - suppress required checks to restore green status;
-- bypass the canonical Merge Gate;
+- bypass the canonical evidence-driven Merge Gate;
 - reinterpret `FAIL`, `BLOCKED` or `FLAKY` evidence as success.
 
-Security indicators escalate to `openband-security`; code remediation re-enters the normal risk-tier lifecycle. Merge eligibility follows the project-wide evidence contract defined by canonical governance.
+Security indicators escalate to `openband-security`; code remediation re-enters the normal risk-tier lifecycle. Merge eligibility follows the project-wide exact-HEAD evidence contract.
+
+## Risk and architecture
+
+Tier remains **T2** because this slice adds bounded engineering-operational policy, a specialist skill and runbook documentation only. It does not change runtime architecture, persistence, cross-runtime contracts, production credentials, deployment topology or autonomous production mutation.
+
+ADR: **NOT REQUIRED** for this first slice. A later telemetry transport, persistent incident store, production credential integration or autonomous remediation mechanism requires separate architecture/risk assessment.
 
 ## Verification
 
-- run `npm run sdd:check`;
-- run `npm run test:graph-sdd` and `npm run graph:ci` if the feature metadata/docs affect graph policy;
-- inspect the NOC skill against `AGENTS.md` for lifecycle duplication or weakened gates;
-- walk the API-regression scenario and verify the output separates facts, hypotheses and recommended actions;
+The schemaVersion 2 evidence contract requires:
+- `graph-check`;
+- `security-policy`;
+- `frontend-typecheck`;
+- `backend-typecheck`;
+- `vitest`;
+- `legacy-tests`;
+- `web-build`;
+- `web-launch-e2e`;
+- `merge-gate`.
+
+Feature-specific review must additionally:
+- inspect the NOC skill against `AGENTS.md` and the Constitution for lifecycle duplication or weakened gates;
+- walk the API-regression scenario and verify output separates observed facts, hypotheses and recommended actions;
 - confirm no runtime/product files changed;
+- confirm all production-changing actions remain explicitly human-authorized;
 - confirm NOC remediation cannot bypass or weaken required merge evidence.
-
-## Architecture Decision
-
-ADR: **NOT REQUIRED** for this first slice. The feature adds an engineering-operations specialist and runbook policy without changing runtime architecture. A later telemetry transport, persistent incident store or autonomous remediation mechanism requires separate architecture assessment.

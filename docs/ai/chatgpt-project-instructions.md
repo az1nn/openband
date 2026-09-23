@@ -6,12 +6,69 @@ Repository: `https://github.com/az1nn/openband`
 
 For OpenBand development work, Git-backed code, GitHub Spec Kit artifacts, Constitution, `AGENTS.md`, architecture, contracts, ADRs, tests and Git history are canonical.
 
+## Session law and `siga`
+
+OpenBand follows:
+
+```text
+ONE TASK = ONE CHAT
+ONE CHAT = AT MOST ONE TASK
+```
+
+A standalone `siga` is the canonical coding-session command. Before selecting or continuing work, read and follow the canonical project skill:
+
+- `.agents/skills/openband-session-router/SKILL.md`;
+- `.qwen/skills/auto-skill-session-router/SKILL.md` only as its compatibility entrypoint;
+- `docs/ai/session-routing.md`.
+
+### Hard repository lock
+
+`Siga` is valid only when canonical Git/GitHub state resolves to exactly:
+
+```text
+az1nn/openband
+```
+
+Never infer the repository from ChatGPT Project membership, model/account memory, a previous chat, organization ownership or a similarly named repository. If the resolved repository is different, emit `REPO_MISMATCH`, show the resolved and required repositories, and perform no mutation.
+
+### Visible OpenBand Agent Tree
+
+Every standalone `siga` must show an `OPENBAND AGENT TREE` before long work. At minimum it shows the repository/base identity, SessionRouter, the canonical probes `RepoProbe`, `GitHubProbe`, `SpecKitProbe`, `EvidenceProbe`, and `DependencyProbe`, relevant active task branches, ownership, explicit dependencies, and the selected route.
+
+`Siga` then routes to exactly one of:
+
+```text
+ACTIVE/OWNED
+ACTIVE/OBSERVER
+WAITING
+NEXT
+REPO_MISMATCH
+```
+
+- `ACTIVE/OWNED`: the current task still owns work and this chat positively proves the matching `SESSION_KEY`; continue it.
+- `ACTIVE/OBSERVER`: only when the user explicitly requests read-only inspection of another live session's task; never mutate that task, lease, branch, PR, Spec Kit artifacts or product code.
+- `WAITING`: this chat owns a task that has no safe autonomous progress before a human/external boundary. A foreign WAITING task is occupancy information, not a global stop.
+- `NEXT`: a new/unbound chat excludes foreign-owned occupied tasks and selects exactly one independent task, preferring existing planned work and otherwise safe planning/specification.
+- `REPO_MISMATCH`: stop without mutation because the current repository is not `az1nn/openband`.
+
+The observer law is:
+
+```text
+READ-ONLY EVIDENCE MAY FAN OUT
+TASK AUTHORITY MAY NOT
+```
+
+Persist live task ownership through the idempotent marked PR/issue session lease defined by `docs/ai/session-routing.md`. Ownership requires matching current-chat `SESSION_KEY` proof; task/branch/PR/user similarity is insufficient. A routine `siga` never silently takes over another `ACTIVE` lease and does not stop there: it continues discovery for independent work.
+
 At the beginning of a material development session:
 
-1. Refresh repository, branch, worktree, issue and PR state.
-2. Read `AGENTS.md`.
-3. Follow `docs/ai/context-handoff.md`.
-4. Reconstruct context progressively:
+1. Verify canonical repository identity is exactly `az1nn/openband`.
+2. Read `.agents/skills/openband-session-router/SKILL.md`.
+3. Render the OpenBand Agent Tree.
+4. Refresh repository, branch, worktree, issue and PR state.
+5. Read `AGENTS.md`.
+6. Follow `docs/ai/context-handoff.md` and `docs/ai/durable-context.md`.
+7. Reconstruct context progressively:
 
 ```text
 L0  Constitution + AGENTS + feature/tier
@@ -19,79 +76,132 @@ L1  feature spec + impacted architecture/contracts/ADRs + Graph
 L2  relevant code + tests + specialists
 ```
 
-Do not load the entire repository or previous conversation history by default.
+Do not load the entire repository or previous conversation history by default. Treat chat and model memory as disposable bootstrap context, never as required project state.
 
-Continuously monitor conversation context health without reporting the status on every response.
+## Task-lifecycle-aware handoff
 
-Use:
+Use two canonical execution/closeout skills after session ownership is resolved:
 
-- GREEN — context remains coherent and trustworthy; continue normally.
-- YELLOW — a semantic boundary is approaching; finish the current safe atomic lifecycle action and refresh canonical state.
-- RED — continuing the current chat materially increases the risk of stale, contradictory, superseded or ambiguous context.
+- `.qwen/skills/auto-skill-continue-work/SKILL.md` — continue the active task until all safe autonomous work is complete;
+- `.qwen/skills/auto-skill-caveman-handoff/SKILL.md` — perform closeout audit, durable persistence and compact handoff only at a genuine task closeout boundary.
 
-Conversation length, message count or number of tool calls alone must never trigger a handoff.
+`.qwen/skills/auto-skill-verified-context-handoff/SKILL.md` remains a compatibility router and must delegate to those skills rather than duplicate policy.
 
-Potential boundaries include:
+A Caveman handoff is eligible only when the current task is:
 
-- Design Gate reached or approved;
-- implementation slice completed;
-- converge/implement cycle completed;
-- verification/freeze completed;
-- PR merged;
-- new Spec Kit feature or materially different workstream starting;
-- stacked dependency landed and dependent work requires revalidation;
-- branch, PR, feature, ADR or task state becoming difficult to distinguish;
-- old logs, diffs, exploration or failed approaches dominating useful context;
-- repository HEAD advancing enough that the conversation is no longer a trustworthy implementation snapshot.
+```text
+TASK_COMPLETE
+BLOCKED_NO_SAFE_WORK
+HUMAN_GATE_NO_SAFE_WORK
+```
 
-When RED, explicitly tell the user:
+If safe work remains, do not emit a handoff.
 
-> ⚠️ **Context boundary recommended — good moment to start a new chat.**
+When the user says `gere handoff`, `generate handoff`, asks for a handoff/continuity prompt, or asks to move to a new chat while the current task is still live:
 
-Do not abandon a safe atomic action already in progress. Finish or explicitly stop the current lifecycle step first.
+1. reconstruct canonical task state;
+2. run `continue-work`;
+3. complete and verify every safe current-task action available now;
+4. do not start the next distinct task;
+5. once the current task is complete or genuinely blocked with no safe progress remaining, tell the user concisely what was completed or what blocker remains;
+6. run `caveman-handoff` and emit the compact artifact.
 
-Then generate a `SESSION_HANDOFF.md` following `docs/ai/session-handoff-template.md`.
+The user's handoff request specifies the eventual output, not permission to abandon unfinished work.
 
-The handoff must contain final state rather than conversation history, including:
+## Continue-work behavior
 
-- objective;
-- repository/base/branch/worktree/HEAD;
-- issue and PR;
-- active Spec Kit feature;
-- current lifecycle step;
-- risk tier and triggers;
-- Design Baseline SHA;
-- Design Gate state;
-- Merge Gate state;
-- final decisions;
-- superseded decisions that must not be reused;
-- completed work;
-- canonical artifacts;
-- Architecture Graph evidence that should be refreshed;
-- verification evidence and the SHA it applies to;
-- blockers/open questions;
-- freshness risks;
-- exact Next Action;
-- minimum bootstrap context for the next chat.
+Continue autonomously through routine implementation, remediation, cleanup and verification. Do not ask for information already known or routine confirmation.
 
-Never allow conversation history, `SESSION_HANDOFF`, ContextPackages, Architecture Graph projections, generated plans, execution state or previous verification claims to override canonical repository state.
+Correctable failures remain part of the active task:
 
-A new chat must verify freshness before acting.
+- real test/CI defects;
+- stale evidence that can be refreshed;
+- actionable base reconciliation;
+- resolvable review feedback;
+- temporary scaffolding cleanup;
+- missing canonical documentation/policy promotion required by the task.
 
-A handoff cannot:
+Fix real defects instead of weakening tests or policy.
 
-- approve a Design Gate;
-- mark verification as PASS;
-- authorize a T2+ merge;
-- override risk tier;
-- override Spec Kit state;
-- override current Git/PR state.
+Stop only for:
 
-If the Design Baseline SHA changed, treat the Design Gate as invalid until re-analysis and human approval.
+- completed current task;
+- required human gate after all safe precursor work is complete;
+- genuine external blocker with no safe autonomous progress remaining.
 
-If verified HEAD changed, rerun affected verification before considering the Merge Gate satisfied.
+Do not perform work asynchronously or promise later completion.
 
-For T2+ work, preserve the OpenBand lifecycle:
+## Caveman closeout
+
+At an eligible boundary, `caveman-handoff` must refresh canonical state, audit scope versus implementation, verify required tests/CI/Graph on the exact relevant HEAD/base, inspect reviews and temporary scaffolding, promote durable knowledge, persist operational state, and classify closeout as:
+
+```text
+VERIFIED_COMPLETE
+IMPLEMENTED_NOT_VERIFIED
+INCOMPLETE
+PROCESS_DRIFT
+```
+
+If the audit discovers safe correctable work, return to `continue-work` instead of emitting an early handoff.
+
+Persist short-lived continuation state using `docs/ai/durable-context.md`: prefer one idempotent marked PR comment, otherwise an issue comment, and use a repository handoff file only when no non-HEAD-mutating sink exists. Persistence must never silently invalidate a verified HEAD.
+
+After persistence, emit one compact Caveman handoff. Caveman Mode saves tokens by compressing transferred context, never by skipping reasoning, tests, CI, Graph checks, review inspection, or gate validation.
+
+The artifact must preserve, when applicable:
+
+- repository + exact base SHA;
+- branch/worktree + exact HEAD;
+- issue / PR / Spec Kit identity;
+- closeout state;
+- current-cycle delta;
+- exact-state verification evidence and freshness;
+- blockers and human gates;
+- critical invariants / authority boundaries;
+- one exact next action;
+- explicit verify-first instruction.
+
+Prefer IDs, SHAs, run IDs and canonical paths over narrative. Do not repeat full specs, plans, ADRs, architecture, logs or old completed milestones.
+
+## Context health
+
+Monitor conversation health without reporting it every response.
+
+- GREEN — context remains coherent; continue normally.
+- YELLOW — a context/semantic boundary is approaching; refresh canonical state and continue the current task toward closeout.
+- RED — chat history is not trustworthy enough for decision-relevant state; reconstruct bounded canonical context before continuing.
+
+YELLOW/RED alone never authorizes an early handoff.
+
+Conversation length, message count or tool-call count alone never trigger a chat change.
+
+If RED, tell the user when useful:
+
+> ⚠️ **Context boundary detected — canonical state will be reconstructed before continuing.**
+
+Then reconstruct L0 → L1 → L2 and continue safe task work. Emit Caveman only after current-task closeout or a genuine no-safe-work blocker/human gate.
+
+## Gate safety
+
+Neither session routing, continuation nor handoff can:
+
+- operate on a repository other than `az1nn/openband`;
+- fabricate a genuine human/external authorization;
+- mark verification PASS without current evidence;
+- mark an evidence-driven Merge Gate as satisfied or perform merge automation directly;
+- lower risk tier;
+- override Spec Kit/Git/tests/Graph state;
+- retroactively approve a missing gate because a PR was merged;
+- silently take over another active session lease;
+- infer lease ownership without matching current-chat `SESSION_KEY` proof;
+- mutate a foreign-owned task from observer mode;
+- start a second distinct task in a chat already bound to one task.
+
+If scope, architecture, risk triggers, dependencies, or verification strategy change materially, rerun Spec Kit analysis and the affected automated validation/evidence before implementation or merge.
+
+If verified HEAD changed, or the target base moved materially, rerun affected verification before considering the Merge Gate satisfied.
+
+For T2+ work preserve:
 
 ```text
 preflight
@@ -101,12 +211,12 @@ preflight
 → checklist?
 → tasks
 → analyze
-→ HUMAN DESIGN GATE
+→ AUTOMATED DESIGN VALIDATION
 → implement
 → converge
 → verify
-→ HUMAN MERGE GATE
+→ EVIDENCE-DRIVEN MERGE GATE
 → cleanup
 ```
 
-Changing chats never resets, skips or satisfies any lifecycle gate.
+Changing chats never resets, skips or satisfies lifecycle gates.

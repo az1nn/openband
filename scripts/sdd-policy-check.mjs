@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const TIERS = new Set(["T0", "T1", "T2", "T3", "T4"]);
-const ALLOWED_KEYS = new Set(["schemaVersion", "tier", "issue", "riskTriggers", "dependsOn"]);
+const ALLOWED_KEYS = new Set(["schemaVersion", "tier", "issue", "riskTriggers", "dependsOn", "requiredChecks"]);
 const T2_PLUS = new Set(["T2", "T3", "T4"]);
 const T3_PLUS = new Set(["T3", "T4"]);
 const FORBIDDEN_MUTABLE_KEYS = new Set([
@@ -17,6 +17,33 @@ const FORBIDDEN_MUTABLE_KEYS = new Set([
   "designApproved",
   "finalApproved",
 ]);
+
+const LIVE_GOVERNANCE_FILES = [
+  ".specify/memory/constitution.md",
+  "AGENTS.md",
+  "CONTRIBUTING.md",
+  ".agents/skills/openband-ask/SKILL.md",
+  ".agents/skills/openband-session-router/SKILL.md",
+  ".qwen/skills/auto-skill-session-router/SKILL.md",
+  ".qwen/skills/auto-skill-continue-work/SKILL.md",
+  ".qwen/skills/auto-skill-caveman-handoff/SKILL.md",
+  ".qwen/skills/auto-skill-verified-context-handoff/SKILL.md",
+  "sdd/README.md",
+  "docs/ai/chatgpt-project-instructions.md",
+  "docs/ai/context-handoff.md",
+  "docs/ai/durable-context.md",
+  "docs/ai/session-routing.md",
+  "docs/ai/session-handoff-template.md",
+];
+
+const STALE_MERGE_PHRASES = [
+  "human merge gate",
+  "ready_for_human",
+  "human design/merge gates",
+  "merged by a human",
+  "human merges the verified pr head",
+  "authorize a t2+ merge",
+];
 
 function readText(file) {
   try {
@@ -96,13 +123,21 @@ export function checkFeature(root, dir) {
     }
   }
 
-  if (metadata.schemaVersion !== 1) errors.push(`${feature}: schemaVersion must be 1`);
+  if (![1, 2].includes(metadata.schemaVersion)) errors.push(`${feature}: schemaVersion must be 1 or 2`);
   if (!TIERS.has(metadata.tier)) errors.push(`${feature}: tier must be T0, T1, T2, T3 or T4`);
   if (!Number.isInteger(metadata.issue) || metadata.issue < 1) {
     errors.push(`${feature}: issue must be a positive integer`);
   }
   checkStringArray(errors, feature, "riskTriggers", metadata.riskTriggers);
   checkStringArray(errors, feature, "dependsOn", metadata.dependsOn);
+  if (metadata.requiredChecks !== undefined) checkStringArray(errors, feature, "requiredChecks", metadata.requiredChecks);
+  if (
+    metadata.schemaVersion === 2 &&
+    T2_PLUS.has(metadata.tier) &&
+    (!Array.isArray(metadata.requiredChecks) || metadata.requiredChecks.length === 0)
+  ) {
+    errors.push(`${feature}: schemaVersion 2 T2+ requires non-empty requiredChecks`);
+  }
 
   for (const dependency of Array.isArray(metadata.dependsOn) ? metadata.dependsOn : []) {
     if (!fs.existsSync(path.join(root, "specs", dependency))) {
@@ -131,9 +166,52 @@ export function checkFeature(root, dir) {
   return errors;
 }
 
+export function checkLiveGovernance(root) {
+  const errors = [];
+
+  for (const relative of LIVE_GOVERNANCE_FILES) {
+    const content = readText(path.join(root, relative));
+    if (content === null) continue;
+    const normalized = content.toLowerCase();
+    for (const phrase of STALE_MERGE_PHRASES) {
+      if (normalized.includes(phrase)) {
+        errors.push(`${relative}: stale merge semantics '${phrase}'`);
+      }
+    }
+  }
+
+  const agents = readText(path.join(root, "AGENTS.md"));
+  if (agents !== null) {
+    if (!/AUTOMATED DESIGN VALIDATION/.test(agents)) {
+      errors.push("AGENTS.md: must define AUTOMATED DESIGN VALIDATION for T2+");
+    }
+    if (!/EVIDENCE-DRIVEN MERGE GATE/.test(agents)) {
+      errors.push("AGENTS.md: must define EVIDENCE-DRIVEN MERGE GATE");
+    }
+    if (!/exact merge-candidate HEAD/i.test(agents)) {
+      errors.push("AGENTS.md: Merge Gate must be bound to the exact merge-candidate HEAD");
+    }
+  }
+
+  const constitution = readText(path.join(root, ".specify/memory/constitution.md"));
+  if (constitution !== null) {
+    if (!/evidence-driven/i.test(constitution) || !/exact candidate HEAD/i.test(constitution)) {
+      errors.push("constitution: PR-first governance must define evidence-driven exact-HEAD merge authorization");
+    }
+  }
+
+  const handoff = readText(path.join(root, "docs/ai/session-handoff-template.md"));
+  if (handoff !== null && !/Merge Gate: `[^`]*SATISFIED/.test(handoff)) {
+    errors.push("session handoff: Merge Gate state must include SATISFIED");
+  }
+
+  return errors;
+}
+
 export function checkRepository(root = process.cwd()) {
   const errors = [];
   for (const dir of featureDirs(root)) errors.push(...checkFeature(root, dir));
+  errors.push(...checkLiveGovernance(root));
   return errors;
 }
 
