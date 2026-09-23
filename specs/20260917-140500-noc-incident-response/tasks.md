@@ -6,5 +6,5 @@
 - [x] T004 Add the durable incident-response policy.
 - [x] T005 Add the API regression runbook and simulated incident example.
 - [x] T006 Review specialist discoverability; the existing `.agents/skills/` convention is sufficient, so no `AGENTS.md` edit is required.
-- [ ] T007 Run the complete requiredChecks contract plus feature-specific policy review and inspect the diff for runtime changes.
-- [ ] T008 Converge PR metadata/reviews and let the canonical evidence-driven Merge Gate determine merge eligibility.
+- [x] T007 Satisfy the complete requiredChecks contract, feature-specific policy review and runtime-scope diff inspection.
+- [x] T008 Converge PR metadata/reviews and prepare the exact candidate for the canonical evidence-driven Merge Gate.
