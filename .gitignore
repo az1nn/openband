@@ -31,3 +31,6 @@ data/*.sqlite-shm
 .openband/
 docs/generated/
 .openband/graph-report.html
+
+# generated test-report media
+docs/vitest-ui-dashboard.png

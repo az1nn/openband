@@ -2381,6 +2381,7 @@ export default function Studio() {
                           label="Pan"
                           minValue={-100}
                           maxValue={100}
+                          interpolationMode="pan"
                           showCurveToggle
                         />
                       </View>

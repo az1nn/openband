@@ -31,6 +31,7 @@ HEAD: <branch>@<sha>
 WORK: issue=<id|-> pr=<id/state|-> spec=<id|-> tier=<tier|->
 STATE: <VERIFIED_COMPLETE|IMPLEMENTED_NOT_VERIFIED|INCOMPLETE|PROCESS_DRIFT>
 PERSIST: <pr-comment|issue-comment|file:<path>|unavailable>
+SIGA: classification=<ADVANCE|WATCH> target=<task/change/gate> reason=<evidence-derived reason> next=<one deterministic action>
 
 DONE:
 - <delta-only completed facts>
@@ -64,6 +65,7 @@ The compact handoff preserves, when applicable:
 - issue, PR and Spec Kit identity;
 - risk tier / lifecycle state when decision-relevant;
 - closeout classification;
+- SIGA core classification/target/reason/next checkpoint;
 - durable persistence sink;
 - current-cycle implementation delta;
 - exact-state verification evidence;

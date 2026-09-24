@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 import { OpenBandNative } from "../bridge";
 import type { Plugin } from "../lib/types";
 import { resolveAssetUrl } from "../lib/assetStore";
+import { resolveRegionSourceWindow } from "../lib/regionEdit";
 
 /**
  * Central blob URL registry with leak protection.
@@ -322,7 +323,7 @@ class UniversalAudioSystem {
   }
 
   async renderMixdown(
-    tracks: { id?: string; name?: string; volume: number; pan: number; muted: boolean; solo: boolean; outputId?: string; sends?: Record<string, number>; regions: { start: number; duration: number; url?: string }[]; plugins?: Plugin[] }[],
+    tracks: { id?: string; name?: string; volume: number; pan: number; muted: boolean; solo: boolean; outputId?: string; sends?: Record<string, number>; regions: { start: number; duration: number; offset?: number; length?: number; url?: string }[]; plugins?: Plugin[] }[],
     duration: number,
     sampleRate: number,
     onProgress?: (pct: number) => void,
@@ -335,7 +336,7 @@ class UniversalAudioSystem {
   }
 
   private async renderMixdownWeb(
-    tracks: { id?: string; name?: string; volume: number; pan: number; muted: boolean; solo: boolean; outputId?: string; sends?: Record<string, number>; regions: { start: number; duration: number; url?: string }[]; plugins?: Plugin[] }[],
+    tracks: { id?: string; name?: string; volume: number; pan: number; muted: boolean; solo: boolean; outputId?: string; sends?: Record<string, number>; regions: { start: number; duration: number; offset?: number; length?: number; url?: string }[]; plugins?: Plugin[] }[],
     duration: number,
     sampleRate: number,
     onProgress?: (pct: number) => void,
@@ -382,12 +383,41 @@ class UniversalAudioSystem {
             const resp = await fetch(resolvedUrl, { credentials: "omit" });
             const ab = await resp.arrayBuffer();
             let buf = await this.decodeAudio(ab, ctx);
-            if (track.plugins && track.plugins.length > 0) {
+            let { offset, length } = resolveRegionSourceWindow(region, buf.duration);
+            if (track.plugins && track.plugins.length > 0 && length > 0) {
+              const sourceStartFrame = Math.min(
+                buf.length,
+                Math.floor(offset * buf.sampleRate),
+              );
+              const sourceFrameCount = Math.min(
+                Math.max(0, buf.length - sourceStartFrame),
+                Math.floor(length * buf.sampleRate),
+              );
+              if (sourceStartFrame > 0 || sourceFrameCount < buf.length) {
+                const selected = ctx.createBuffer(
+                  Math.max(1, buf.numberOfChannels),
+                  Math.max(1, sourceFrameCount),
+                  buf.sampleRate,
+                );
+                for (let channel = 0; channel < buf.numberOfChannels; channel++) {
+                  selected
+                    .getChannelData(channel)
+                    .set(
+                      buf
+                        .getChannelData(channel)
+                        .subarray(sourceStartFrame, sourceStartFrame + sourceFrameCount),
+                    );
+                }
+                buf = selected;
+                offset = 0;
+                length = Math.min(length, buf.duration);
+              }
               const { applyPluginChain } = await import("../lib/pluginChain");
               buf = await applyPluginChain(buf, track.plugins, sampleRate, {
                 duration,
                 modTime: region.start,
               });
+              length = Math.min(length, buf.duration);
             }
             const src = ctx.createBufferSource();
             src.buffer = buf;
@@ -402,7 +432,13 @@ class UniversalAudioSystem {
               gain.connect(pan);
               pan.connect(masterGain);
             }
-            src.start(region.start, 0, Math.min(region.duration, Math.max(0, duration - region.start)));
+            const playDur = Math.min(
+              region.duration,
+              length,
+              Math.max(0, buf.duration - offset),
+              Math.max(0, duration - region.start),
+            );
+            if (playDur > 0) src.start(region.start, offset, playDur);
           } catch (e) {
             console.warn("Failed to process region:", e);
           }
@@ -423,7 +459,7 @@ class UniversalAudioSystem {
   }
 
   private async renderMixdownNative(
-    tracks: { id?: string; name?: string; volume: number; pan: number; muted: boolean; solo: boolean; outputId?: string; sends?: Record<string, number>; regions: { start: number; duration: number; url?: string }[]; plugins?: Plugin[] }[],
+    tracks: { id?: string; name?: string; volume: number; pan: number; muted: boolean; solo: boolean; outputId?: string; sends?: Record<string, number>; regions: { start: number; duration: number; offset?: number; length?: number; url?: string }[]; plugins?: Plugin[] }[],
     duration: number,
     sampleRate: number,
     onProgress?: (pct: number) => void,
@@ -473,16 +509,23 @@ class UniversalAudioSystem {
           }
           const startSample = Math.floor(region.start * sampleRate);
           const channelLength = decodedChannels[0]?.length || 0;
+          const sourceDuration = channelLength / sampleRate;
+          const { offset, length } = resolveRegionSourceWindow(region, sourceDuration);
+          const sourceStartSample = Math.min(
+            channelLength,
+            Math.floor(offset * sampleRate),
+          );
           const regionSamples = Math.min(
             Math.floor(region.duration * sampleRate),
-            channelLength,
-            totalSamples - startSample,
+            Math.floor(length * sampleRate),
+            Math.max(0, channelLength - sourceStartSample),
+            Math.max(0, totalSamples - startSample),
           );
 
           if (decodedChannels.length === 1) {
             const ch0 = decodedChannels[0];
             for (let i = 0; i < regionSamples; i++) {
-              const src = ch0[i] || 0;
+              const src = ch0[sourceStartSample + i] || 0;
               left[startSample + i] += src * leftGain;
               right[startSample + i] += src * rightGain;
             }
@@ -490,8 +533,8 @@ class UniversalAudioSystem {
             const ch0 = decodedChannels[0];
             const ch1 = decodedChannels[1] || decodedChannels[0];
             for (let i = 0; i < regionSamples; i++) {
-              const srcL = ch0[i] || 0;
-              const srcR = ch1[i] || 0;
+              const srcL = ch0[sourceStartSample + i] || 0;
+              const srcR = ch1[sourceStartSample + i] || 0;
               left[startSample + i] += srcL * leftGain;
               right[startSample + i] += srcR * rightGain;
             }

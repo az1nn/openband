@@ -64,6 +64,18 @@ Short-lived facts required to resume after task closeout belong in a Caveman han
 
 This state is derived and must be revalidated by the next session.
 
+## SIGA operational checkpoint
+
+SIGA's minimal checkpoint is derived operational state, never a new authority:
+
+```text
+classification + target + reason + exact HEAD when relevant + one NEXT probe/action
+```
+
+Do not create a standalone mutable SIGA status store. While work is live, reconstruct/persist the checkpoint through the existing marked session lease. At eligible closeout, reconstruct/persist it through the Caveman handoff. Both remain subordinate to real Git/GitHub/Spec Kit/CI/deploy state.
+
+A WATCH checkpoint is valid only when it names a concrete external/human reason and deterministic re-probe. RESUME remains active work and is not a Caveman closeout state. VERIFIED_COMPLETE maps to ADVANCE; no-safe-work blocker/human closeout maps to WATCH.
+
 ## Persistence sink order
 
 At eligible task closeout, `caveman-handoff` must persist the final artifact using the first safe available sink:
