@@ -91,6 +91,29 @@ describe("renderTrackStem automation", () => {
     expect(late).toBeGreaterThan(early);
   });
 
+  it("renders exponential pan automation without using the positive-only ramp API", async () => {
+    const track = makeTrack({
+      pan: [
+        { time: 0, value: 10, curve: "linear" },
+        { time: 16, value: 100, curve: "exponential" },
+      ],
+    });
+    const buf = await renderTrackStem(track, 120, 10);
+    expect(buf).not.toBeNull();
+  });
+
+  it("renders center-crossing exponential pan automation", async () => {
+    const track = makeTrack({
+      pan: [
+        { time: 0, value: -100, curve: "linear" },
+        { time: 8, value: 0, curve: "exponential" },
+        { time: 16, value: 100, curve: "exponential" },
+      ],
+    });
+    const buf = await renderTrackStem(track, 120, 10);
+    expect(buf).not.toBeNull();
+  });
+
   it("does not throw when called twice with identical content", async () => {
     const track = makeTrack();
     const a = await renderTrackStem(track, 120, 10);

@@ -1,6 +1,7 @@
 import { useCallback, useRef } from "react";
 import { View, Pressable, Text } from "react-native";
 import type { AutomationPoint } from "../lib/types";
+import { interpolatePanAutomationSegment } from "../lib/automationEngine";
 
 interface AutomationLaneProps {
   points: AutomationPoint[];
@@ -12,6 +13,7 @@ interface AutomationLaneProps {
   minValue?: number;
   maxValue?: number;
   showCurveToggle?: boolean;
+  interpolationMode?: "default" | "pan";
   testID?: string;
 }
 
@@ -26,6 +28,7 @@ export function AutomationLane({
   minValue = 0,
   maxValue = 100,
   showCurveToggle = false,
+  interpolationMode = "default",
   testID,
 }: AutomationLaneProps) {
   if (!visible) return null;
@@ -97,7 +100,20 @@ export function AutomationLane({
         p0.time === p1.time ? 1 : (t - p0.time) / (p1.time - p0.time);
 
       let val: number;
-      if (p1.curve === "exponential" && p0.value > 0 && p1.value > 0) {
+      if (interpolationMode === "pan") {
+        val = interpolatePanAutomationSegment(
+          p0.value,
+          p1.value,
+          frac,
+          p1.curve,
+          minValue,
+          maxValue,
+        );
+      } else if (
+        p1.curve === "exponential" &&
+        p0.value > 0 &&
+        p1.value > 0
+      ) {
         const ratio = p1.value / p0.value;
         val = p0.value * Math.pow(ratio, frac);
       } else {

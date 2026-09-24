@@ -42,6 +42,45 @@ ONE TASK = ONE CHAT
 ONE CHAT = AT MOST ONE TASK
 ```
 
+## Core SIGA orchestration
+
+This skill is the canonical SIGA for OpenBand and implements the portable contract in:
+
+- `docs/ai/siga-orchestration.md`;
+- `docs/ai/siga-capabilities.json`.
+
+The core lifecycle is never replaced:
+
+```text
+RECONCILE -> DECIDE -> EXECUTE -> VERIFY -> PERSIST
+```
+
+Every continuation has one core classification:
+
+- **RESUME** — this chat owns incomplete work and safe deterministic work remains;
+- **WATCH** — this chat owns the task, no safe local work remains, and a real external/human gate can be re-probed;
+- **ADVANCE** — previous owned work is verified complete, or this unbound chat may bind exactly one independent next task.
+
+OpenBand routes refine the core: `ACTIVE/OWNED -> RESUME`, `WAITING -> WATCH`, and `NEXT -> ADVANCE`. `ACTIVE/OBSERVER` is read-only inspection of foreign-owned work and never grants continuation authority.
+
+Before mutation, apply the idempotent law:
+
+```text
+observe -> compare desired state -> no-op if satisfied -> mutate once -> re-read -> verify
+```
+
+Use ensure-style behavior for branch, worktree, PR, lease, handoff, task and gate state whenever the local adapter can inspect the desired state.
+
+Operational failures use `TRANSIENT | CONFLICT | BLOCKED | HUMAN_REQUIRED | PERMANENT`. WATCH reasons use `CI_PENDING | REVIEW_PENDING | DEPLOY_PENDING | HUMAN_APPROVAL | EXTERNAL_SERVICE | DEPENDENCY_PENDING` when applicable, and every WATCH records a deterministic re-probe.
+
+A SIGA checkpoint is derived only:
+
+```text
+classification + target + reason + exact HEAD when relevant + one NEXT probe/action
+```
+
+Persist it through the existing lease/Caveman sinks. Never create a standalone SIGA database or status authority.
+
 ## Trigger
 
 Treat `siga` as the canonical session command only when used standalone, ignoring case, surrounding whitespace and terminal punctuation.
@@ -105,8 +144,12 @@ SESSION_KEY: <stable generated key>
 CHAT_LABEL: <short human-findable task label>
 TASK: issue=<id|-> pr=<id|-> spec=<id|->
 STATE: <ACTIVE|WAITING|CLOSED>
+CORE: <RESUME|WATCH|ADVANCE>
+TARGET: <issue|pr|spec|gate identity>
+REASON: <evidence-derived reason>
 HEAD: <sha|->
 WAITING_ON: <none|human:<gate>|external:<blocker>>
+RECHECK: <deterministic probe|none>
 NEXT: <one current-task action or one next-session action>
 UPDATED_AT: <ISO-8601 when available>
 ```
@@ -250,6 +293,7 @@ OPENBAND AGENT TREE
 ...
 
 SESSION: ACTIVE/OWNED | ACTIVE/OBSERVER | WAITING | NEXT | REPO_MISMATCH
+CORE: RESUME | WATCH | ADVANCE | N/A
 TASK: <issue/PR/spec or selected task>
 WHY: <one sentence from canonical evidence>
 ACTION: <continue | observe | human action | start exactly one task | stop wrong repo>

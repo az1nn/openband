@@ -1,0 +1,51 @@
+{
+  "siga": {
+    "protocol": 1,
+    "architecture": "repository-local",
+    "stateScope": "repository",
+    "canonicalSkill": ".agents/skills/openband-session-router/SKILL.md",
+    "coreContract": "docs/ai/siga-orchestration.md",
+    "authority": "derived"
+  },
+  "capabilities": {
+    "git": true,
+    "pull_requests": true,
+    "ci": true,
+    "specs": true,
+    "tests": true,
+    "deploy": true,
+    "worktrees": true,
+    "concurrency": true
+  },
+  "adapters": {
+    "git": "git",
+    "pull_requests": "github",
+    "ci": "github-actions",
+    "specs": "github-spec-kit",
+    "tests": "package-scripts",
+    "deploy": "vercel-status",
+    "worktrees": "git-worktree",
+    "concurrency": "github-pr-issue-session-lease"
+  },
+  "verification": {
+    "required_gates": [
+      "graph-check",
+      "security-policy",
+      "frontend-typecheck",
+      "backend-typecheck",
+      "vitest",
+      "legacy-tests",
+      "web-build",
+      "web-launch-e2e",
+      "merge-gate"
+    ],
+    "conditional_gates": [
+      "electron-build",
+      "android-build"
+    ]
+  },
+  "checkpoint": {
+    "persistence": "existing-session-lease-or-caveman-handoff",
+    "standalone_mutable_store": false
+  }
+}
