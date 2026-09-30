@@ -6,8 +6,8 @@
 - [x] **T0002** Create umbrella tracking issue #117.
 - [x] **T0003** Create isolated planning branch `agent/117-repository-convergence-program` from `master@dd72218b6a673421225664bd3cfc3ea7694acb2d`.
 - [x] **T0004** Define sequence, requirements, recovery strategy, branch-hygiene rules, and final audit contract.
-- [ ] **T0005** Run automated design validation for #117 and fix any Spec Kit/Graph policy defect.
-- [ ] **T0006** Obtain exact-HEAD CI for the #117 documentation-only candidate.
+- [x] **T0005** Run automated design validation for #117 and fix any Spec Kit/Graph policy defect.
+- [x] **T0006** Obtain exact-HEAD CI for the #117 documentation-only candidate (OpenBand CI V2 run #568 / 36787485386 PASS on prior exact planning HEAD).
 - [ ] **T0007** Merge #117 when its evidence-driven Merge Gate is satisfied.
 
 ## Phase 1 — finish #43 / PR #72 (T4)
