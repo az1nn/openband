@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 2,
+  "tier": "T3",
+  "issue": 117,
+  "riskTriggers": [
+    "repository-convergence-orchestration",
+    "release-state-reconciliation",
+    "cross-feature-evidence-sequencing",
+    "destructive-branch-hygiene"
+  ],
+  "dependsOn": [],
+  "requiredChecks": [
+    "graph-check",
+    "security-policy",
+    "frontend-typecheck",
+    "backend-typecheck",
+    "vitest",
+    "legacy-tests",
+    "web-build",
+    "web-launch-e2e",
+    "merge-gate"
+  ]
+}
